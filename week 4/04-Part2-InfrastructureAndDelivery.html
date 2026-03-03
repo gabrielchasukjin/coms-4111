@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Petflix Streams a Cat Video — Part 2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>How Petflix Streams a Cat Video — Part 2</h1>
+            <p class="subtitle">From CDN delivery to the hardware that decodes your cat video</p>
+        </header>
+
+        <p>
+            In Part 1, we followed a cat video request from your browser through DNS routing, the API gateway,
+            microservices, and the caching layer. The system figured out <em>what</em> video you want and <em>where</em>
+            the data lives. Now the hard part begins: actually delivering that video to your screen, keeping the
+            service running when things fail, and managing the physical infrastructure underneath it all.
+        </p>
+        <p>
+            Part 2 picks up at <strong>Layer 5</strong> and works its way down to the bare metal — the CPU cores
+            that decode each frame of your cat video.
+        </p>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 1: LAYER 5 — THE CDN -->
+        <!-- ================================================================ -->
+        <div class="section">
+            <h2>Layer 5 — The CDN (Content Delivery Network)</h2>
+
+            <p>
+                You have probably noticed that when you stream a video on Netflix, it starts almost instantly — no
+                matter where you are. You might assume the video is flying across the internet from some massive data
+                center in California. In reality, it is coming from a server that might be <em>in the same building</em>
+                as your ISP's local office, just a few miles from your couch.
+            </p>
+
+            <h3>The "Petflix Box"</h3>
+
+            <p>
+                Netflix operates a program called <strong>Open Connect</strong>, and the core idea is remarkably
+                simple: instead of streaming every video from a handful of centralized data centers, Netflix installs
+                physical servers — called <strong>Open Connect Appliances (OCAs)</strong> — directly inside the data
+                centers of Internet Service Providers around the world. In our Petflix analogy, think of these as
+                "Petflix Boxes."
+            </p>
+
+            <div class="definition-box">
+                <strong>CDN (Content Delivery Network):</strong> A geographically distributed network of servers
+                that caches and delivers content from locations physically close to end users. Instead of every
+                request traveling to a central origin server, the CDN serves the content from the nearest edge node.
+            </div>
+
+            <img src="slides/cdn-petflix-box.png" alt="Diagram showing the Petflix Box — a physical server installed inside an ISP data center, serving video to nearby users">
+
+            <p>
+                Here is why this matters so much for video. Video files are enormous. A single hour of 4K content
+                can be tens of gigabytes. If every viewer in New York had to pull that data from a data center in
+                Oregon, the backbone internet links between those regions would be crushed. By placing Petflix Boxes
+                inside ISPs, the video traffic stays <em>local</em>. It never has to traverse the long-haul internet
+                backbone at all.
+            </p>
+
+            <div class="analogy">
+                Think of it like a library system. Instead of one massive central library that everyone in the country
+                drives to, you build branch libraries in every neighborhood. The popular books are stocked at every
+                branch. You only need to request a rare book from the central library — everything else is already
+                on the shelf a few blocks away.
+            </div>
+
+            <h3>Per-Title Encoding</h3>
+
+            <p>
+                Not all videos are created equal. A static lecture recording — where the camera barely moves and
+                the frame is mostly a presenter next to slides — compresses very differently from a fast-paced
+                action sequence with explosions and rapid camera cuts. Netflix recognized this and developed an
+                approach called <strong>per-title encoding</strong>.
+            </p>
+
+            <div class="definition-box">
+                <strong>Per-Title Encoding:</strong> Instead of applying a single, one-size-fits-all set of
+                encoding presets to every video, each title gets its own custom "encoding recipe." The system
+                analyzes the visual complexity of the content and generates a tailored set of quality-bitrate
+                pairs optimized specifically for that title.
+            </div>
+
+            <div class="explanation-box">
+                <h4>Why does this matter?</h4>
+                <p>
+                    Consider two videos. Video A is a slow, dialogue-heavy drama with mostly static shots. Video B
+                    is an action movie with fast motion, scene transitions, and lots of visual detail. If you encode
+                    both at the same bitrate — say, 5 Mbps — Video A will look perfect, while Video B might still
+                    show artifacts and blur during fast scenes. Conversely, if you set the bitrate high enough for
+                    Video B, you are wasting bandwidth on Video A, which looked great at a fraction of that bitrate.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Per-title encoding solves this by generating a custom "encoding ladder" for each title: a set
+                    of resolution and bitrate combinations where each step represents the best visual quality
+                    achievable at that bitrate for <em>that specific piece of content</em>.
+                </p>
+            </div>
+
+            <h3>Adaptive Bitrate Streaming (ABR)</h3>
+
+            <p>
+                Even with a perfectly encoded video sitting on a nearby CDN server, there is still the problem of
+                <strong>network variability</strong>. Your bandwidth is not constant. It fluctuates — maybe someone
+                else in your house starts a video call, maybe your Wi-Fi signal weakens as you walk to the kitchen.
+                The player needs to handle this gracefully.
+            </p>
+
+            <div class="definition-box">
+                <strong>Adaptive Bitrate Streaming (ABR):</strong> A technique where the video player continuously
+                monitors available bandwidth and buffer levels, dynamically switching between different quality
+                levels of the video in real time. If bandwidth drops, the player instantly switches to a lower
+                quality stream to avoid buffering. If bandwidth improves, it switches back up to higher quality.
+            </div>
+
+            <img src="slides/adaptive-bitrate.png" alt="Diagram illustrating adaptive bitrate streaming and VMAF quality metrics across different bandwidth levels">
+
+            <p>
+                The video file is not stored as a single monolithic file. It is broken into small <strong>chunks</strong>
+                (typically 2-10 seconds each), and each chunk is available in multiple quality levels. The player
+                can switch quality at any chunk boundary. This is why you sometimes notice the picture get slightly
+                blurrier for a moment and then sharpen back up — that is ABR in action.
+            </p>
+
+            <h3>VMAF — Measuring Perceptual Quality</h3>
+
+            <p>
+                But how does the system decide what counts as "good enough" quality at a given bitrate? Traditional
+                metrics like PSNR (Peak Signal-to-Noise Ratio) measure mathematical differences between the original
+                and compressed frames, but those numbers do not always correlate with what humans actually perceive
+                as good or bad quality.
+            </p>
+
+            <div class="definition-box">
+                <strong>VMAF (Video Multi-Method Assessment Fusion):</strong> A perceptual video quality metric
+                developed by Netflix that predicts how a human viewer would rate the quality of a video. It combines
+                multiple elementary quality metrics using machine learning, trained on thousands of human quality
+                ratings. VMAF scores range from 0 to 100, where higher is better.
+            </div>
+
+            <p>
+                VMAF allows the encoding pipeline to make intelligent decisions: for a given title, at a given
+                resolution, what is the <em>minimum</em> bitrate that still produces a VMAF score above the
+                acceptable threshold? This is how per-title encoding and ABR come together — the encoding ladder
+                is built using VMAF to ensure every quality step looks good to the human eye, not just good on paper.
+            </p>
+
+            <div class="key-insight">
+                The CDN layer is where the physics of the internet meet the economics of streaming. By pushing
+                content to the edge (ISP-local servers), encoding each title with a custom recipe, and adapting
+                quality in real time, Petflix delivers a smooth viewing experience without overwhelming the
+                network backbone.
+            </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 2: LAYER 6 — PODS, LEADER ELECTION, AND REPLICATION -->
+        <!-- ================================================================ -->
+        <div class="section">
+            <h2>Layer 6 — Pods, Leader Election, and Replication</h2>
+
+            <p>
+                Everything we have discussed so far — DNS routing, the API gateway, microservices, caching, CDN
+                delivery — relies on services being <em>available</em>. But what happens when a server crashes?
+                What happens when a hard drive fails, or a network cable gets unplugged, or an entire rack loses
+                power? In a system serving millions of concurrent users, these are not hypothetical scenarios.
+                They happen every day.
+            </p>
+
+            <p>
+                The answer is <strong>replication</strong>: never run just one copy of anything.
+            </p>
+
+            <h3>From Single Instances to Pods</h3>
+
+            <div class="definition-box">
+                <strong>Pod:</strong> A group of replicated service instances that work together. Instead of
+                running a single instance of a service, you run multiple replicas — a pod — so that if one
+                instance fails, the others can continue handling requests without interruption.
+            </div>
+
+            <p>
+                But replication introduces a new problem: if you have multiple copies of a service, and that
+                service manages data (like a database), how do you keep the copies in sync? You cannot just let
+                every replica accept writes independently — that leads to conflicting data. This is where the
+                <strong>leader-follower</strong> model comes in.
+            </p>
+
+            <h3>Leader-Follower Replication</h3>
+
+            <div class="explanation-box">
+                <h4>How it works</h4>
+                <p>
+                    In leader-follower replication, one replica is designated as the <strong>leader</strong>
+                    (sometimes called the "primary" or "master"). All write operations go through the leader.
+                    The other replicas are <strong>followers</strong> (or "secondaries" / "replicas") that
+                    receive a copy of every write from the leader and apply it to their own data.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Read operations can be served by <em>any</em> replica — leader or follower — which spreads
+                    the read load across the entire pod. But writes must funnel through the single leader to
+                    maintain a consistent ordering of operations.
+                </p>
+            </div>
+
+            <div class="problem-box">
+                <strong>The critical question:</strong> What happens when the leader fails? If the leader crashes
+                and no new leader is elected, the system cannot accept any writes. All followers have data, but
+                none of them are authorized to accept new writes. The system is effectively stuck. We need a way
+                to automatically and reliably elect a new leader.
+            </div>
+
+            <h3>The Raft Consensus Algorithm</h3>
+
+            <p>
+                Raft is a consensus algorithm designed to be understandable (its predecessor, Paxos, was notoriously
+                difficult to reason about). It solves the problem of leader election and log replication in a
+                distributed system.
+            </p>
+
+            <img src="slides/leader-election.png" alt="Diagram illustrating the Raft consensus algorithm with leader, follower, and candidate states, showing heartbeats and election flow">
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Three States</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Every node in a Raft cluster is in exactly one of three states at any given time:
+                    <strong>Leader</strong>, <strong>Follower</strong>, or <strong>Candidate</strong>.
+                    Under normal operation, there is one leader and all other nodes are followers.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Heartbeats</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    The leader periodically sends <strong>heartbeat</strong> messages to all followers. These
+                    heartbeats serve two purposes: they replicate new data (if any) and they signal "I am still
+                    alive." Each follower has an <strong>election timeout</strong> — a randomized timer that resets
+                    every time a heartbeat arrives.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Timeout and Candidacy</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    If a follower's election timeout expires without receiving a heartbeat (meaning the leader is
+                    likely down), the follower transitions to the <strong>Candidate</strong> state. It increments
+                    the current <em>term</em> number (a logical clock) and sends a <strong>RequestVote</strong>
+                    message to all other nodes, effectively saying: "I think the leader is dead. Vote for me."
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Majority Vote</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Each node votes for at most one candidate per term. If a candidate receives votes from a
+                    <strong>majority</strong> of nodes (more than half), it becomes the new leader. It immediately
+                    starts sending heartbeats to establish its authority and prevent further elections.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    <strong>Majority ACK for Writes</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Once a leader is established, writes follow a similar majority rule. A write is only considered
+                    <strong>committed</strong> when a majority of replicas acknowledge (ACK) that they have stored
+                    the data. The leader does not confirm the write to the client until this majority acknowledgment
+                    is received.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                Why does the majority rule work? Because any two majorities of the same set must overlap by at
+                least one member. This means that no matter which nodes are available in the future, at least one
+                of them will have the latest committed data. A 5-node cluster can tolerate 2 failures. A 3-node
+                cluster can tolerate 1 failure. This is why clusters are typically odd-numbered.
+            </div>
+
+            <div class="analogy">
+                Think of Raft like a corporate board of directors. The CEO (leader) makes decisions and keeps the
+                board informed (heartbeats). If the CEO suddenly becomes unreachable, board members (followers) wait
+                a reasonable amount of time, and then one of them calls an emergency meeting (becomes a candidate)
+                and asks for a vote to become acting CEO. They need a majority vote to take over. And every major
+                decision (write) still requires sign-off from a majority of the board before it is final.
+            </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 3: LAYER 7 — VMS, CONTAINERS, AND THE ORCHESTRATOR -->
+        <!-- ================================================================ -->
+        <div class="section">
+            <h2>Layer 7 — VMs, Containers, and the Orchestrator</h2>
+
+            <p>
+                We have been talking about services, pods, and replicas — but where do these things actually
+                <em>run</em>? Ultimately, every line of code executes on a physical server somewhere. But modern
+                infrastructure does not run applications directly on bare metal. Instead, there are layers of
+                abstraction that provide <strong>isolation</strong>, <strong>portability</strong>, and
+                <strong>efficiency</strong>.
+            </p>
+
+            <h3>The Isolation Stack</h3>
+
+            <p>
+                From the bottom up, the stack looks like this:
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Physical Server</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    The actual hardware: CPU, RAM, storage, network interfaces. A rack-mounted machine in a data center.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Hypervisor</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Software that sits on top of the physical hardware and allows multiple <strong>virtual machines</strong>
+                    to share it. The hypervisor manages how VMs access the underlying CPU, memory, and I/O.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Virtual Machines (VMs)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Each VM runs its own <em>complete operating system</em>. From the perspective of software running
+                    inside a VM, it looks and feels like a dedicated physical machine. VMs are fully isolated from
+                    each other.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Container Runtime</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Software (like Docker) that runs inside a VM (or directly on a host OS) and manages
+                    <strong>containers</strong>. The container runtime uses OS-level features (namespaces, cgroups)
+                    to isolate processes.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    <strong>Containers</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Lightweight, isolated environments that share the host OS kernel. Each container packages an
+                    application and its dependencies, but does not carry an entire operating system.
+                </p>
+            </div>
+
+            <h3>VMs vs. Containers</h3>
+
+            <img src="slides/vms-containers.png" alt="Side-by-side comparison diagram showing the architecture of Virtual Machines versus Containers, highlighting the difference in OS layers">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Virtual Machines</h4>
+                    <ul>
+                        <li><strong>Isolation:</strong> Strong. Each VM has its own OS kernel, so a crash or security breach in one VM cannot affect another.</li>
+                        <li><strong>Overhead:</strong> Heavy. Each VM carries a full OS — that means gigabytes of disk space and significant RAM just for the OS itself.</li>
+                        <li><strong>Startup time:</strong> Slow (seconds to minutes). Booting an OS takes time.</li>
+                        <li><strong>Use case:</strong> When you need strong security boundaries, or when different workloads require different operating systems.</li>
+                    </ul>
+                </div>
+                <div class="visual-item">
+                    <h4>Containers</h4>
+                    <ul>
+                        <li><strong>Isolation:</strong> Weaker. Containers share the host kernel. A kernel-level vulnerability could potentially escape the container boundary.</li>
+                        <li><strong>Overhead:</strong> Minimal. No duplicate OS — just the application and its dependencies, often megabytes instead of gigabytes.</li>
+                        <li><strong>Startup time:</strong> Fast (milliseconds to seconds). No OS to boot — just start the process.</li>
+                        <li><strong>Use case:</strong> Microservices, rapid scaling, CI/CD pipelines — anywhere you need lightweight, fast, portable deployment.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="problem-box">
+                <strong>The "Noisy Neighbor" Problem:</strong> In any shared environment — whether VMs on the same
+                physical host or containers on the same VM — one workload can hog resources (CPU, memory, disk I/O,
+                network bandwidth) and degrade performance for everything else running alongside it. This is why
+                resource limits, quotas, and careful placement of workloads are critical in production systems.
+                If your cat video encoding job consumes 100% of CPU, every other container on that host suffers.
+            </div>
+
+            <h3>Kubernetes: The Orchestrator</h3>
+
+            <p>
+                Running a few containers manually is straightforward. Running thousands of containers across hundreds
+                of machines — deciding where each one goes, restarting them when they crash, scaling them up when
+                traffic surges, deploying new versions without downtime — that is an entirely different problem.
+                This is what <strong>Kubernetes</strong> (often abbreviated as K8s) solves.
+            </p>
+
+            <div class="definition-box">
+                <strong>Kubernetes (K8s):</strong> An open-source container orchestration platform that automates
+                the deployment, scaling, and management of containerized applications. Originally developed by
+                Google (based on their internal system called Borg), it is now the industry standard for running
+                containers in production.
+            </div>
+
+            <img src="slides/kubernetes.png" alt="Diagram showing Kubernetes architecture with scheduling, scaling, healing, and deployment capabilities">
+
+            <p>
+                Kubernetes handles four essential responsibilities:
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Schedule</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    When you tell Kubernetes to run a container, it decides <em>which machine</em> in the cluster
+                    should run it. It considers available resources (CPU, memory), existing workloads, constraints
+                    you have specified (e.g., "this container needs a GPU"), and anti-affinity rules (e.g., "do not
+                    put two replicas of the same service on the same physical machine").
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Scale</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Kubernetes can automatically increase or decrease the number of container instances based on
+                    observed load. If CPU utilization spikes above a threshold, Kubernetes spins up additional
+                    replicas. When load drops, it removes the extras. This is called <strong>auto-scaling</strong>,
+                    and it means you do not pay for (or manage) idle capacity during low-traffic hours.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Heal</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    If a container crashes or a health check fails, Kubernetes automatically restarts it. If an
+                    entire node (machine) goes down, Kubernetes reschedules all the containers that were running
+                    on that node onto other healthy nodes. This self-healing capability means many failures are
+                    resolved without any human intervention.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Deploy</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Kubernetes supports <strong>rolling deployments</strong>: when you release a new version of a
+                    service, Kubernetes gradually replaces old containers with new ones, a few at a time. If the
+                    new version starts failing, it can automatically roll back. This enables zero-downtime deployments —
+                    users never notice the update happening.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Kubernetes is like an air traffic controller for your data center. You tell it "I need 10 instances
+                of Service X running at all times," and it figures out which runways (machines) to use, reroutes
+                traffic when a runway is closed (node failure), adds more flights (containers) during peak hours,
+                and smoothly transitions planes (rolling deployments) without ever shutting down the airport.
+            </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 4: LAYER 8 — CORES, THREADS, AND VIDEO DECODING -->
+        <!-- ================================================================ -->
+        <div class="section">
+            <h2>Layer 8 — Cores, Threads, and Video Decoding</h2>
+
+            <p>
+                We have finally arrived at the bottom of the stack. After traveling through DNS, the API gateway,
+                microservices, caches, CDNs, replicated pods, VMs, containers, and Kubernetes — your cat video
+                request has reached the actual <strong>CPU cores</strong> that will decode the compressed video
+                data into frames your screen can display.
+            </p>
+
+            <p>
+                This layer is where we confront fundamental concepts of how computers actually execute work:
+                concurrency, parallelism, and the subtle bugs that arise when multiple threads share resources.
+            </p>
+
+            <h3>Concurrency vs. Parallelism</h3>
+
+            <p>
+                These two terms are often used interchangeably, but they mean different things, and understanding
+                the distinction is critical.
+            </p>
+
+            <img src="slides/concurrency-parallelism.png" alt="Diagram contrasting concurrency (interleaved tasks on one core) with parallelism (simultaneous tasks on multiple cores)">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Concurrency</h4>
+                    <p>
+                        <strong>Dealing with</strong> multiple tasks at once. The tasks may not actually execute
+                        simultaneously — they may be interleaved on a single core, with the CPU rapidly switching
+                        between them. The key idea is that multiple tasks are <em>in progress</em> at the same time,
+                        even if only one is actively executing at any given instant.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> A single-core CPU running a web server that handles 100 connections
+                        concurrently. It switches between connections so fast that each client feels like they have
+                        the server's full attention.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>Parallelism</h4>
+                    <p>
+                        <strong>Actually doing</strong> multiple tasks at the same time. This requires multiple
+                        execution units — multiple CPU cores, multiple machines, or specialized hardware. Two tasks
+                        running in parallel are genuinely executing simultaneously.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> A quad-core CPU decoding four video frames at the same time, one
+                        per core. Each core is independently doing real work in the same clock cycle.
+                    </p>
+                </div>
+            </div>
+
+            <div class="analogy">
+                <strong>The chef analogy:</strong> Concurrency is one chef juggling multiple dishes — stirring the
+                soup, then chopping vegetables, then checking the oven, rapidly switching between tasks so that all
+                dishes make progress. Parallelism is four chefs, each working on their own dish at the same time.
+                You can have concurrency without parallelism (one chef, many dishes), parallelism without much
+                concurrency (four chefs, each focused on one thing), or both (four chefs, each juggling multiple dishes).
+            </div>
+
+            <h3>Race Conditions</h3>
+
+            <p>
+                When multiple threads (or processes) access shared data, the result can depend on the <em>order</em>
+                and <em>timing</em> of their execution. This is called a <strong>race condition</strong>, and it
+                is one of the most common and insidious bugs in concurrent programming.
+            </p>
+
+            <div class="definition-box">
+                <strong>Race Condition:</strong> A bug that occurs when two or more threads access shared data
+                concurrently, and the final result depends on the unpredictable timing of their execution. The
+                program produces correct results sometimes and incorrect results other times, depending on which
+                thread "wins the race."
+            </div>
+
+            <div class="explanation-box">
+                <h4>A concrete example</h4>
+                <p>
+                    Suppose two threads both want to increment a shared counter that currently holds the value 10:
+                </p>
+                <p>
+                    <strong>Thread A:</strong> Read counter (gets 10) &rarr; Add 1 &rarr; Write counter (writes 11)<br>
+                    <strong>Thread B:</strong> Read counter (gets 10) &rarr; Add 1 &rarr; Write counter (writes 11)
+                </p>
+                <p style="margin-bottom: 0;">
+                    If both threads read the value <em>before</em> either writes, they both read 10, both compute 11,
+                    and both write 11. The counter ends up at 11 instead of the correct value of 12. One increment
+                    is lost. This kind of bug may happen once in a million executions, making it extremely difficult
+                    to reproduce and debug.
+                </p>
+            </div>
+
+            <h3>Locks</h3>
+
+            <div class="definition-box">
+                <strong>Lock (Mutex):</strong> A synchronization mechanism that ensures <strong>mutual exclusion</strong>.
+                Before a thread accesses shared data, it must acquire the lock. If another thread already holds the
+                lock, the requesting thread waits (blocks) until the lock is released. This guarantees that only one
+                thread accesses the shared data at a time.
+            </div>
+
+            <p>
+                Locks solve race conditions, but they come with their own costs. They reduce parallelism (threads
+                spend time waiting instead of working), and they introduce the possibility of a much worse problem:
+                <strong>deadlocks</strong>.
+            </p>
+
+            <h3>Deadlocks</h3>
+
+            <div class="definition-box">
+                <strong>Deadlock:</strong> A situation where two or more threads are permanently blocked, each waiting
+                for a resource held by the other. Neither can proceed, and the system is stuck.
+            </div>
+
+            <div class="explanation-box">
+                <h4>The classic deadlock scenario</h4>
+                <p>
+                    Imagine two resources, X and Y, each protected by its own lock:
+                </p>
+                <p>
+                    <strong>Thread A:</strong> Acquires lock on X, then tries to acquire lock on Y<br>
+                    <strong>Thread B:</strong> Acquires lock on Y, then tries to acquire lock on X
+                </p>
+                <p style="margin-bottom: 0;">
+                    If Thread A grabs X and Thread B grabs Y at roughly the same time, they are stuck. Thread A holds
+                    X and waits for Y (which B holds). Thread B holds Y and waits for X (which A holds). Neither will
+                    ever release their lock because they are both waiting. The system is deadlocked.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Deadlock is like two people meeting in a narrow hallway, each refusing to step aside because they are
+                waiting for the other to move first. Neither moves. They stand there forever (or until someone
+                intervenes). In software, the "intervention" is typically a timeout mechanism or a deadlock detector
+                that kills one of the stuck threads.
+            </div>
+
+            <h3>Hardware Video Decoders</h3>
+
+            <p>
+                Decoding video — decompressing the H.264, H.265, VP9, or AV1 encoded stream back into raw pixel
+                data — is computationally intensive. Doing this entirely in software (running decoder algorithms
+                on general-purpose CPU cores) works, but it consumes significant CPU time and drains battery on
+                mobile devices.
+            </p>
+
+            <p>
+                Modern CPUs and GPUs include <strong>dedicated hardware video decoders</strong> — fixed-function
+                circuits specifically designed to decode video formats. These are not programmable in the general
+                sense; they are purpose-built silicon that can decode video far more efficiently (faster, with less
+                power consumption) than software running on general-purpose cores.
+            </p>
+
+            <div class="key-insight">
+                When you watch a cat video on your phone without the battery draining in minutes, you can thank
+                the hardware video decoder. It is the final link in the chain: the compressed video chunk that
+                traveled from the Petflix Box through the network stack, through the OS, into the decoder circuit,
+                and finally onto your screen as pixels — all in a fraction of a second.
+            </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 5: THE FULL STACK SUMMARY -->
+        <!-- ================================================================ -->
+        <div class="section">
+            <h2>The Full Stack — All Eight Layers</h2>
+
+            <p>
+                Let us step back and see the complete picture. From the moment you click "play" on a cat video
+                to the moment pixels appear on your screen, your request passes through eight distinct layers,
+                each solving a different challenge.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Name</th>
+                        <th>Key Concept</th>
+                        <th>Problem it Solves</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>DNS Routing</td>
+                        <td>Geo-routing, failover</td>
+                        <td>Route user to nearest healthy datacenter</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>API Gateway</td>
+                        <td>Circuit breaker, rate limiting</td>
+                        <td>Prevent cascading failures, manage traffic</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Microservices</td>
+                        <td>Parallel fan-out, backoff</td>
+                        <td>Assemble response from multiple services</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Data &amp; Caching</td>
+                        <td>Consistency spectrum</td>
+                        <td>Fast reads, manage stale data</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>CDN</td>
+                        <td>Adaptive bitrate, per-title encoding</td>
+                        <td>Deliver video from nearby with optimal quality</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Replication</td>
+                        <td>Raft consensus, leader election</td>
+                        <td>Fault tolerance, data consistency</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>VMs / Containers</td>
+                        <td>Kubernetes, auto-scaling</td>
+                        <td>Resource isolation, elastic scaling</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Cores / Threads</td>
+                        <td>Concurrency, parallelism</td>
+                        <td>Efficient hardware utilization</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <img src="slides/full-stack-summary.png" alt="Summary table showing all eight layers of the Petflix architecture from DNS routing down to CPU cores">
+
+            <div class="key-insight">
+                Each layer solves a different challenge, and they all work together seamlessly. No single layer
+                could deliver the experience on its own. DNS routing is useless without the services behind it.
+                Kubernetes is meaningless without applications to orchestrate. Hardware decoders are idle without
+                video data to decode. The power of the system comes from the composition of all eight layers,
+                each doing its part.
+            </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SECTION 6: SUMMARY BOX -->
+        <!-- ================================================================ -->
+        <div class="summary-box">
+            <h3>Key Takeaways</h3>
+            <ul>
+                <li><span class="checkmark">&#10003;</span> <strong>CDNs push content to the edge</strong> — Petflix Boxes inside ISP data centers mean your video travels miles, not thousands of miles.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Per-title encoding</strong> gives each video a custom encoding recipe, optimizing quality-per-bit for its specific visual complexity.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Adaptive Bitrate Streaming</strong> lets the player switch quality levels in real time so you never see a buffering spinner.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>VMAF</strong> measures video quality the way humans perceive it, not just the way math describes it.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Leader-follower replication</strong> keeps data consistent while distributing read load across replicas.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Raft consensus</strong> elects a new leader automatically when one fails, using majority voting to guarantee safety.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>VMs provide strong isolation</strong> (full OS per VM) at the cost of overhead; <strong>containers provide lightweight isolation</strong> (shared kernel) with fast startup.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Kubernetes orchestrates containers at scale</strong> — scheduling, auto-scaling, self-healing, and rolling deployments.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Concurrency is about structure</strong> (dealing with many tasks); <strong>parallelism is about execution</strong> (doing many tasks simultaneously).</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Race conditions, locks, and deadlocks</strong> are fundamental challenges of shared-state concurrency.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Hardware video decoders</strong> are the final link — purpose-built silicon that turns compressed data into pixels efficiently.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>The full eight-layer stack</strong> works as a composed system — each layer depends on and enables the others.</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Petflix Distributed Systems — Supplementary to Lecture 04</p>
+        </footer>
+
+    </div>
+</body>
+</html>

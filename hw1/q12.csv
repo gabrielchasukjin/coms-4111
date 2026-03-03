@@ -1,0 +1,11 @@
+author_name,commit_count,repo_name
+Linus Torvalds,17254,torvalds/linux
+David S. Miller,6481,torvalds/linux
+Takashi Iwai,5789,torvalds/linux
+Chris Lattner,4206,apple/swift
+Al Viro,4158,torvalds/linux
+H Hartley Sweeten,4111,torvalds/linux
+Mark Brown,3948,torvalds/linux
+Doug Gregor,3889,apple/swift
+Arnd Bergmann,3573,torvalds/linux
+Ingo Molnar,3517,torvalds/linux

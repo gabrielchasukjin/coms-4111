@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concurrency, Scheduling, and Conflict Serializability — Part 4</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        .schedule-table { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; }
+        .schedule-table td { padding: 0.5rem 1rem; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Concurrency, Scheduling, and Conflict Serializability</h1>
+            <p class="subtitle">Why interleaving transactions is dangerous, and how conflict graphs keep us safe</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Why Concurrent Transactions? -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Why Concurrent Transactions?</h2>
+
+            <p>So far in this course, we have seen how Write-Ahead Logging (WAL) gives us <strong>Atomicity</strong> and <strong>Durability</strong> — two of the four ACID properties. But there is a massive, practical problem we have not yet addressed: real databases serve <strong>many users simultaneously</strong>. Think about a banking system processing thousands of transfers per second, or an airline reservation system handling bookings from around the world. We simply cannot run transactions one at a time, waiting for each to finish before starting the next. That would be catastrophically slow.</p>
+
+            <p>This brings us to the <strong>Isolation</strong> property of ACID. We need to interleave operations from different transactions for performance, but we must do so in a way that produces correct results — as if the transactions had run one at a time.</p>
+
+            <div class="analogy">
+                Think of a busy restaurant kitchen. You have multiple orders (transactions) being prepared simultaneously. Each order has a sequence of steps (chop vegetables, heat pan, cook, plate). The kitchen interleaves work on multiple orders for efficiency — the chef does not finish one entire meal before touching anything for the next. But if interleaving is done carelessly, ingredients from one order could end up in another order's dish, producing results that no single-order-at-a-time execution would ever produce.
+            </div>
+
+            <h3>The Bank Transfer Example</h3>
+
+            <p>Let us make this concrete with the classic bank example. We have two accounts:</p>
+            <ul>
+                <li><strong>Account A</strong> starts with <strong>$50</strong></li>
+                <li><strong>Account B</strong> starts with <strong>$200</strong></li>
+            </ul>
+
+            <p>And two transactions that need to run:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>T1: Transfer $50 from A to B</h4>
+                    <p style="margin-bottom: 0.5rem;"><code>read(A)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>A = A - 50</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>write(A)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>read(B)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>B = B + 50</code></p>
+                    <p style="margin-bottom: 0;"><code>write(B)</code></p>
+                </div>
+                <div class="visual-item">
+                    <h4>T2: Apply 6% Interest to A and B</h4>
+                    <p style="margin-bottom: 0.5rem;"><code>read(A)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>A = A * 1.06</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>write(A)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>read(B)</code></p>
+                    <p style="margin-bottom: 0.5rem;"><code>B = B * 1.06</code></p>
+                    <p style="margin-bottom: 0;"><code>write(B)</code></p>
+                </div>
+            </div>
+
+            <p>What happens if we run them one at a time?</p>
+
+            <div class="explanation-box">
+                <h4>Serial Order 1: T1 then T2</h4>
+                <p style="margin-bottom: 0.5rem;">After T1: A = $0, B = $250</p>
+                <p style="margin-bottom: 0.5rem;">After T2: A = $0 * 1.06 = <strong>$0</strong>, B = $250 * 1.06 = <strong>$265</strong></p>
+                <p style="margin-bottom: 0;">Total = $265</p>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Serial Order 2: T2 then T1</h4>
+                <p style="margin-bottom: 0.5rem;">After T2: A = $50 * 1.06 = $53, B = $200 * 1.06 = $212</p>
+                <p style="margin-bottom: 0.5rem;">After T1: A = $53 - $50 = <strong>$3</strong>, B = $212 + $50 = <strong>$262</strong></p>
+                <p style="margin-bottom: 0;">Total = $265</p>
+            </div>
+
+            <div class="key-insight">
+                Both serial orders are correct! The bank does not care which one happens — the interest might be applied before or after the transfer, and either outcome is acceptable. What matters is that the final result is equivalent to SOME serial ordering of the transactions.
+            </div>
+
+            <p>The problem appears when we <strong>interleave</strong> operations from T1 and T2 carelessly. Some interleavings produce results (like A = $3, B = $265, total = $268) that do not match <em>any</em> serial order. Money has appeared from nowhere — the database is now in an inconsistent state.</p>
+
+            <img src="slides/concurrent-txns.png" alt="Concurrent transactions motivation — why databases need to run multiple transactions at once">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Schedules — Serial vs. Interleaved -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Schedules — Serial vs. Interleaved</h2>
+
+            <div class="definition-box">
+                <strong>Schedule:</strong> A sequence of operations (reads and writes) from one or more transactions, where the operations of each individual transaction appear in the same order as they are defined in that transaction. A schedule tells us exactly when each operation executes relative to all other operations across all transactions.
+            </div>
+
+            <p>The key constraint on a schedule is that it must <strong>preserve each transaction's internal ordering</strong>. If T1 says "read A, then write A, then read B," every schedule must keep those T1 operations in that order. But operations from <em>different</em> transactions can be placed anywhere relative to each other.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Serial Schedule</h4>
+                    <p>Transactions execute one at a time with <strong>no interleaving</strong>. All of T1's operations finish before any of T2's begin (or vice versa).</p>
+                    <p style="margin-bottom: 0;"><strong>Always correct</strong>, but potentially very slow. If T1 is waiting for a disk read, the CPU sits idle instead of doing useful work for T2.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Interleaved Schedule</h4>
+                    <p>Operations from different transactions are <strong>mixed together</strong>. T1 might do a read, then T2 does a write, then T1 continues.</p>
+                    <p style="margin-bottom: 0;"><strong>May or may not be correct</strong>. Some interleavings produce the same result as a serial schedule; others do not.</p>
+                </div>
+            </div>
+
+            <img src="slides/serial-interleaved.png" alt="Serial vs interleaved schedules — showing how operations from different transactions can be ordered">
+
+            <h3>Schedule A vs. Schedule B</h3>
+
+            <p>The lecture demonstrates this with two specific interleaved schedules, both using A = $50, B = $200 with the same T1 (transfer) and T2 (interest):</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Schedule A (Good Interleaving)</h4>
+                    <p>The interleaving happens to produce the exact same final state as the serial order T1 then T2: A = $0, B = $265.</p>
+                    <p style="margin-bottom: 0;">This schedule is <span class="highlight-text">serializable</span> — even though operations were interleaved, the outcome is indistinguishable from a serial execution.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Schedule B (Bad Interleaving)</h4>
+                    <p>The interleaving produces a final state that does not match T1→T2 <em>or</em> T2→T1. For example, A = $3, B = $265, total = $268.</p>
+                    <p style="margin-bottom: 0;">This schedule is <span class="highlight-text">NOT serializable</span> — no serial execution could ever produce this result. Money was created from nothing.</p>
+                </div>
+            </div>
+
+            <img src="slides/schedule-examples.png" alt="Schedule A and Schedule B examples — good and bad interleavings with concrete values">
+
+            <div class="definition-box">
+                <strong>Equivalent Schedules:</strong> Two schedules are equivalent if they produce the same final database state for <em>every</em> possible initial database state. This is a very strong condition — it is not enough to match on one particular starting point.
+            </div>
+
+            <div class="definition-box">
+                <strong>Serializable Schedule:</strong> An interleaved schedule is serializable if it is equivalent to <em>some</em> serial schedule. It does not have to match a specific serial order — any serial order will do. If the result matches T1→T2, that is fine. If it matches T2→T1, that is also fine. If it matches neither, the schedule is not serializable.
+            </div>
+
+            <div class="key-insight">
+                Serializability is the gold standard for correctness in concurrent transaction processing. The DBMS's job is to allow as much interleaving as possible for performance while guaranteeing that every admitted schedule is serializable.
+            </div>
+
+            <p>The lecture walks through schedules S1 through S6 to build intuition for which interleavings are safe and which are not. The takeaway: you cannot just eyeball a schedule and tell whether it is serializable. We need a systematic method, which is exactly what conflict serializability provides.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Conflicts and Anomalies -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Conflicts and Anomalies</h2>
+
+            <p>Before we can define conflict serializability, we need to precisely understand what a <strong>conflict</strong> is. The general model is simple: transactions perform <code>r(X)</code> (read item X) and <code>w(X)</code> (write item X) operations on data items.</p>
+
+            <div class="definition-box">
+                <strong>Conflict:</strong> Two operations conflict if and only if ALL three conditions hold:
+                <ol style="margin-top: 0.75rem; margin-bottom: 0;">
+                    <li>They belong to <strong>different transactions</strong></li>
+                    <li>They access the <strong>same data item</strong></li>
+                    <li>At least one of them is a <strong>write</strong></li>
+                </ol>
+            </div>
+
+            <p>This gives us exactly three types of conflicts:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Conflict Type</th>
+                        <th>Operations</th>
+                        <th>Intuition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Read-Write (RW)</strong></td>
+                        <td>T<sub>i</sub> reads X, then T<sub>j</sub> writes X</td>
+                        <td>T<sub>i</sub>'s read value depends on whether it happens before or after T<sub>j</sub>'s write. Swapping the order changes what T<sub>i</sub> sees.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write-Read (WR)</strong></td>
+                        <td>T<sub>i</sub> writes X, then T<sub>j</sub> reads X</td>
+                        <td>T<sub>j</sub> reads the value T<sub>i</sub> wrote. If we swap the order, T<sub>j</sub> reads the old value instead. The outcome changes.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write-Write (WW)</strong></td>
+                        <td>T<sub>i</sub> writes X, then T<sub>j</sub> writes X</td>
+                        <td>The final value of X is whatever was written last. Swapping the order changes which write "wins."</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="problem-box">
+                <h4>What about Read-Read?</h4>
+                <p style="margin-bottom: 0;">Two reads on the same item from different transactions are <strong>NOT a conflict</strong>. Reads do not change data, so the order in which two reads happen has no effect on the outcome. You can swap them freely without changing anything. This is why the definition requires "at least one is a write."</p>
+            </div>
+
+            <img src="slides/conflict-types.png" alt="The three conflict types: Read-Write (RW), Write-Read (WR), and Write-Write (WW)">
+
+            <div class="analogy">
+                Think of a shared Google Doc. Two people reading the same paragraph at the same time is perfectly fine — neither changes anything. But if one person is editing while another is reading, the reader might see a half-finished edit (RW/WR conflict). And if two people try to edit the same paragraph simultaneously, one person's changes will overwrite the other's (WW conflict).
+            </div>
+
+            <h3>Conflicts vs. Anomalies: A Crucial Distinction</h3>
+
+            <p>This is a subtle but important point that the lecture emphasizes:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Conflict</h4>
+                    <p style="margin-bottom: 0;">A <strong>potential</strong> problem. Two operations that <em>could</em> cause issues depending on their relative ordering. A conflict is a structural property of the schedule — it identifies pairs of operations where order matters.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Anomaly</h4>
+                    <p style="margin-bottom: 0;">An <strong>actual</strong> problem. A conflict that, given the specific ordering in the schedule, leads to an incorrect or non-serializable result. An anomaly is what happens when a conflict goes wrong.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                Not every conflict causes an anomaly, but every anomaly arises from a conflict. Conflicts are necessary but not sufficient conditions for anomalies. A schedule can have many conflicts and still be serializable, as long as those conflicts do not combine to create a cycle (as we will see shortly).
+            </div>
+
+            <img src="slides/conflicts-vs-anomalies.png" alt="Conflicts vs anomalies — showing that conflicts are potential problems while anomalies are actual problems">
+
+            <div class="explanation-box">
+                <h4>Why does this distinction matter?</h4>
+                <p style="margin-bottom: 0;">Because conflict serializability works by reasoning about conflicts — not by checking whether anomalies actually occurred. This makes it <em>conservative</em>: it may reject some schedules that would actually produce correct results (because the conflicts did not happen to cause anomalies in that particular case). But it <em>never</em> accepts a schedule that produces incorrect results. This is a deliberate engineering tradeoff — safety over maximum concurrency.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Conflict Serializability -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Conflict Serializability</h2>
+
+            <p>Now we reach the core question: given an interleaved schedule, <strong>how do we determine if it is serializable?</strong></p>
+
+            <p>One approach would be to test <em>general</em> serializability: check whether the schedule produces the same result as some serial schedule for <em>every</em> possible initial database state. But this is completely impractical — there are infinitely many possible initial states. We need a different approach.</p>
+
+            <div class="definition-box">
+                <strong>Conflict Serializability:</strong> A schedule is <strong>conflict serializable</strong> if it can be transformed into a serial schedule by repeatedly swapping the order of adjacent operations that do <strong>not</strong> conflict. In other words, if you can "untangle" the interleaving into a serial order by only swapping operations whose order does not matter, the schedule is conflict serializable.
+            </div>
+
+            <div class="analogy">
+                Imagine a line of people waiting at a counter. Some pairs of people have a dependency (one must go before the other — perhaps one is writing a check that the other needs to deposit). Other pairs have no dependency and can be freely swapped. Conflict serializability asks: can you rearrange this line into a grouping where all of Person A's tasks are together, then all of Person B's, etc. — only by swapping people who have no dependency between them?
+            </div>
+
+            <p>Swapping adjacent non-conflicting operations one at a time is tedious. Fortunately, there is an elegant equivalent test:</p>
+
+            <div class="magic-connection">
+                <h4>The Key Theorem</h4>
+                <p style="margin-bottom: 0;">A schedule is conflict serializable <strong>if and only if</strong> its <strong>conflict graph</strong> (also called a serialization graph or precedence graph) is <strong>acyclic</strong>. This transforms the problem from "try all possible swap sequences" into "check a graph for cycles" — which is fast and mechanical.</p>
+            </div>
+
+            <h3>Building a Conflict Graph</h3>
+
+            <p>The conflict graph captures the ordering constraints that conflicts impose. Here is how to build one:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Create a node for each transaction</strong>
+                </div>
+                <p style="margin-bottom: 0;">If your schedule involves transactions T1, T2, and T3, draw three nodes.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>For each conflict, draw a directed edge</strong>
+                </div>
+                <p style="margin-bottom: 0;">For every pair of conflicting operations, draw an edge from the transaction whose operation comes <strong>first</strong> in the schedule to the transaction whose operation comes <strong>second</strong>. The edge means: "in any equivalent serial schedule, this transaction must come before that one."</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Check for cycles</strong>
+                </div>
+                <p style="margin-bottom: 0;">If the graph has <strong>no cycles</strong>, the schedule is conflict serializable. If there is <strong>any cycle</strong>, it is NOT conflict serializable.</p>
+            </div>
+
+            <img src="slides/conflict-serializability.png" alt="Conflict serializability definition and the equivalence with acyclic conflict graphs">
+
+            <div class="explanation-box">
+                <h4>Why do cycles mean non-serializability?</h4>
+                <p>A cycle like T1 → T2 → T1 means: "T1 must come before T2 (because of some conflict), AND T2 must come before T1 (because of some other conflict)." This is a logical contradiction — T1 cannot be both before and after T2 in a serial schedule. It is like saying "I must finish breakfast before lunch, and I must finish lunch before breakfast." No linear ordering satisfies both constraints.</p>
+                <p style="margin-bottom: 0;">Conversely, if there are no cycles, all the ordering constraints are compatible, and we can find at least one serial ordering that respects all of them.</p>
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Acyclic (Good)</h4>
+                    <p style="margin-bottom: 0.5rem;">T1 → T2 → T3</p>
+                    <p style="margin-bottom: 0;">No cycles. Equivalent serial order: T1, T2, T3. The schedule is conflict serializable.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Cyclic (Bad)</h4>
+                    <p style="margin-bottom: 0.5rem;">T1 → T2 → T1 (cycle!)</p>
+                    <p style="margin-bottom: 0;">Cycle detected. No serial ordering can satisfy both T1-before-T2 and T2-before-T1. NOT conflict serializable.</p>
+                </div>
+            </div>
+
+            <img src="slides/conflict-graphs.png" alt="Good conflict graph (acyclic, DAG) vs bad conflict graph (contains a cycle)">
+
+            <div class="key-insight">
+                The beauty of conflict graphs is that they reduce a complex question ("does this interleaved schedule produce correct results?") to a simple graph property ("does this directed graph have a cycle?"). Cycle detection is a well-studied algorithm that runs in linear time — O(V + E), where V is the number of transactions and E is the number of conflict edges.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: DAGs and Topological Orderings -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. DAGs and Topological Orderings</h2>
+
+            <p>When a conflict graph has no cycles, we have established that the schedule is conflict serializable. But <em>which</em> serial schedule is it equivalent to? This is where <strong>topological ordering</strong> comes in.</p>
+
+            <div class="definition-box">
+                <strong>DAG (Directed Acyclic Graph):</strong> A directed graph with no cycles. If a conflict graph is acyclic, it is a DAG. This is the "safe" case — the schedule is conflict serializable.
+            </div>
+
+            <div class="definition-box">
+                <strong>Topological Ordering:</strong> A linear ordering of all nodes in a DAG such that for every directed edge from node u to node v, u appears before v in the ordering. In other words, all edges point "forward" (left to right) in the linear sequence.
+            </div>
+
+            <p>A topological ordering of the conflict graph gives us <strong>the equivalent serial schedule</strong>. The transactions should be executed in this order to produce the same result as the interleaved schedule.</p>
+
+            <h3>Algorithm for Topological Sort</h3>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Find a node with no incoming edges</strong>
+                </div>
+                <p style="margin-bottom: 0;">This node has no transaction that must precede it. It can safely go first.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Add that node to the ordering and remove it from the graph</strong>
+                </div>
+                <p style="margin-bottom: 0;">Also remove all of its outgoing edges, since the constraints involving this node are now satisfied.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Repeat until all nodes are placed</strong>
+                </div>
+                <p style="margin-bottom: 0;">Each iteration, pick any node with no remaining incoming edges. If at any point no such node exists (but nodes remain), the graph has a cycle and topological sort is impossible.</p>
+            </div>
+
+            <div class="problem-box">
+                <h4>Is the topological ordering unique?</h4>
+                <p style="margin-bottom: 0;"><strong>Not necessarily.</strong> If at any step there are multiple nodes with no incoming edges, you can pick any of them. Different choices lead to different (but equally valid) topological orderings. This means there may be <strong>multiple equivalent serial schedules</strong>, and the interleaved schedule is equivalent to all of them.</p>
+            </div>
+
+            <div class="analogy">
+                The lecture illustrates this with a project dependencies example. Suppose you have tasks A through F, where some tasks depend on others (e.g., "B depends on A" means you must finish A before starting B). These dependencies form a DAG. A topological sort gives you a valid order to complete all tasks while respecting all dependencies. If A and C are both independent tasks with no prerequisites, you can do either one first — leading to multiple valid orderings.
+            </div>
+
+            <img src="slides/dags-topological.png" alt="DAGs and topological orderings — project dependency example showing multiple valid orderings">
+
+            <div class="magic-connection">
+                <h4>Connecting It All Together</h4>
+                <p>Here is the complete pipeline for determining whether an interleaved schedule is safe:</p>
+                <ol>
+                    <li><strong>Identify all conflicts</strong> in the schedule (pairs of operations from different transactions on the same item where at least one is a write)</li>
+                    <li><strong>Build the conflict graph</strong> (nodes = transactions, edges = conflict orderings)</li>
+                    <li><strong>Check for cycles</strong> — if there is a cycle, the schedule is NOT conflict serializable, and the DBMS must abort one of the transactions and retry</li>
+                    <li><strong>If acyclic</strong>, perform a topological sort to find the equivalent serial schedule(s)</li>
+                </ol>
+                <p style="margin-bottom: 0;">This is exactly what real database systems do (conceptually) to ensure the Isolation property of ACID.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Worked Example — Five Transactions -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Worked Example — Five Transactions</h2>
+
+            <p>Let us walk through the complete example from the lecture to cement the process. We have five transactions and the following interleaved schedule:</p>
+
+            <div class="definition-box">
+                <strong>Schedule S1:</strong> <code>w1(A), r2(A), w1(B), w3(C), r2(C), r4(B), w2(D), w4(E), r5(D), w5(E)</code>
+            </div>
+
+            <p>Our goal: determine whether S1 is conflict serializable, and if so, find an equivalent serial schedule.</p>
+
+            <!-- Step 1 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Identify All Conflicts (by Data Item)</strong>
+                </div>
+                <p>Systematically go through each data item and find pairs of operations from different transactions where at least one is a write:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Item</th>
+                            <th>Operation 1</th>
+                            <th>Operation 2</th>
+                            <th>Type</th>
+                            <th>Edge</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>A</strong></td>
+                            <td><code>w1(A)</code></td>
+                            <td><code>r2(A)</code></td>
+                            <td>WR</td>
+                            <td>T1 → T2</td>
+                        </tr>
+                        <tr>
+                            <td><strong>B</strong></td>
+                            <td><code>w1(B)</code></td>
+                            <td><code>r4(B)</code></td>
+                            <td>WR</td>
+                            <td>T1 → T4</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C</strong></td>
+                            <td><code>w3(C)</code></td>
+                            <td><code>r2(C)</code></td>
+                            <td>WR</td>
+                            <td>T3 → T2</td>
+                        </tr>
+                        <tr>
+                            <td><strong>D</strong></td>
+                            <td><code>w2(D)</code></td>
+                            <td><code>r5(D)</code></td>
+                            <td>WR</td>
+                            <td>T2 → T5</td>
+                        </tr>
+                        <tr>
+                            <td><strong>E</strong></td>
+                            <td><code>w4(E)</code></td>
+                            <td><code>w5(E)</code></td>
+                            <td>WW</td>
+                            <td>T4 → T5</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-bottom: 0;">Notice: all five data items (A, B, C, D, E) contribute exactly one conflict each in this example. In general, a single data item can produce multiple conflicts if many transactions access it.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Build the Conflict Graph</strong>
+                </div>
+                <p>Nodes: T1, T2, T3, T4, T5</p>
+                <p>Edges (from the conflicts identified above):</p>
+                <ul style="margin-bottom: 0;">
+                    <li>T1 → T2 (because of <code>w1(A)</code> before <code>r2(A)</code>)</li>
+                    <li>T1 → T4 (because of <code>w1(B)</code> before <code>r4(B)</code>)</li>
+                    <li>T3 → T2 (because of <code>w3(C)</code> before <code>r2(C)</code>)</li>
+                    <li>T2 → T5 (because of <code>w2(D)</code> before <code>r5(D)</code>)</li>
+                    <li>T4 → T5 (because of <code>w4(E)</code> before <code>w5(E)</code>)</li>
+                </ul>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Check for Cycles</strong>
+                </div>
+                <p>Let us trace all possible paths:</p>
+                <ul>
+                    <li>From T1: T1 → T2 → T5 (dead end). T1 → T4 → T5 (dead end).</li>
+                    <li>From T3: T3 → T2 → T5 (dead end).</li>
+                    <li>From T2: T2 → T5 (dead end).</li>
+                    <li>From T4: T4 → T5 (dead end).</li>
+                    <li>From T5: no outgoing edges.</li>
+                </ul>
+                <p style="margin-bottom: 0;">No path ever leads back to a node we already visited. <strong>The graph is ACYCLIC</strong>. Therefore, schedule S1 is <strong>conflict serializable</strong>.</p>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Find the Equivalent Serial Schedule (Topological Sort)</strong>
+                </div>
+                <p>Apply the topological sort algorithm:</p>
+                <ul>
+                    <li><strong>Iteration 1:</strong> Nodes with no incoming edges: T1, T3. Pick T3. Remove T3 and edge T3 → T2.</li>
+                    <li><strong>Iteration 2:</strong> Nodes with no incoming edges: T1. Pick T1. Remove T1 and edges T1 → T2, T1 → T4.</li>
+                    <li><strong>Iteration 3:</strong> Nodes with no incoming edges: T2, T4. Pick T4. Remove T4 and edge T4 → T5.</li>
+                    <li><strong>Iteration 4:</strong> Nodes with no incoming edges: T2. Pick T2. Remove T2 and edge T2 → T5.</li>
+                    <li><strong>Iteration 5:</strong> Only T5 remains. Pick T5.</li>
+                </ul>
+                <p>One valid topological ordering: <strong>T3, T1, T4, T2, T5</strong></p>
+                <p style="margin-bottom: 0;">But this is not the only one! If in iteration 1 we had picked T1 first, and in iteration 3 picked T2 first, we would get <strong>T1, T3, T2, T4, T5</strong>. Both are valid equivalent serial schedules for S1.</p>
+            </div>
+
+            <img src="slides/five-txn-example.png" alt="Five-transaction worked example showing the conflict graph, cycle check, and topological sort">
+
+            <div class="key-insight">
+                This worked example illustrates the full pipeline: (1) extract conflicts from the schedule, (2) build the conflict graph, (3) check for cycles, and (4) topological sort if acyclic. Practice this process until it becomes mechanical — it is one of the most testable skills in this course.
+            </div>
+
+            <div class="explanation-box">
+                <h4>What if the graph HAD a cycle?</h4>
+                <p style="margin-bottom: 0;">If we found a cycle — say T1 → T2 → T4 → T1 — then no topological ordering exists and the schedule is not conflict serializable. In practice, the DBMS would detect this situation and <strong>abort</strong> one of the transactions involved in the cycle. The aborted transaction is rolled back (using the WAL undo mechanisms from earlier lectures) and retried later. Choosing <em>which</em> transaction to abort is called the <strong>victim selection</strong> problem, and different systems use different strategies (youngest transaction, one with the least work done, etc.).</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>Concurrent transactions are essential</strong> — databases serve many users, and serial execution is too slow. Interleaving gives us performance.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Schedules can be serial or interleaved</strong> — serial schedules are always correct but slow; interleaved schedules may or may not be correct.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>A serializable schedule</strong> is one whose result matches some serial schedule. This is the correctness standard.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflicts arise</strong> when two operations from different transactions access the same data item and at least one is a write (RW, WR, or WW).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflicts are potential problems; anomalies are actual problems.</strong> Not every conflict causes an anomaly, but every anomaly comes from a conflict.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflict serializability</strong> is tested via conflict graphs: nodes = transactions, edges = conflict orderings.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Acyclic conflict graph = safe.</strong> Topological sort gives the equivalent serial ordering.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Cyclic conflict graph = unsafe.</strong> The DBMS must abort a transaction to break the cycle.</li>
+                </ul>
+            </div>
+
+            <img src="slides/lecture-summary.png" alt="Lecture summary — key concepts from concurrency and serializability">
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Concurrency &amp; Serializability — Supplementary to Lecture 04</p>
+        </footer>
+
+    </div>
+</body>
+</html>

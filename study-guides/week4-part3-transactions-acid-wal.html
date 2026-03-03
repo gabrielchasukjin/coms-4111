@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions, ACID, and Write-Ahead Logging — Interactive Study Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+
+        /* ── Interactive additions ── */
+        .interactive-block {
+            background: #fff; border: 2px solid #e5e5e5; border-radius: 4px;
+            padding: 1.75rem; margin: 2rem 0; position: relative;
+        }
+        .interactive-block::before {
+            content: 'INTERACTIVE'; position: absolute; top: -10px; left: 16px;
+            background: #000; color: #fff; font-size: 0.65rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 2px; letter-spacing: 1px;
+        }
+        .interactive-block h4 { margin-top: 0; }
+
+        .sim-btn {
+            padding: 8px 18px; font-size: 0.85rem; font-weight: 600;
+            background: #000; color: #fff; border: none; border-radius: 3px;
+            cursor: pointer; font-family: inherit; transition: background 0.2s;
+            margin-right: 8px; margin-top: 8px;
+        }
+        .sim-btn:hover { background: #333; }
+        .sim-btn:disabled { background: #ccc; cursor: default; }
+        .sim-btn.outline { background: #fff; color: #000; border: 1.5px solid #000; }
+        .sim-btn.outline:hover { background: #f5f5f5; }
+
+        .quiz-block {
+            background: #fafafa; border: 2px solid #e5e5e5; border-radius: 4px;
+            padding: 1.75rem; margin: 2rem 0; position: relative;
+        }
+        .quiz-block::before {
+            content: 'CHECK YOUR UNDERSTANDING'; position: absolute; top: -10px; left: 16px;
+            background: #000; color: #fff; font-size: 0.65rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 2px; letter-spacing: 1px;
+        }
+        .quiz-block .q { font-weight: 600; margin-bottom: 1rem; margin-top: 0.5rem; }
+        .quiz-opt {
+            display: block; width: 100%; text-align: left;
+            background: #fff; border: 1.5px solid #e5e5e5; border-radius: 3px;
+            padding: 10px 14px; margin-bottom: 8px; cursor: pointer;
+            font-size: 0.9rem; font-family: inherit; transition: all 0.15s; color: #333;
+        }
+        .quiz-opt:hover { border-color: #000; background: #f9f9f9; }
+        .quiz-opt.correct { border-color: #2d7a3a; background: #eaf7ec; color: #2d7a3a; }
+        .quiz-opt.wrong { border-color: #c0392b; background: #fdf0ef; color: #c0392b; }
+        .quiz-opt:disabled { cursor: default; opacity: 0.7; }
+        .quiz-feedback {
+            margin-top: 12px; padding: 12px 14px; border-radius: 3px;
+            font-size: 0.88rem; display: none; line-height: 1.6;
+        }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.correct-fb { background: #eaf7ec; border-left: 3px solid #2d7a3a; color: #1a5c2a; }
+        .quiz-feedback.wrong-fb { background: #fdf0ef; border-left: 3px solid #c0392b; color: #8b1a1a; }
+
+        .scenario-card {
+            background: #fff; border: 1.5px solid #e5e5e5; border-radius: 4px;
+            padding: 1.25rem; margin: 0.75rem 0; cursor: pointer; transition: all 0.2s;
+        }
+        .scenario-card:hover { border-color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .scenario-card.active { border-color: #000; background: #fafafa; }
+        .scenario-card h4 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+        .scenario-card p { margin: 0; font-size: 0.88rem; color: #555; }
+
+        .progress-dots { display: flex; gap: 8px; margin: 1rem 0; }
+        .progress-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #e5e5e5; transition: background 0.3s;
+        }
+        .progress-dot.active { background: #000; }
+        .progress-dot.done { background: #2d7a3a; }
+
+        .real-example {
+            background: #f0f7ff; border-left: 3px solid #2c5282; padding: 1.5rem;
+            margin: 1.75rem 0; border-radius: 2px;
+        }
+        .real-example h4 { margin-top: 0; color: #2c5282; }
+        .real-example p { color: #2d3748; }
+
+        .wal-step {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 14px; margin: 8px 0; border-radius: 4px;
+            border: 1.5px solid #e5e5e5; background: #fff;
+            opacity: 0.35; transition: all 0.4s;
+        }
+        .wal-step.active { opacity: 1; border-color: #000; background: #fafafa; }
+        .wal-step.done { opacity: 0.6; border-color: #2d7a3a; }
+        .wal-step .step-icon {
+            width: 36px; height: 36px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 0.85rem;
+            background: #f5f5f5; flex-shrink: 0; border: 1.5px solid #e5e5e5;
+            font-weight: 700; color: #666;
+        }
+        .wal-step.active .step-icon { background: #000; border-color: #000; color: #fff; }
+        .wal-step.done .step-icon { background: #2d7a3a; border-color: #2d7a3a; color: #fff; }
+        .wal-step .step-content h4 { margin: 0 0 4px 0; font-size: 0.95rem; }
+        .wal-step .step-content p { margin: 0; font-size: 0.85rem; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Transactions, ACID &amp; Write-Ahead Logging</h1>
+            <p class="subtitle">How databases guarantee your data survives crashes and stays consistent &mdash; with real-world examples and hands-on simulations</p>
+        </header>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 1: WHY SHOULD YOU CARE             -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>1. Why Should You Care?</h2>
+
+            <p>Before we talk about any theory, let's talk about real disasters that happened because databases didn't handle this correctly.</p>
+
+            <div class="real-example">
+                <h4>Knight Capital Group &mdash; August 1, 2012</h4>
+                <p>A software bug caused Knight Capital's trading system to execute <strong>millions of unintended stock trades</strong> in 45 minutes. The system was buying high and selling low on 154 different stocks. By the time anyone pulled the plug, the firm had lost <strong>$440 million</strong> &mdash; effectively destroying the company overnight.</p>
+                <p style="margin-bottom: 0;">The root cause? A deployment error left old code running alongside new code, and the system had no transactional safeguards to ensure trades were executed as all-or-nothing units. Partial, inconsistent state crept in, and chaos followed.</p>
+            </div>
+
+            <div class="real-example">
+                <h4>Your Everyday Life</h4>
+                <p>You Venmo your friend $50 for dinner. Your balance drops by $50, but <em>right at that moment</em> Venmo's server crashes. When it restarts: did your friend get the $50? Did your balance go back up? Or is the money just... gone?</p>
+                <p style="margin-bottom: 0;">This is exactly the problem transactions solve. Without them, every app that touches money, medical records, flight bookings, or grades is a ticking time bomb.</p>
+            </div>
+
+            <p>Transactions are not some abstract database concept. They are the reason your bank account doesn't randomly lose money, your flight reservation doesn't double-book your seat, and your medical records don't get half-updated with someone else's data.</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 2: OLTP vs OLAP                    -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>2. Two Kinds of Database Work</h2>
+
+            <p>Not all database usage is the same. When a Visa card is swiped at a grocery store, the system needs to check your balance, authorize the charge, and update the records &mdash; all in <strong>milliseconds</strong>, while thousands of other people are swiping their cards at the exact same moment.</p>
+
+            <p>Compare that to a data analyst at Netflix who runs a query like "What was our subscriber growth by country last quarter?" This query might scan billions of rows and take minutes, but nobody is waiting with their credit card out.</p>
+
+            <img src="../week 4/slides/oltp-vs-olap.png" alt="OLTP vs OLAP comparison">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>OLTP &mdash; Online Transaction Processing</h4>
+                    <p><strong>Think:</strong> the cash register, the ATM, the "Buy Now" button.</p>
+                    <ul>
+                        <li>Many short, fast operations</li>
+                        <li>Reads AND writes</li>
+                        <li>Millisecond latency &mdash; users are waiting</li>
+                        <li>Thousands of users at once</li>
+                    </ul>
+                    <p style="margin-bottom: 0;"><strong>Real examples:</strong> Visa processes <span class="highlight-text">65,000 transactions per second</span>. Uber handles millions of ride requests daily. Every "Add to Cart" on Amazon is an OLTP transaction.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>OLAP &mdash; Online Analytical Processing</h4>
+                    <p><strong>Think:</strong> the quarterly business report, the recommendation model.</p>
+                    <ul>
+                        <li>Few complex queries</li>
+                        <li>Mostly reads (scanning huge datasets)</li>
+                        <li>Seconds to hours &mdash; nobody staring at a spinner</li>
+                        <li>A handful of analysts</li>
+                    </ul>
+                    <p style="margin-bottom: 0;"><strong>Real examples:</strong> "Which products have declining margins?" "What content should we recommend to cat video watchers?" Training ML models on user behavior data.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                This entire lecture is about the OLTP world &mdash; where thousands of users are simultaneously reading and writing, any operation could crash mid-flight, and correctness is non-negotiable.
+            </div>
+
+            <div class="quiz-block" id="q1">
+                <p class="q">A bank needs to apply 6% interest to 10 million savings accounts at the end of the month. Is this OLTP or OLAP?</p>
+                <button class="quiz-opt" onclick="checkQ('q1',this,false)">A. OLAP &mdash; it's a batch job scanning lots of data</button>
+                <button class="quiz-opt" onclick="checkQ('q1',this,true)">B. OLTP &mdash; it's writing to every account and correctness is critical</button>
+                <button class="quiz-opt" onclick="checkQ('q1',this,false)">C. Neither &mdash; this is just a scheduled task</button>
+                <div class="quiz-feedback" id="q1-fb"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 3: WHAT IS A TRANSACTION?          -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>3. What Is a Transaction?</h2>
+
+            <div class="definition-box">
+                <strong>Transaction:</strong> A sequence of one or more database operations that is treated as a <strong>single, indivisible unit of work</strong>. Either ALL of the operations succeed and become permanent, or NONE of them do.
+            </div>
+
+            <p>Let's make this viscerally concrete. Forget databases for a second and think about your real life.</p>
+
+            <div class="real-example">
+                <h4>The Airline Booking</h4>
+                <p>You're booking a round-trip flight from New York to Tokyo. The booking involves three steps:</p>
+                <ol>
+                    <li><strong>Reserve seat on NYC &rarr; Tokyo flight</strong></li>
+                    <li><strong>Reserve seat on Tokyo &rarr; NYC return flight</strong></li>
+                    <li><strong>Charge your credit card $1,200</strong></li>
+                </ol>
+                <p>What if the system completes step 1 and 3, but step 2 fails because the return flight is full? You've been charged $1,200, you have a one-way ticket to Tokyo, and no way home.</p>
+                <p style="margin-bottom: 0;">A transaction ensures: either all three steps succeed (you get both flights and you're charged), or none of them happen (no flights, no charge). There is no in-between.</p>
+            </div>
+
+            <img src="../week 4/slides/transaction-sql.png" alt="Transaction syntax in SQL">
+
+            <div class="explanation-box">
+                <h4>Transaction Syntax in SQL</h4>
+                <p style="font-family: 'SF Mono', monospace; font-size: 0.9rem; line-height: 2; margin-bottom: 0;">
+                    <code>START TRANSACTION;</code><br>
+                    &nbsp;&nbsp;<code>UPDATE accounts SET balance = balance - 50 WHERE id = 'alice';</code><br>
+                    &nbsp;&nbsp;<code>UPDATE accounts SET balance = balance + 50 WHERE id = 'bob';</code><br>
+                    <code>COMMIT;</code> &mdash; make both changes permanent<br>
+                    <em>(or <code>ROLLBACK;</code> &mdash; discard everything, as if nothing happened)</em>
+                </p>
+            </div>
+
+            <h3>The Bank Interest Problem</h3>
+
+            <p>A bank needs to apply 6% annual interest to every savings account. There are 1,000 accounts. The transaction reads each balance, computes <code>new_balance = old_balance &times; 1.06</code>, and writes it back.</p>
+
+            <img src="../week 4/slides/bank-interest-crash.png" alt="Bank interest crash scenario">
+
+            <div class="problem-box">
+                <h4>The Crash Problem</h4>
+                <p>The system crashes after updating 500 of the 1,000 accounts.</p>
+                <ul>
+                    <li>500 customers got their 6% interest &mdash; their balances are updated</li>
+                    <li>500 customers did NOT get interest &mdash; their balances are unchanged</li>
+                </ul>
+                <p style="margin-bottom: 0;">This is a <strong>lawsuit waiting to happen</strong>. Some customers got free money, others got shortchanged, and the bank's books don't balance.</p>
+            </div>
+
+            <div class="analogy">
+                Think of a transaction like a light switch. It's either ON or OFF. There is no "halfway flipped" state. If something interrupts you mid-flip, the switch must end up in one of the two valid positions &mdash; never stuck in between.
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 4: ACID                            -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>4. The ACID Properties</h2>
+
+            <p>ACID is the set of four guarantees that every serious transactional database provides. Each letter addresses a different way things can go wrong.</p>
+
+            <img src="../week 4/slides/acid-properties.png" alt="The four ACID properties">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>A &mdash; Atomicity</h4>
+                    <p><strong>"All or nothing."</strong></p>
+                    <p>Either every operation succeeds, or none take effect. If the bank interest crashes after 500 accounts, atomicity rolls back all 500. Zero accounts get interest, not half.</p>
+                    <p style="margin-bottom:0;"><strong>Real life:</strong> When you withdraw cash from an ATM, either the machine dispenses cash AND your balance decreases, or neither happens. You never get charged without receiving cash.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>C &mdash; Consistency</h4>
+                    <p><strong>"Valid state to valid state."</strong></p>
+                    <p>The database starts consistent and ends consistent. All constraints hold. Money doesn't appear from nowhere or vanish.</p>
+                    <p style="margin-bottom:0;"><strong>Real life:</strong> In a bank transfer, total money across all accounts is the same before and after. Alice had $100, Bob had $200 (total $300) &mdash; after any transfer the total is still $300.</p>
+                </div>
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>I &mdash; Isolation</h4>
+                    <p><strong>"No interference."</strong></p>
+                    <p>Concurrent transactions don't see each other's half-finished work. Each executes as if it were the only one running.</p>
+                    <p style="margin-bottom:0;"><strong>Real life:</strong> Two bank tellers processing transfers simultaneously can't accidentally double-spend the same $100. Each teller sees a consistent view.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>D &mdash; Durability</h4>
+                    <p><strong>"Committed = permanent."</strong></p>
+                    <p>Once you see "Transaction committed," the changes survive anything &mdash; power outage, server crash, earthquake.</p>
+                    <p style="margin-bottom:0;"><strong>Real life:</strong> Once the ATM says "Withdrawal complete" and you have cash in hand, your bank can't later say "actually, that didn't happen."</p>
+                </div>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Notice something?</h4>
+                <p>Two of the four &mdash; <strong>Atomicity</strong> and <strong>Durability</strong> &mdash; are both enforced by the same mechanism: <strong>Write-Ahead Logging (WAL)</strong>. This is not a coincidence. WAL is the workhorse that makes crash recovery possible.</p>
+                <p style="margin-bottom: 0;"><strong>Isolation</strong> is enforced by locking and serializability (next lecture). <strong>Consistency</strong> is enforced by application logic and constraints.</p>
+            </div>
+
+            <img src="../week 4/slides/acid-challenges.png" alt="ACID challenges in practice">
+
+            <div class="quiz-block" id="q2">
+                <p class="q">The Venmo crash scenario from the intro &mdash; you sent $50, server crashed, money might be "gone." Which ACID property specifically prevents this?</p>
+                <button class="quiz-opt" onclick="checkQ('q2',this,true)">A. Atomicity &mdash; the transfer either fully completes or fully rolls back</button>
+                <button class="quiz-opt" onclick="checkQ('q2',this,false)">B. Consistency &mdash; the total money must be conserved</button>
+                <button class="quiz-opt" onclick="checkQ('q2',this,false)">C. Isolation &mdash; other users shouldn't see the partial transfer</button>
+                <button class="quiz-opt" onclick="checkQ('q2',this,false)">D. Durability &mdash; once confirmed, the transfer is permanent</button>
+                <div class="quiz-feedback" id="q2-fb"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 5: PHYSICAL LOGGING                -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>5. Physical Logging &mdash; The Building Block</h2>
+
+            <p>Before we get to WAL, we need the tool it uses: <strong>physical logging</strong>. The idea is beautifully simple.</p>
+
+            <div class="definition-box">
+                <strong>Physical Logging:</strong> Before modifying any data on disk, first write a log record describing exactly what the change is. This record captures enough information to both <em>undo</em> and <em>redo</em> the change.
+            </div>
+
+            <div class="real-example">
+                <h4>The Home Renovation Analogy</h4>
+                <p>You're remodeling your kitchen. Before you rip out the old countertop, you take a photo of how it looks (<strong>OldValue</strong>). Then a photo of the design plan for the new one (<strong>NewValue</strong>). You write both in a notebook with the room name and exact location.</p>
+                <p style="margin-bottom: 0;">If the contractor ghosts you mid-renovation, you use the "before" photo to restore the original (UNDO). If the renovation was completed but someone questions it, you use the "after" photo to verify or redo it (REDO). That notebook is the log.</p>
+            </div>
+
+            <img src="../week 4/slides/physical-logging.png" alt="Physical logging concept">
+
+            <div class="explanation-box">
+                <h4>What a Log Record Looks Like</h4>
+                <p style="font-family: 'SF Mono', monospace; font-size: 0.95rem; margin-bottom: 0.75rem;">
+                    <code>[TransactionID, PageID, Offset, OldValue, NewValue]</code>
+                </p>
+                <ul>
+                    <li><strong>TransactionID:</strong> Which transaction made this change (e.g., "T1")</li>
+                    <li><strong>PageID:</strong> Which page of the database file was modified</li>
+                    <li><strong>Offset:</strong> Where on that page the change happened</li>
+                    <li><strong>OldValue:</strong> What was there before &mdash; needed to UNDO</li>
+                    <li><strong>NewValue:</strong> What we changed it to &mdash; needed to REDO</li>
+                </ul>
+            </div>
+
+            <p>For the bank example, updating account #1 from $1,000 to $1,060 creates:</p>
+
+            <p style="font-family: 'SF Mono', monospace; font-size: 0.9rem; background: #f5f5f5; padding: 1rem; border-radius: 3px;">
+                [T1, Page5, Offset12, <strong>$1000</strong>, <strong>$1060</strong>]
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>UNDO &mdash; Roll Back</h4>
+                    <p>Restore the <strong>OldValue</strong>. Used when a transaction crashed before committing. Its partial changes must be erased.</p>
+                    <p style="margin-bottom:0;"><em>"The renovation was never finished. Put the old countertop back."</em></p>
+                </div>
+                <div class="visual-item">
+                    <h4>REDO &mdash; Replay Forward</h4>
+                    <p>Apply the <strong>NewValue</strong>. Used when a transaction committed but data pages might not be on disk.</p>
+                    <p style="margin-bottom:0;"><em>"The renovation was approved and paid for. Make sure the new countertop is installed."</em></p>
+                </div>
+            </div>
+
+            <div class="quiz-block" id="q3">
+                <p class="q">A log record says [T7, Page12, Offset5, "John", "Jonathan"]. T7 crashed before committing. What does recovery do?</p>
+                <button class="quiz-opt" onclick="checkQ('q3',this,false)">A. REDO: change "John" to "Jonathan"</button>
+                <button class="quiz-opt" onclick="checkQ('q3',this,true)">B. UNDO: restore "John" using the OldValue</button>
+                <button class="quiz-opt" onclick="checkQ('q3',this,false)">C. Delete the record entirely</button>
+                <button class="quiz-opt" onclick="checkQ('q3',this,false)">D. Nothing &mdash; the crash already reverted it</button>
+                <div class="quiz-feedback" id="q3-fb"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 6: WAL                             -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>6. Write-Ahead Logging (WAL) &mdash; The Protocol</h2>
+
+            <p>We know what log records look like and what UNDO/REDO do. The crucial question is: <strong>when</strong> do we write these records to disk? Get the ordering wrong, and the database cannot recover.</p>
+
+            <div class="definition-box">
+                <strong>Write-Ahead Logging (WAL)</strong> dictates the order: the log is always written <strong>ahead</strong> of (before) the data. Log first, data second. Always.
+            </div>
+
+            <img src="../week 4/slides/wal-commit-protocol.png" alt="The WAL commit protocol">
+
+            <h3>The Two Rules</h3>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>The Durability Rule</strong>
+                </div>
+                <p>Before acknowledging a COMMIT to the user, <span class="highlight-text">ALL of that transaction's log records must be flushed to disk</span>.</p>
+                <p style="margin-bottom: 0;"><strong>Why?</strong> If we tell you "transfer complete!" but the log isn't on disk yet, a crash loses it. We can't REDO your transfer. Your money is gone. <em>Durability violated.</em></p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>The Atomicity Rule</strong>
+                </div>
+                <p>Before writing a modified data page to disk, <span class="highlight-text">ALL log records for that page must be flushed first</span>.</p>
+                <p style="margin-bottom: 0;"><strong>Why?</strong> If modified data gets to disk before the log, a crash leaves corrupted data with no way to undo it. <em>Atomicity violated.</em></p>
+            </div>
+
+            <h3>What Happens If You Break These Rules?</h3>
+
+            <img src="../week 4/slides/incorrect-protocols.png" alt="Two incorrect protocols">
+
+            <div class="problem-box">
+                <h4>Wrong Approach #1: Write data first, then log</h4>
+                <p>You update account balances on disk, then plan to write log records. Crash happens between the two.</p>
+                <p style="margin-bottom: 0;"><strong>Result:</strong> Partially modified data on disk, no log to undo it. Database permanently corrupted. <strong>Atomicity destroyed.</strong></p>
+            </div>
+
+            <div class="problem-box">
+                <h4>Wrong Approach #2: Acknowledge COMMIT before log is done</h4>
+                <p>You tell the user "Transfer complete!" but haven't finished writing all log records. Crash happens.</p>
+                <p style="margin-bottom: 0;"><strong>Result:</strong> COMMIT record exists but some change records are missing. Can't fully redo the transfer. <strong>Durability destroyed.</strong></p>
+            </div>
+
+            <div class="analogy">
+                Think of the WAL log as a black box flight recorder. It must <em>always</em> be recording before the plane does anything. If the plane crashes, you read the recorder to reconstruct what happened. If the recorder wasn't running, you have wreckage with no explanation.
+            </div>
+
+            <!-- ── WAL Walkthrough ── -->
+            <div class="interactive-block">
+                <h4>Walk Through the Bank Interest Example with WAL</h4>
+                <p style="font-size: 0.9rem; color: #555; margin-bottom: 1rem;">1,000 accounts need 6% interest. Click through each step to see what WAL does, when, and why.</p>
+                <div class="progress-dots" id="wal-dots"></div>
+                <div id="wal-steps-container"></div>
+                <div style="margin-top: 1rem;">
+                    <button class="sim-btn" id="wal-next" onclick="walNext()">Next Step &rarr;</button>
+                    <button class="sim-btn outline" onclick="walReset()">Reset</button>
+                </div>
+                <div id="wal-detail" style="margin-top: 1rem; padding: 14px; background: #f5f5f5; border-radius: 3px; font-size: 0.88rem; color: #333; min-height: 60px;">
+                    Click "Next Step" to begin.
+                </div>
+            </div>
+
+            <img src="../week 4/slides/wal-bank-example.png" alt="WAL bank interest example step by step">
+
+            <h3>Crash Recovery &mdash; The Payoff</h3>
+
+            <img src="../week 4/slides/wal-crash-recovery.png" alt="WAL crash recovery">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>COMMIT record found?</h4>
+                    <p style="margin-bottom:0;"><strong>YES &rarr; REDO.</strong> Replay all changes using NewValues. Committed work is restored even if data pages weren't on disk yet. <strong>Durability guaranteed.</strong></p>
+                </div>
+                <div class="visual-item">
+                    <h4>No COMMIT record?</h4>
+                    <p style="margin-bottom:0;"><strong>NO &rarr; UNDO.</strong> Reverse all changes using OldValues. Partial work completely erased. <strong>Atomicity guaranteed.</strong></p>
+                </div>
+            </div>
+
+            <!-- ── Crash Simulator ── -->
+            <div class="interactive-block">
+                <h4>Crash Scenario Simulator</h4>
+                <p style="font-size: 0.9rem; color: #555; margin-bottom: 1rem;">The bank is applying interest to 1,000 accounts. Choose when the crash happens.</p>
+
+                <div class="scenario-card" id="crash-a" onclick="selectCrash('a')">
+                    <h4>Scenario A: Crash after 500 updates, before COMMIT</h4>
+                    <p>Log has 500 change records but no COMMIT. 500 data pages modified in memory.</p>
+                </div>
+                <div class="scenario-card" id="crash-b" onclick="selectCrash('b')">
+                    <h4>Scenario B: Crash after COMMIT in log, before data pages flushed</h4>
+                    <p>Log has all 1,000 records AND the COMMIT. But disk data pages are stale.</p>
+                </div>
+                <div class="scenario-card" id="crash-c" onclick="selectCrash('c')">
+                    <h4>Scenario C: Crash after everything written to disk</h4>
+                    <p>Log has COMMIT, all data pages flushed. Then crash.</p>
+                </div>
+                <div id="crash-result" style="margin-top: 1rem; min-height: 80px;"></div>
+            </div>
+
+            <div class="quiz-block" id="q4">
+                <p class="q">A transaction updated 3 rows, COMMIT was written and flushed to the log, then the server crashed before data pages were written. After recovery, what state are the 3 rows in?</p>
+                <button class="quiz-opt" onclick="checkQ('q4',this,true)">A. All 3 rows have new values &mdash; REDO replays them from the log</button>
+                <button class="quiz-opt" onclick="checkQ('q4',this,false)">B. All 3 rows have old values &mdash; changes were lost</button>
+                <button class="quiz-opt" onclick="checkQ('q4',this,false)">C. Some new, some old &mdash; inconsistent</button>
+                <button class="quiz-opt" onclick="checkQ('q4',this,false)">D. The database can't recover from this</button>
+                <div class="quiz-feedback" id="q4-fb"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 7: SEQUENTIAL WRITES               -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>7. Why WAL Is Practically Free</h2>
+
+            <p>You might be thinking: "All these log records sound expensive." They're not, and the reason is physics.</p>
+
+            <img src="../week 4/slides/sequential-writes.png" alt="Sequential vs random writes">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Random Writes</h4>
+                    <p>Writing data pages to scattered disk locations. The disk head must seek to each spot.</p>
+                    <p style="margin-bottom:0;">1 million pages: <span class="highlight-text">~100,000 seconds</span> (over a day)</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Sequential Writes</h4>
+                    <p>Writing data to consecutive locations. No seeking.</p>
+                    <p style="margin-bottom:0;">1 million pages: <span class="highlight-text">~1 second</span></p>
+                </div>
+            </div>
+
+            <p>That's <strong>100,000x faster</strong>. Five orders of magnitude.</p>
+
+            <div class="real-example">
+                <h4>The Amazon Warehouse Analogy</h4>
+                <p>Random writes are like an Amazon worker who, for every package, walks to a random spot in a warehouse the size of 10 football fields, places the package, walks back, gets the next one. All day.</p>
+                <p style="margin-bottom: 0;">Sequential writes are like standing at a conveyor belt, placing packages one after another as they roll by. Same number of packages &mdash; but the worker never moves. That's WAL: append-only, always writing to the end, never seeking.</p>
+            </div>
+
+            <div class="key-insight">
+                The WAL log is append-only = always sequential = essentially free in terms of performance. You get crash recovery at negligible cost.
+            </div>
+
+            <div class="quiz-block" id="q5">
+                <p class="q">Why does WAL use an append-only log instead of updating data pages directly?</p>
+                <button class="quiz-opt" onclick="checkQ('q5',this,false)">A. Append-only logs are easier to code</button>
+                <button class="quiz-opt" onclick="checkQ('q5',this,true)">B. Sequential writes are ~100,000x faster than random writes</button>
+                <button class="quiz-opt" onclick="checkQ('q5',this,false)">C. Direct updates would need more disk space</button>
+                <button class="quiz-opt" onclick="checkQ('q5',this,false)">D. The OS doesn't allow random writes</button>
+                <div class="quiz-feedback" id="q5-fb"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SECTION 8: COMPLETE PICTURE                -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="section">
+            <h2>8. The Complete Picture</h2>
+
+            <div class="explanation-box">
+                <h4>The Chain of Reasoning</h4>
+                <ol>
+                    <li><strong>Real-world operations</strong> (bank transfers, flight bookings) must be all-or-nothing</li>
+                    <li>We wrap them in <strong>transactions</strong></li>
+                    <li>Transactions need <strong>ACID properties</strong></li>
+                    <li><strong>Atomicity</strong> and <strong>Durability</strong> are hardest because of crashes</li>
+                    <li><strong>Physical logging</strong> records every change with OldValue/NewValue for UNDO/REDO</li>
+                    <li><strong>WAL</strong> specifies: log to disk BEFORE data pages, BEFORE acknowledging COMMIT</li>
+                    <li>Recovery: COMMIT in log &rarr; REDO. No COMMIT &rarr; UNDO.</li>
+                    <li>WAL's append-only log uses <strong>sequential writes</strong> = ~100,000x faster</li>
+                </ol>
+            </div>
+
+            <div class="quiz-block" id="q6">
+                <p class="q">Real scenario: A doctor submits a prescription. The system must (1) add it to the patient record, (2) update the pharmacy queue, (3) deduct from insurance. Server crashes after step 2. With WAL, what happens?</p>
+                <button class="quiz-opt" onclick="checkQ('q6',this,false)">A. Steps 1-2 kept, step 3 lost &mdash; partial state</button>
+                <button class="quiz-opt" onclick="checkQ('q6',this,true)">B. All 3 rolled back (UNDO) &mdash; no COMMIT means erase everything</button>
+                <button class="quiz-opt" onclick="checkQ('q6',this,false)">C. Database corrupted, needs manual repair</button>
+                <button class="quiz-opt" onclick="checkQ('q6',this,false)">D. Only step 3 rolled back</button>
+                <div class="quiz-feedback" id="q6-fb"></div>
+            </div>
+
+            <div class="summary-box">
+                <h3>Key Takeaways</h3>
+                <ul>
+                    <li><span class="checkmark">&#10003;</span> <strong>Transactions are all-or-nothing</strong> &mdash; like a flight booking: everything succeeds or nothing does</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>ACID</strong> protects against crashes (A, D), concurrent access (I), and data corruption (C)</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>WAL = log first, data second</strong> &mdash; two rules ensure atomicity and durability</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Recovery is simple</strong> &mdash; COMMIT in log = REDO. No COMMIT = UNDO.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Sequential writes</strong> make WAL ~100,000x faster than the alternative</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Transactions &amp; WAL &mdash; Interactive Study Guide</p>
+        </footer>
+    </div>
+
+    <script>
+        // ═══════════════ QUIZ SYSTEM ═══════════════
+        const answered = new Set();
+        const explanations = {
+            q1: {
+                correct: "Correct! Even though it's batch-like, this is OLTP because it's writing to every account and correctness is absolutely critical. You can't have half the accounts get interest and half not. It needs ACID guarantees.",
+                wrong: "This is actually OLTP! Yes it touches many accounts, but it's writing to every one and correctness is critical &mdash; you can't have some customers get interest and others not. It needs full ACID guarantees."
+            },
+            q2: {
+                correct: "Exactly! Atomicity is the 'all or nothing' guarantee. The Venmo transfer either fully completes (your balance drops, friend's rises) or fully rolls back (neither changes). No money vanishes.",
+                wrong: "The key property here is Atomicity &mdash; 'all or nothing.' If the server crashes mid-transfer, atomicity ensures the entire transfer rolls back. Your balance is restored, friend's stays the same."
+            },
+            q3: {
+                correct: "Right! T7 never committed, so we UNDO its changes by restoring the OldValue ('John'). The crash didn't necessarily revert things &mdash; the modified page might have been written to disk.",
+                wrong: "Since T7 never committed, we UNDO: restore 'John' using the OldValue. We can't assume the crash reverted it &mdash; the modified page might already be on disk."
+            },
+            q4: {
+                correct: "The COMMIT record is in the log, so during recovery the database REDOs all 3 changes using NewValues from the log. All rows end up correct. This is Durability in action.",
+                wrong: "The COMMIT IS in the log, so the database performs REDO &mdash; replaying all 3 changes from the log. All rows get their new values. Durability at work."
+            },
+            q5: {
+                correct: "Sequential writes (appending to end of file) are ~100,000x faster than random writes (scattered page updates). Disk heads must physically seek for random writes. WAL exploits this with append-only logging.",
+                wrong: "The reason is performance: sequential writes are ~100,000x faster than random writes. The disk head never has to seek when appending. This makes WAL's overhead negligible."
+            },
+            q6: {
+                correct: "With WAL, no COMMIT means UNDO everything. All three steps are rolled back. The database returns to the state before the doctor hit submit. Doctor must resubmit &mdash; inconvenient but safe. No phantom prescriptions.",
+                wrong: "Since crash happened before COMMIT, there's no COMMIT record. WAL UNDOs ALL changes (all 3 steps). Database returns to pre-submit state. Atomicity: all or nothing."
+            }
+        };
+
+        function checkQ(qid, btn, isCorrect) {
+            if (answered.has(qid)) return;
+            answered.add(qid);
+            const block = document.getElementById(qid);
+            block.querySelectorAll('.quiz-opt').forEach(o => o.disabled = true);
+            btn.classList.add(isCorrect ? 'correct' : 'wrong');
+            const fb = document.getElementById(qid + '-fb');
+            fb.classList.add('show', isCorrect ? 'correct-fb' : 'wrong-fb');
+            fb.innerHTML = isCorrect
+                ? '<strong>&#10003;</strong> ' + explanations[qid].correct
+                : '<strong>&#10007;</strong> ' + explanations[qid].wrong;
+        }
+
+        // ═══════════════ WAL WALKTHROUGH ═══════════════
+        const walSteps = [
+            { icon: '1', title: 'BEGIN transaction', desc: 'Write [T1, BEGIN] to the log in memory.',
+              detail: 'The transaction starts. Nothing is on disk yet &mdash; just a note in memory that T1 has begun. Like a doctor picking up a prescription pad and writing the date.' },
+            { icon: '2', title: 'Log each change (in memory)', desc: 'For each account: write [T1, PageID, Offset, OldBalance, NewBalance].',
+              detail: 'Account #1: [T1, Page5, Offset12, $1000, $1060]. Account #2: [T1, Page5, Offset48, $2000, $2120]. All 1,000 records are created in memory. Data pages also modified in memory. Nothing on disk yet. We\'re filling out the "renovation notebook" with before/after photos.' },
+            { icon: '3', title: 'Flush ALL log records to disk', desc: 'Sequential write of all 1,000+ records to the log file on disk.',
+              detail: 'This is the critical moment. All change records are now safely on stable storage. This satisfies WAL Rule 2 (log on disk before data pages). The append-only log makes this a sequential write &mdash; 1,000 records in a fraction of a second. The notebook is now in a fireproof safe.' },
+            { icon: '4', title: 'Write COMMIT record and flush', desc: 'Write [T1, COMMIT] to log and flush to disk.',
+              detail: 'This satisfies WAL Rule 1: all log records (including COMMIT) are on disk before we tell anyone. After this flush, the transaction is officially committed. Even if the server explodes now, we can always recover by reading the log.' },
+            { icon: '5', title: 'Acknowledge to user', desc: '"Transaction committed successfully."',
+              detail: 'The bank\'s system sees confirmation. The bank can legally tell all 1,000 customers they got interest. Even though actual disk data might still show old balances (see next step), the LOG guarantees recovery. The receipt is printed &mdash; it\'s official.' },
+            { icon: '6', title: 'Write data pages to disk (later)', desc: 'Buffer pool flushes modified pages lazily. No rush.',
+              detail: 'The actual data pages (new balances) are still in memory. Eventually they\'ll be written to disk &mdash; but there\'s no urgency. If the system crashes before this, we REDO from the log. This lazy approach avoids 1,000 random writes during the critical path. The user doesn\'t wait.' }
+        ];
+
+        let walStep = -1;
+
+        function initWal() {
+            const dotsEl = document.getElementById('wal-dots');
+            const stepsEl = document.getElementById('wal-steps-container');
+            dotsEl.innerHTML = walSteps.map((_, i) => `<div class="progress-dot" id="wal-dot-${i}"></div>`).join('');
+            stepsEl.innerHTML = walSteps.map((s, i) => `
+                <div class="wal-step" id="wal-step-${i}">
+                    <div class="step-icon">${s.icon}</div>
+                    <div class="step-content"><h4>${s.title}</h4><p>${s.desc}</p></div>
+                </div>`).join('');
+        }
+
+        function walNext() {
+            walStep++;
+            if (walStep >= walSteps.length) {
+                document.getElementById('wal-next').disabled = true;
+                document.getElementById('wal-next').textContent = 'Complete \u2713';
+                document.getElementById('wal-detail').innerHTML = '<strong>Done!</strong> The user got confirmation at step 5, but data pages weren\'t written until step 6 (possibly seconds later). WAL makes this safe because the log has everything needed to recover.';
+                return;
+            }
+            walSteps.forEach((_, i) => {
+                const el = document.getElementById('wal-step-' + i);
+                const dot = document.getElementById('wal-dot-' + i);
+                el.classList.remove('active', 'done');
+                dot.classList.remove('active', 'done');
+                if (i < walStep) { el.classList.add('done'); dot.classList.add('done'); }
+                else if (i === walStep) { el.classList.add('active'); dot.classList.add('active'); }
+            });
+            document.getElementById('wal-detail').innerHTML = walSteps[walStep].detail;
+        }
+
+        function walReset() {
+            walStep = -1;
+            document.getElementById('wal-next').disabled = false;
+            document.getElementById('wal-next').textContent = 'Next Step \u2192';
+            document.getElementById('wal-detail').innerHTML = 'Click "Next Step" to begin.';
+            initWal();
+        }
+
+        // ═══════════════ CRASH SIMULATOR ═══════════════
+        function selectCrash(scenario) {
+            document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+            document.getElementById('crash-' + scenario).classList.add('active');
+            const r = document.getElementById('crash-result');
+            if (scenario === 'a') {
+                r.innerHTML = `<div class="step" style="border-color: #c0392b;">
+                    <strong style="color: #c0392b;">Recovery: UNDO all 500 changes</strong>
+                    <p style="margin-top:0.5rem;">Database restarts, reads log: 500 change records, <strong>no COMMIT</strong>. T1 never finished.</p>
+                    <p>Action: restore OldValue for each of the 500 records. Account #1 goes $1,060 &rarr; $1,000. Account #2 goes $2,120 &rarr; $2,000. Etc.</p>
+                    <p style="margin-bottom:0;"><strong>End state:</strong> All 1,000 accounts have original balances. Nobody got interest. Bank re-runs later. Fair.</p></div>`;
+            } else if (scenario === 'b') {
+                r.innerHTML = `<div class="step" style="border-color: #2d7a3a;">
+                    <strong style="color: #2d7a3a;">Recovery: REDO all 1,000 changes</strong>
+                    <p style="margin-top:0.5rem;">Database restarts, reads log: all 1,000 records AND <strong>COMMIT found</strong>. T1 completed.</p>
+                    <p>Action: apply NewValue from each record. Even though disk still shows old balances, the log has every new value. All accounts updated.</p>
+                    <p style="margin-bottom:0;"><strong>End state:</strong> All accounts have correct new balances. Crash is invisible. <em>This is the magic of WAL.</em></p></div>`;
+            } else {
+                r.innerHTML = `<div class="step" style="border-color: #555;">
+                    <strong>Recovery: Nothing to do</strong>
+                    <p style="margin-top:0.5rem;">Database restarts, checks log against data pages. Everything matches. Resumes normal operation.</p>
+                    <p style="margin-bottom:0;"><strong>End state:</strong> All accounts correct. The crash happened after all important work was done.</p></div>`;
+            }
+        }
+
+        initWal();
+    </script>
+</body>
+</html>

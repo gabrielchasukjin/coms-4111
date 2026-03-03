@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concurrency Control & Deadlocks — Interactive Study Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --surface3: #22222e;
+    --border: #2a2a3a;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --green: #00b894;
+    --green-glow: rgba(0, 184, 148, 0.3);
+    --red: #ff6b6b;
+    --red-glow: rgba(255, 107, 107, 0.3);
+    --yellow: #ffc048;
+    --yellow-glow: rgba(255, 192, 72, 0.3);
+    --blue: #54a0ff;
+    --blue-glow: rgba(84, 160, 255, 0.3);
+    --orange: #ff9f43;
+    --pink: #fd79a8;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ─── Progress Bar ─── */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px; z-index: 1000;
+    background: linear-gradient(90deg, var(--accent), var(--blue), var(--green));
+    transition: width 0.3s ease;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* ─── Nav ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: rgba(10, 10, 15, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  nav .logo { font-weight: 800; font-size: 14px; letter-spacing: 1px; color: var(--accent); }
+  nav .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav .nav-links a {
+    font-size: 12px; color: var(--text-dim); text-decoration: none;
+    padding: 4px 10px; border-radius: 6px; transition: all 0.2s;
+  }
+  nav .nav-links a:hover, nav .nav-links a.active { color: var(--text); background: var(--surface2); }
+  #xp-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--yellow); display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ─── Hero ─── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 120px 24px 80px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--blue) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    position: relative; margin-bottom: 16px;
+  }
+  .hero .subtitle { font-size: 1.2rem; color: var(--text-dim); max-width: 600px; position: relative; margin-bottom: 32px; }
+  .hero .prereqs {
+    position: relative; display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center; margin-bottom: 40px;
+  }
+  .prereq-tag {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--text-dim);
+  }
+  .prereq-tag .icon { margin-right: 4px; }
+  .start-btn {
+    position: relative; padding: 14px 36px; font-size: 16px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    color: #fff; border: none; border-radius: 30px; cursor: pointer;
+    transition: all 0.3s; letter-spacing: 0.5px;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+
+  /* ─── Sections ─── */
+  .section {
+    max-width: 860px; margin: 0 auto; padding: 80px 24px;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 40px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.8rem; font-weight: 800; }
+  .section-header .tag {
+    margin-left: auto; font-size: 11px; padding: 4px 10px;
+    border-radius: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* ─── Content Cards ─── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
+  .card p { color: var(--text-dim); margin-bottom: 12px; }
+
+  .callout {
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    border-left: 3px solid;
+  }
+  .callout.info { background: rgba(84, 160, 255, 0.08); border-color: var(--blue); }
+  .callout.warn { background: rgba(255, 192, 72, 0.08); border-color: var(--yellow); }
+  .callout.danger { background: rgba(255, 107, 107, 0.08); border-color: var(--red); }
+  .callout.success { background: rgba(0, 184, 148, 0.08); border-color: var(--green); }
+  .callout .callout-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .callout.info .callout-title { color: var(--blue); }
+  .callout.warn .callout-title { color: var(--yellow); }
+  .callout.danger .callout-title { color: var(--red); }
+  .callout.success .callout-title { color: var(--green); }
+
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+    background: var(--surface3); padding: 2px 7px; border-radius: 5px;
+  }
+
+  /* ─── Anomaly Grid ─── */
+  .anomaly-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin: 20px 0;
+  }
+  .anomaly-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; cursor: pointer;
+    transition: all 0.3s; position: relative; overflow: hidden;
+  }
+  .anomaly-card:hover { transform: translateY(-3px); }
+  .anomaly-card .emoji { font-size: 2rem; margin-bottom: 10px; display: block; }
+  .anomaly-card h4 { font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+  .anomaly-card .conflict-type {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .anomaly-card p { font-size: 0.85rem; color: var(--text-dim); }
+  .anomaly-card.ww { border-color: var(--red); }
+  .anomaly-card.ww .conflict-type { background: var(--red-glow); color: var(--red); }
+  .anomaly-card.wr { border-color: var(--orange); }
+  .anomaly-card.wr .conflict-type { background: rgba(255,159,67,0.2); color: var(--orange); }
+  .anomaly-card.rw1 { border-color: var(--yellow); }
+  .anomaly-card.rw1 .conflict-type { background: var(--yellow-glow); color: var(--yellow); }
+  .anomaly-card.rw2 { border-color: var(--pink); }
+  .anomaly-card.rw2 .conflict-type { background: rgba(253,121,168,0.2); color: var(--pink); }
+
+  /* ─── Animated Diagrams ─── */
+  .diagram-container {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin: 24px 0;
+    position: relative;
+  }
+  .diagram-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-dim); margin-bottom: 16px;
+  }
+
+  /* ─── Lock Table Visual ─── */
+  .lock-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    margin: 16px 0; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .lock-table th {
+    background: var(--surface3); padding: 12px 16px;
+    font-weight: 700; font-size: 13px; text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table td {
+    padding: 12px 16px; text-align: center; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table tr:last-child td { border-bottom: none; }
+  .lock-yes { color: var(--green); font-weight: 700; }
+  .lock-no { color: var(--red); font-weight: 700; }
+
+  /* ─── Interactive Conflict Graph Builder ─── */
+  .graph-canvas {
+    width: 100%; height: 320px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .graph-canvas svg { width: 100%; height: 100%; }
+  .graph-node {
+    cursor: pointer; transition: all 0.2s;
+  }
+  .graph-node:hover circle { filter: brightness(1.3); }
+
+  /* ─── Timeline Animation ─── */
+  .timeline {
+    display: flex; flex-direction: column; gap: 4px; margin: 16px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  }
+  .timeline-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    border-radius: 6px; transition: all 0.3s;
+  }
+  .timeline-row.highlight { background: var(--accent-glow); }
+  .timeline-step { width: 28px; text-align: center; color: var(--text-dim); font-size: 11px; }
+  .timeline-txn {
+    padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; min-width: 32px; text-align: center;
+  }
+  .timeline-op { color: var(--text); }
+  .timeline-arrow { color: var(--text-dim); }
+
+  /* ─── Quiz / Game Components ─── */
+  .quiz-box {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent); border-radius: var(--radius);
+    padding: 28px; margin: 28px 0; position: relative; overflow: hidden;
+  }
+  .quiz-box::before {
+    content: ''; position: absolute; top: -50%; right: -50%;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .quiz-box .quiz-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    position: relative;
+  }
+  .quiz-badge {
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .quiz-xp { font-size: 12px; color: var(--yellow); font-weight: 600; }
+  .quiz-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; position: relative; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .quiz-option {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; cursor: pointer;
+    transition: all 0.2s; font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-option:hover { border-color: var(--accent); background: var(--surface3); }
+  .quiz-option.correct { border-color: var(--green); background: rgba(0,184,148,0.1); }
+  .quiz-option.wrong { border-color: var(--red); background: rgba(255,107,107,0.1); }
+  .quiz-option .opt-letter {
+    width: 28px; height: 28px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    font-size: 12px; background: var(--surface3); flex-shrink: 0;
+  }
+  .quiz-feedback {
+    margin-top: 14px; padding: 12px 16px; border-radius: 8px;
+    font-size: 13px; display: none; position: relative;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct-fb { background: rgba(0,184,148,0.1); border: 1px solid var(--green); color: var(--green); }
+  .quiz-feedback.wrong-fb { background: rgba(255,107,107,0.1); border: 1px solid var(--red); color: var(--red); }
+
+  /* ─── Drag & Drop Matching Game ─── */
+  .match-game {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin: 28px 0;
+  }
+  .match-game h3 { margin-bottom: 6px; }
+  .match-game .instructions { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+  .match-columns { display: flex; gap: 24px; flex-wrap: wrap; }
+  .match-col { flex: 1; min-width: 200px; }
+  .match-col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 10px; }
+  .match-item {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    cursor: grab; font-size: 13px; font-weight: 500;
+    transition: all 0.2s; user-select: none;
+  }
+  .match-item:active { cursor: grabbing; }
+  .match-item.selected { border-color: var(--accent); background: rgba(108,92,231,0.1); }
+  .match-item.matched { border-color: var(--green); background: rgba(0,184,148,0.08); opacity: 0.7; cursor: default; }
+  .match-item.wrong-match { border-color: var(--red); animation: headShake 0.5s; }
+
+  .match-target {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    min-height: 44px; font-size: 13px; color: var(--text-dim);
+    transition: all 0.2s; cursor: pointer;
+  }
+  .match-target.active { border-color: var(--accent); background: rgba(108,92,231,0.05); }
+  .match-target.matched { border-style: solid; border-color: var(--green); color: var(--green); font-weight: 600; }
+
+  @keyframes headShake {
+    0% { transform: translateX(0); } 15% { transform: translateX(-6px); }
+    30% { transform: translateX(6px); } 45% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); }
+  }
+
+  /* ─── Interactive 2PL Simulator ─── */
+  .simulator {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin: 28px 0;
+  }
+  .sim-controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sim-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer;
+    transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .sim-btn:hover { border-color: var(--accent); background: var(--surface3); }
+  .sim-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sim-btn.primary:hover { background: #7d6ff0; }
+  .sim-log {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: var(--surface2); border-radius: 8px; padding: 16px;
+    max-height: 300px; overflow-y: auto; line-height: 1.8;
+  }
+  .sim-log .log-entry { padding: 2px 0; }
+  .sim-log .lock-acquire { color: var(--green); }
+  .sim-log .lock-wait { color: var(--yellow); }
+  .sim-log .lock-release { color: var(--blue); }
+  .sim-log .deadlock { color: var(--red); font-weight: 700; }
+  .sim-log .txn-label { font-weight: 700; }
+
+  /* ─── Waits-For Graph Visual ─── */
+  .wfg-container {
+    display: flex; align-items: center; justify-content: center;
+    gap: 40px; padding: 30px; flex-wrap: wrap;
+  }
+  .wfg-node {
+    width: 70px; height: 70px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; position: relative;
+    border: 3px solid; transition: all 0.3s;
+  }
+
+  /* ─── Scenario Builder ─── */
+  .scenario {
+    background: var(--surface2); border-radius: 10px;
+    padding: 20px; margin: 16px 0;
+  }
+  .scenario-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .scenario-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px; border-radius: 6px; margin: 4px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    transition: all 0.5s; opacity: 0.4;
+  }
+  .scenario-step.active { opacity: 1; background: var(--surface3); }
+  .scenario-step.done { opacity: 0.6; }
+
+  /* ─── Score / XP ─── */
+  .xp-toast {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--surface2); border: 1px solid var(--yellow);
+    border-radius: 12px; padding: 12px 20px;
+    font-weight: 700; color: var(--yellow); font-size: 14px;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+  }
+  .xp-toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ─── Comparison Cards ─── */
+  .vs-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start; margin: 20px 0; }
+  .vs-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .vs-card h4 { font-size: 1rem; margin-bottom: 8px; }
+  .vs-divider {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.5rem; color: var(--text-dim); padding-top: 30px;
+  }
+
+  /* ─── Scroll animations ─── */
+  .fade-in {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* ─── Footer ─── */
+  footer {
+    text-align: center; padding: 60px 24px;
+    color: var(--text-dim); font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 640px) {
+    .vs-container { grid-template-columns: 1fr; }
+    .vs-divider { padding-top: 0; transform: rotate(90deg); }
+    nav .nav-links { display: none; }
+  }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar" style="width: 0%"></div>
+
+<nav>
+  <div class="logo">COMS 4111 STUDY GUIDE</div>
+  <div class="nav-links">
+    <a href="#stage">Intro</a>
+    <a href="#anomalies">Anomalies</a>
+    <a href="#serializability">Serializability</a>
+    <a href="#2pl">2PL</a>
+    <a href="#deadlocks">Deadlocks</a>
+    <a href="#solutions">Solutions</a>
+    <a href="#final-boss">Final Boss</a>
+  </div>
+  <div id="xp-display">⚡ <span id="xp-count">0</span> XP</div>
+</nav>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ HERO ━━━━━━━━━━━━━━━━━━━ -->
+<div class="hero" id="stage">
+  <h1>Concurrency Control<br>& Deadlocks</h1>
+  <p class="subtitle">An interactive journey from "why do transactions conflict?" to "how do databases keep everything safe."</p>
+  <div class="prereqs">
+    <span class="prereq-tag"><span class="icon">📦</span> ACID Properties</span>
+    <span class="prereq-tag"><span class="icon">📝</span> WAL Protocol</span>
+    <span class="prereq-tag"><span class="icon">🔄</span> Transactions</span>
+    <span class="prereq-tag"><span class="icon">📊</span> SQL Basics</span>
+  </div>
+  <button class="start-btn" onclick="document.getElementById('scene').scrollIntoView({behavior:'smooth'})">Begin the Journey ↓</button>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SETTING THE STAGE ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="scene">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--accent-glow); color: var(--accent);">0</div>
+    <h2>Setting the Stage</h2>
+    <span class="tag" style="background: var(--accent-glow); color: var(--accent);">Context</span>
+  </div>
+
+  <div class="card">
+    <h3>Why Does This Matter?</h3>
+    <p>Databases handle <strong>thousands of transactions per second</strong>. Running them one at a time (serially) is safe but painfully slow. Running them all at once is fast but can corrupt your data.</p>
+    <p>Concurrency control is the art of running transactions <strong>simultaneously</strong> while making it <em>look like</em> they ran one at a time.</p>
+
+    <div class="callout info">
+      <div class="callout-title">🧱 What this builds on</div>
+      <p style="margin:0; color: var(--text-dim); font-size: 14px;">
+        You already know: transactions are groups of operations (reads/writes) that must be <strong>Atomic</strong>, <strong>Consistent</strong>, <strong>Isolated</strong>, and <strong>Durable</strong> (ACID). The <strong>Isolation</strong> part is what this entire guide is about — how do we keep transactions from interfering with each other?
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The Big Picture</h3>
+    <p>Here's the roadmap we'll follow:</p>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--red);">
+        <strong>1.</strong> What goes wrong? → <em>4 Anomalies</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">→</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--yellow);">
+        <strong>2.</strong> How do we detect bad schedules? → <em>Conflict Serializability</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">→</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--green);">
+        <strong>3.</strong> How do we prevent them? → <em>2PL (Locking)</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">→</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--blue);">
+        <strong>4.</strong> What if locking creates a new problem? → <em>Deadlocks</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 1: ANOMALIES ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="anomalies">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--red-glow); color: var(--red);">1</div>
+    <h2>The 4 Concurrency Anomalies</h2>
+    <span class="tag" style="background: var(--red-glow); color: var(--red);">Problems</span>
+  </div>
+
+  <div class="card">
+    <p>When transactions run concurrently without any protection, four bad things can happen. Each arises from a specific type of <strong>conflict</strong> between operations.</p>
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Conflict vs Anomaly</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">A <strong>conflict</strong> is a <em>potential</em> problem (two ops on same data, at least one is a write). An <strong>anomaly</strong> is when that conflict actually causes incorrect behavior.</p>
+    </div>
+  </div>
+
+  <div class="anomaly-grid">
+    <div class="anomaly-card ww fade-in">
+      <span class="emoji">💥</span>
+      <span class="conflict-type">W → W</span>
+      <h4>Lost Update</h4>
+      <p>Two transactions write the same item. The first write is silently overwritten and lost forever.</p>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);line-height:1.8;">
+        T1: read(A)=100<br>
+        T2: read(A)=100<br>
+        T1: write(A, 150) ← +50<br>
+        T2: write(A, 80) &nbsp;← −20<br>
+        <span style="color:var(--red);">Result: A=80 (T1's +50 is lost!)</span>
+      </div>
+    </div>
+
+    <div class="anomaly-card wr fade-in">
+      <span class="emoji">🗑️</span>
+      <span class="conflict-type">W → R</span>
+      <h4>Dirty Read</h4>
+      <p>You read data written by a transaction that hasn't committed yet. If it aborts, you've read garbage.</p>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);line-height:1.8;">
+        T1: write(A, 200)<br>
+        T2: read(A)=200 ← reads T1's write<br>
+        T1: ABORT! ← rolls back<br>
+        <span style="color:var(--orange);">T2 used a value that never existed!</span>
+      </div>
+    </div>
+
+    <div class="anomaly-card rw1 fade-in">
+      <span class="emoji">🔀</span>
+      <span class="conflict-type">R → W</span>
+      <h4>Unrepeatable Read</h4>
+      <p>You read a row, someone changes it, you read it again — different value. The <strong>same row</strong> changed.</p>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);line-height:1.8;">
+        T1: read(A)=100<br>
+        T2: write(A, 200); COMMIT<br>
+        T1: read(A)=200 ← different!<br>
+        <span style="color:var(--yellow);">Same query, different answer</span>
+      </div>
+    </div>
+
+    <div class="anomaly-card rw2 fade-in">
+      <span class="emoji">👻</span>
+      <span class="conflict-type">R → W</span>
+      <h4>Phantom Read</h4>
+      <p>You run a query, someone inserts/deletes rows, you run it again — different <strong>set of rows</strong>.</p>
+      <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);line-height:1.8;">
+        T1: SELECT * WHERE age>20 → 5 rows<br>
+        T2: INSERT (age=25); COMMIT<br>
+        T1: SELECT * WHERE age>20 → 6 rows<br>
+        <span style="color:var(--pink);">A "phantom" row appeared!</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-box fade-in" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">What's the key difference between an Unrepeatable Read and a Phantom Read?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">A</span> Unrepeatable reads involve writes, phantoms involve reads
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz1')">
+        <span class="opt-letter">B</span> Unrepeatable = same row changes value; Phantom = the set of rows changes
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">C</span> Unrepeatable is W-W conflict, Phantom is R-W conflict
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">D</span> There is no difference, they're the same anomaly
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz1-feedback"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 2: CONFLICT SERIALIZABILITY ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="serializability">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--yellow-glow); color: var(--yellow);">2</div>
+    <h2>Conflict Serializability</h2>
+    <span class="tag" style="background: var(--yellow-glow); color: var(--yellow);">Detection</span>
+  </div>
+
+  <div class="card">
+    <h3>The Goal: Make It Look Serial</h3>
+    <p>A schedule is <strong>conflict serializable</strong> if it produces the same result as some serial (one-at-a-time) execution. We check this by building a <strong>conflict graph</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h3>Step-by-Step: Building a Conflict Graph</h3>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:12px;">
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--yellow);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+        <div>
+          <strong>Identify conflicts</strong> between operations of <em>different</em> transactions on the <em>same</em> data item:
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <code style="color:var(--red);">W-W</code>
+            <code style="color:var(--orange);">W-R</code>
+            <code style="color:var(--yellow);">R-W</code>
+            <code style="color:var(--green);">R-R ← NOT a conflict!</code>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--yellow);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+        <div><strong>Draw the graph:</strong> each transaction is a node. For each conflict, draw an edge from the earlier transaction to the later one.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--yellow);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+        <div><strong>Check for cycles:</strong>
+          <div style="margin-top:6px;">
+            <span style="color:var(--green);font-weight:700;">No cycle → Conflict Serializable ✓</span><br>
+            <span style="color:var(--red);font-weight:700;">Cycle → NOT Serializable ✗</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Conflict Graph Builder -->
+  <div class="diagram-container fade-in">
+    <div class="diagram-label">Interactive Example — Click "Next Step" to walk through</div>
+    <div style="margin-bottom:12px;font-size:14px;">
+      <strong>Schedule:</strong>
+      <code>r1(A), w2(A), r1(B), w3(B), w2(B)</code>
+    </div>
+    <div id="conflict-steps">
+      <div class="timeline" id="conflict-timeline"></div>
+    </div>
+    <div style="margin-top:16px;">
+      <svg id="conflict-graph-svg" width="100%" height="180" viewBox="0 0 500 180">
+        <!-- Nodes -->
+        <circle cx="100" cy="90" r="30" fill="none" stroke="#6c5ce7" stroke-width="2.5" id="cg-t1"/>
+        <text x="100" y="95" text-anchor="middle" fill="#e4e4ef" font-weight="800" font-size="16">T1</text>
+        <circle cx="250" cy="90" r="30" fill="none" stroke="#54a0ff" stroke-width="2.5" id="cg-t2"/>
+        <text x="250" y="95" text-anchor="middle" fill="#e4e4ef" font-weight="800" font-size="16">T2</text>
+        <circle cx="400" cy="90" r="30" fill="none" stroke="#00b894" stroke-width="2.5" id="cg-t3"/>
+        <text x="400" y="95" text-anchor="middle" fill="#e4e4ef" font-weight="800" font-size="16">T3</text>
+        <!-- Edges (hidden initially) -->
+        <line x1="130" y1="85" x2="220" y2="85" stroke="var(--yellow)" stroke-width="2" id="cg-edge1" opacity="0" marker-end="url(#arrowY)"/>
+        <text x="175" y="75" fill="var(--yellow)" font-size="11" font-weight="600" id="cg-edge1-label" opacity="0">r1(A)→w2(A)</text>
+        <line x1="130" y1="100" x2="370" y2="100" stroke="var(--orange)" stroke-width="2" id="cg-edge2" opacity="0" marker-end="url(#arrowO)"/>
+        <text x="250" y="120" fill="var(--orange)" font-size="11" font-weight="600" id="cg-edge2-label" opacity="0">r1(B)→w3(B)</text>
+        <line x1="280" y1="82" x2="370" y2="82" stroke="var(--pink)" stroke-width="2" id="cg-edge3" opacity="0" marker-end="url(#arrowP)"/>
+        <text x="330" y="72" fill="var(--pink)" font-size="11" font-weight="600" id="cg-edge3-label" opacity="0">w3(B)→w2(B)…wait</text>
+        <line x1="370" y1="100" x2="280" y2="100" stroke="var(--red)" stroke-width="2" id="cg-edge4" opacity="0" marker-end="url(#arrowR)"/>
+        <text x="330" y="120" fill="var(--red)" font-size="11" font-weight="600" id="cg-edge4-label" opacity="0">w3(B)→w2(B)</text>
+        <!-- Arrow markers -->
+        <defs>
+          <marker id="arrowY" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--yellow)"/></marker>
+          <marker id="arrowO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--orange)"/></marker>
+          <marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pink)"/></marker>
+          <marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--red)"/></marker>
+        </defs>
+      </svg>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="sim-btn primary" id="cg-next-btn" onclick="nextConflictStep()">Next Step →</button>
+      <button class="sim-btn" onclick="resetConflictGraph()">Reset</button>
+    </div>
+    <div id="cg-explanation" style="margin-top:12px;font-size:13px;color:var(--text-dim);min-height:40px;">
+      Click "Next Step" to identify conflicts one by one and build the graph.
+    </div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-box fade-in" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Two transactions: r1(A), r2(A), w1(A), w2(A). Is this conflict serializable?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">A</span> Yes — no conflicts exist
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">B</span> Yes — there's no cycle in the conflict graph
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz2')">
+        <span class="opt-letter">C</span> No — T1→T2 (r1 before w2) and T2→T1 (r2 before w1) creates a cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">D</span> Can't determine without knowing the data values
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz2-feedback"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 3: TWO-PHASE LOCKING ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="2pl">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--green-glow); color: var(--green);">3</div>
+    <h2>Two-Phase Locking (2PL)</h2>
+    <span class="tag" style="background: var(--green-glow); color: var(--green);">Prevention</span>
+  </div>
+
+  <div class="card">
+    <h3>From Detection to Prevention</h3>
+    <p>Conflict graphs tell us <em>after the fact</em> if a schedule was bad. But we need to <strong>prevent</strong> bad schedules from happening. Enter: <strong>locking</strong>.</p>
+    <div class="callout success">
+      <div class="callout-title">✅ The core idea</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">Before you touch data, you must ask for permission (a lock). If someone else is using it in a conflicting way, you <strong>wait</strong>.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Two Types of Locks</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--green);">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🔓</div>
+        <strong style="color:var(--green);">Shared Lock (S)</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">Required before <strong>reading</strong>. Multiple transactions can hold S locks on the same item simultaneously.</p>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--red);">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🔒</div>
+        <strong style="color:var(--red);">Exclusive Lock (X)</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">Required before <strong>writing</strong>. No one else can hold any lock on the item. Totally exclusive.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Lock Compatibility Matrix</h3>
+    <p>When you request a lock, can you get it?</p>
+    <table class="lock-table">
+      <tr>
+        <th style="background:var(--bg);"></th>
+        <th>S Lock Held</th>
+        <th>X Lock Held</th>
+      </tr>
+      <tr>
+        <td><strong>Request S</strong></td>
+        <td><span class="lock-yes">✓ YES</span></td>
+        <td><span class="lock-no">✗ WAIT</span></td>
+      </tr>
+      <tr>
+        <td><strong>Request X</strong></td>
+        <td><span class="lock-no">✗ WAIT</span></td>
+        <td><span class="lock-no">✗ WAIT</span></td>
+      </tr>
+    </table>
+    <div class="callout info">
+      <div class="callout-title">💡 Think of it like a library book</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        S lock = "I'm reading this book" — others can read too, but no one can scribble in it.<br>
+        X lock = "I'm editing this book" — nobody else can touch it until I'm done.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Strict 2PL Rules</h3>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:14px;margin:16px 0;line-height:2;">
+      <div><span style="color:var(--green);font-weight:700;">Rule 1:</span> Acquire S-lock before every read</div>
+      <div><span style="color:var(--green);font-weight:700;">Rule 2:</span> Acquire X-lock before every write</div>
+      <div><span style="color:var(--green);font-weight:700;">Rule 3:</span> Release ALL locks only at commit or abort</div>
+    </div>
+    <div style="margin-top:16px;background:var(--surface2);border-radius:10px;padding:20px;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:2rem;">📈</div>
+          <div style="font-weight:700;font-size:13px;margin-top:4px;">Growing Phase</div>
+          <div style="font-size:12px;color:var(--text-dim);">Acquire locks</div>
+        </div>
+        <div style="font-size:2rem;color:var(--text-dim);">→</div>
+        <div style="text-align:center;">
+          <div style="font-size:2rem;">🔒</div>
+          <div style="font-weight:700;font-size:13px;margin-top:4px;">Lock Point</div>
+          <div style="font-size:12px;color:var(--text-dim);">All locks held</div>
+        </div>
+        <div style="font-size:2rem;color:var(--text-dim);">→</div>
+        <div style="text-align:center;">
+          <div style="font-size:2rem;">📉</div>
+          <div style="font-weight:700;font-size:13px;margin-top:4px;">Shrinking Phase</div>
+          <div style="font-size:12px;color:var(--text-dim);">Release all at COMMIT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2PL Simulator -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">🎮 2PL Lock Simulator</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Watch how Strict 2PL manages locks for two concurrent transactions.</p>
+    <div style="margin-bottom:12px;font-size:13px;font-family:'JetBrains Mono',monospace;">
+      <strong>T1:</strong> read(A), write(B) &nbsp;&nbsp; <strong>T2:</strong> read(B), write(A)
+    </div>
+    <div class="sim-controls">
+      <button class="sim-btn primary" id="sim-step-btn" onclick="simStep()">Next Step →</button>
+      <button class="sim-btn" onclick="simReset()">Reset</button>
+    </div>
+    <div class="sim-log" id="sim-log">
+      <div class="log-entry" style="color:var(--text-dim);">Click "Next Step" to begin the simulation...</div>
+    </div>
+    <div id="sim-lock-state" style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;">
+        <strong>Item A:</strong> <span id="lock-a">unlocked</span>
+      </div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;">
+        <strong>Item B:</strong> <span id="lock-b">unlocked</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-box fade-in" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">In Strict 2PL, when are locks released?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">A</span> Immediately after each operation completes
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">B</span> Gradually, one at a time during the shrinking phase
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz3')">
+        <span class="opt-letter">C</span> ALL locks released at once when the transaction commits or aborts
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">D</span> Only S-locks are released; X-locks persist forever
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz3-feedback"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 4: DEADLOCKS ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="deadlocks">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--red-glow); color: var(--red);">4</div>
+    <h2>Deadlocks</h2>
+    <span class="tag" style="background: var(--red-glow); color: var(--red);">The Catch</span>
+  </div>
+
+  <div class="card">
+    <h3>Locking Introduces a New Problem</h3>
+    <p>2PL prevents concurrency anomalies — great! But what happens when two transactions are each waiting for a lock the other one holds? <strong>Neither can proceed.</strong> This is a <strong>deadlock</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h3>Classic Deadlock Scenario</h3>
+    <div class="scenario">
+      <div class="scenario-title">🎬 The Dining Philosophers of Databases</div>
+      <div id="deadlock-scenario" style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.2;">
+        <div class="scenario-step active" id="dl-step-0">
+          <span style="color:var(--accent);font-weight:700;">T1</span> acquires <span style="color:var(--red);">X-lock on A</span> ✓
+        </div>
+        <div class="scenario-step" id="dl-step-1">
+          <span style="color:var(--blue);font-weight:700;">T2</span> acquires <span style="color:var(--red);">X-lock on B</span> ✓
+        </div>
+        <div class="scenario-step" id="dl-step-2">
+          <span style="color:var(--accent);font-weight:700;">T1</span> requests <span style="color:var(--green);">S-lock on B</span> → <span style="color:var(--yellow);">BLOCKED</span> (T2 holds X on B)
+        </div>
+        <div class="scenario-step" id="dl-step-3">
+          <span style="color:var(--blue);font-weight:700;">T2</span> requests <span style="color:var(--green);">S-lock on A</span> → <span style="color:var(--yellow);">BLOCKED</span> (T1 holds X on A)
+        </div>
+        <div class="scenario-step" id="dl-step-4" style="color:var(--red);font-weight:700;">
+          💀 DEADLOCK — T1 waits for T2, T2 waits for T1. Forever.
+        </div>
+      </div>
+      <button class="sim-btn" style="margin-top:12px;" onclick="animateDeadlock()">▶ Animate</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Waits-For Graph</h3>
+    <p>To detect deadlocks, we build a <strong>waits-for graph</strong>:</p>
+    <ul style="color:var(--text-dim);font-size:14px;padding-left:20px;margin:12px 0;">
+      <li>Nodes = transactions</li>
+      <li>Edge T1 → T2 means "T1 is waiting for a lock that T2 holds"</li>
+      <li><strong>Cycle = DEADLOCK</strong></li>
+    </ul>
+
+    <div class="callout danger">
+      <div class="callout-title">🚨 Don't confuse the two graphs!</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        <strong>Conflict graph:</strong> based on the order of already-executed operations → checks serializability<br>
+        <strong>Waits-for graph:</strong> based on who's waiting for whose lock right now → detects deadlocks<br>
+        They are <em>completely different</em> graphs!
+      </p>
+    </div>
+
+    <div style="margin-top:20px;display:flex;justify-content:center;">
+      <svg width="260" height="130" viewBox="0 0 260 130">
+        <defs>
+          <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--red)"/>
+          </marker>
+        </defs>
+        <circle cx="70" cy="65" r="30" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <text x="70" y="70" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="16">T1</text>
+        <circle cx="190" cy="65" r="30" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+        <text x="190" y="70" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="16">T2</text>
+        <!-- T1 → T2 (top) -->
+        <path d="M 100 50 Q 130 20 160 50" fill="none" stroke="var(--red)" stroke-width="2" marker-end="url(#arrowRed)">
+          <animate attributeName="stroke-dasharray" values="0,200;200,0" dur="1.5s" repeatCount="indefinite"/>
+        </path>
+        <text x="130" y="28" fill="var(--red)" font-size="11" text-anchor="middle" font-weight="600">waits for B</text>
+        <!-- T2 → T1 (bottom) -->
+        <path d="M 160 80 Q 130 110 100 80" fill="none" stroke="var(--red)" stroke-width="2" marker-end="url(#arrowRed)">
+          <animate attributeName="stroke-dasharray" values="0,200;200,0" dur="1.5s" repeatCount="indefinite"/>
+        </path>
+        <text x="130" y="120" fill="var(--red)" font-size="11" text-anchor="middle" font-weight="600">waits for A</text>
+        <!-- Cycle indicator -->
+        <text x="130" y="70" fill="var(--red)" font-size="20" text-anchor="middle" font-weight="900">♻</text>
+      </svg>
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--red);font-weight:600;margin-top:8px;">CYCLE DETECTED → DEADLOCK!</div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-box fade-in" id="quiz4">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+20 XP</span>
+    </div>
+    <div class="quiz-question">T1 holds X(A), waits for S(C). T2 holds X(B), waits for S(A). T3 holds X(C), waits for S(B). Is there a deadlock?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz4')">
+        <span class="opt-letter">A</span> Yes — T1→T3→T2→T1 forms a cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">B</span> No — there's no cycle because T3 isn't waiting for T1
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">C</span> No — you need at least 4 transactions for a deadlock
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">D</span> Can't determine without knowing the isolation level
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz4-feedback"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 5: DEADLOCK SOLUTIONS ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="solutions">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--blue-glow); color: var(--blue);">5</div>
+    <h2>Deadlock Solutions</h2>
+    <span class="tag" style="background: var(--blue-glow); color: var(--blue);">Strategies</span>
+  </div>
+
+  <div class="card">
+    <h3>Three Approaches</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px,1fr));gap:16px;margin-top:16px;">
+      <div style="background:var(--surface2);padding:16px;border-radius:10px;border-top:3px solid var(--blue);">
+        <div style="font-size:1.3rem;margin-bottom:6px;">🔍</div>
+        <strong>Detection</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Let deadlocks happen, detect them, abort a victim to break the cycle.</p>
+      </div>
+      <div style="background:var(--surface2);padding:16px;border-radius:10px;border-top:3px solid var(--green);">
+        <div style="font-size:1.3rem;margin-bottom:6px;">🛡️</div>
+        <strong>C2PL</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Conservative 2PL: grab ALL locks at the start. Can't deadlock if you never wait incrementally.</p>
+      </div>
+      <div style="background:var(--surface2);padding:16px;border-radius:10px;border-top:3px solid var(--yellow);">
+        <div style="font-size:1.3rem;margin-bottom:6px;">⏰</div>
+        <strong>Timestamp-Based</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Wait-Die and Wound-Wait: use transaction age to decide who waits and who aborts.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wait-Die vs Wound-Wait -->
+  <div class="card">
+    <h3>Wait-Die vs Wound-Wait</h3>
+    <p>Both use transaction <strong>timestamps</strong> (earlier timestamp = older = higher priority).</p>
+
+    <div class="vs-container" style="margin-top:20px;">
+      <div class="vs-card" style="border-top:3px solid var(--accent);">
+        <h4 style="color:var(--accent);">Wait-Die</h4>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">
+          "Old people are <strong>patient</strong>, young people <strong>die</strong>"
+        </p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;">
+          <div>If T1 is <span style="color:var(--green);">OLDER</span> → T1 <strong>waits</strong> for T2</div>
+          <div>If T1 is <span style="color:var(--red);">YOUNGER</span> → T1 <strong>dies</strong> (aborts)</div>
+        </div>
+        <div class="callout info" style="margin-top:12px;">
+          <p style="margin:0;font-size:12px;color:var(--text-dim);">Only the requesting txn ever aborts. The one holding the lock is never forced to give it up.</p>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <div class="vs-card" style="border-top:3px solid var(--orange);">
+        <h4 style="color:var(--orange);">Wound-Wait</h4>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">
+          "Old people are <strong>aggressive</strong>, young people are <strong>patient</strong>"
+        </p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;">
+          <div>If T1 is <span style="color:var(--red);">OLDER</span> → T1 <strong>wounds</strong> T2 (forces T2 to abort)</div>
+          <div>If T1 is <span style="color:var(--green);">YOUNGER</span> → T1 <strong>waits</strong> for T2</div>
+        </div>
+        <div class="callout info" style="margin-top:12px;">
+          <p style="margin:0;font-size:12px;color:var(--text-dim);">The older txn always wins. It can preempt the younger one's lock.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout success" style="margin-top:16px;">
+      <div class="callout-title">🔑 Critical detail: Timestamp preservation</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        When a transaction is aborted and restarts, it <strong>keeps its original timestamp</strong>. This means it gets "older" over time and will eventually have the highest priority, preventing starvation.
+      </p>
+    </div>
+  </div>
+
+  <!-- Matching Game: Wait-Die vs Wound-Wait -->
+  <div class="match-game fade-in">
+    <h3>🎮 Matching Game: Who Does What?</h3>
+    <p class="instructions">Click a scenario on the left, then click the correct outcome on the right.</p>
+    <div class="match-columns">
+      <div class="match-col">
+        <div class="match-col-title">Scenario</div>
+        <div class="match-item" id="m-src-0" onclick="selectMatchSource(0)">
+          <strong>Wait-Die:</strong> Old T1 requests lock held by young T2
+        </div>
+        <div class="match-item" id="m-src-1" onclick="selectMatchSource(1)">
+          <strong>Wait-Die:</strong> Young T2 requests lock held by old T1
+        </div>
+        <div class="match-item" id="m-src-2" onclick="selectMatchSource(2)">
+          <strong>Wound-Wait:</strong> Old T1 requests lock held by young T2
+        </div>
+        <div class="match-item" id="m-src-3" onclick="selectMatchSource(3)">
+          <strong>Wound-Wait:</strong> Young T2 requests lock held by old T1
+        </div>
+      </div>
+      <div class="match-col">
+        <div class="match-col-title">Outcome</div>
+        <div class="match-target" id="m-tgt-0" onclick="selectMatchTarget(0)">T1 waits patiently</div>
+        <div class="match-target" id="m-tgt-1" onclick="selectMatchTarget(1)">T2 aborts (dies)</div>
+        <div class="match-target" id="m-tgt-2" onclick="selectMatchTarget(2)">T2 is forced to abort (wounded)</div>
+        <div class="match-target" id="m-tgt-3" onclick="selectMatchTarget(3)">T2 waits patiently</div>
+      </div>
+    </div>
+    <div id="match-result" style="margin-top:16px;font-size:14px;font-weight:600;min-height:24px;"></div>
+  </div>
+
+  <!-- Quiz 5 -->
+  <div class="quiz-box fade-in" id="quiz5">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+20 XP</span>
+    </div>
+    <div class="quiz-question">Why does an aborted transaction keep its original timestamp when it restarts?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">A</span> To save memory in the timestamp table
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz5')">
+        <span class="opt-letter">B</span> To prevent starvation — it becomes "older" and will eventually get priority
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">C</span> Because the WAL requires it for crash recovery
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">D</span> To maintain backward compatibility with older databases
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz5-feedback"></div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━ SECTION 6: FINAL BOSS ━━━━━━━━━━━━━━━━━━━ -->
+<div class="section fade-in" id="final-boss">
+  <div class="section-header">
+    <div class="section-num" style="background:linear-gradient(135deg,var(--accent-glow),var(--yellow-glow));color:var(--yellow);">⭐</div>
+    <h2>Final Boss — Comprehensive Quiz</h2>
+    <span class="tag" style="background: linear-gradient(135deg,var(--accent-glow),var(--yellow-glow)); color: var(--yellow);">Boss Fight</span>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz6">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q1</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">Which of these is NOT a valid conflict between operations of two different transactions?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">A</span> w1(A), w2(A) — Write-Write
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz6')">
+        <span class="opt-letter">B</span> r1(A), r2(A) — Read-Read
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">C</span> r1(A), w2(A) — Read-Write
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">D</span> w1(A), r2(A) — Write-Read
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz6-feedback"></div>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz7">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q2</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">You have schedule: w1(A), r2(A), w2(B), r1(B). Draw the conflict graph mentally. Is it serializable?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz7')">
+        <span class="opt-letter">A</span> No — T1→T2 (w1A before r2A) and T2→T1 (w2B before r1B) creates a cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">B</span> Yes — only T1→T2 edge exists, no cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">C</span> Yes — the operations are on different data items so no conflicts
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">D</span> No — but only because of a W-W conflict
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz7-feedback"></div>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz8">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q3</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">Under Wound-Wait: T1 (timestamp=5, older) requests a lock held by T2 (timestamp=10, younger). What happens?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz8')">
+        <span class="opt-letter">A</span> T1 waits for T2
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz8')">
+        <span class="opt-letter">B</span> T1 aborts (dies)
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz8')">
+        <span class="opt-letter">C</span> T1 wounds T2 — forces T2 to abort and takes the lock
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz8')">
+        <span class="opt-letter">D</span> Both transactions abort
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz8-feedback"></div>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz9">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q4</span>
+      <span class="quiz-xp">+30 XP</span>
+    </div>
+    <div class="quiz-question">T1 holds S(A), S(B). T2 holds X(C), requests X(A). T3 holds S(A), requests S(C). Is there a deadlock?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz9')">
+        <span class="opt-letter">A</span> Yes — T1→T2→T3→T1
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz9')">
+        <span class="opt-letter">B</span> No — T2 waits for T1 and T3 (X(A) blocked by S(A)), T3 waits for T2 (S(C) blocked by X(C)), but T1 isn't waiting for anyone. T2→T3→T2? No, T3 isn't holding anything T2 needs. No cycle.
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz9')">
+        <span class="opt-letter">C</span> Yes — T2→T3→T2 cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz9')">
+        <span class="opt-letter">D</span> Can't determine without knowing the transaction timestamps
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz9-feedback"></div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="card fade-in" style="border: 1px solid var(--yellow); margin-top:40px;">
+    <h3>📋 Cheat Sheet — Everything At A Glance</h3>
+    <table class="lock-table" style="margin-top:16px;">
+      <tr>
+        <th>Concept</th>
+        <th>Purpose</th>
+        <th>Key Test</th>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Conflict Serializability</strong></td>
+        <td style="text-align:left;">Is this schedule safe?</td>
+        <td style="text-align:left;">No cycle in conflict graph</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Strict 2PL</strong></td>
+        <td style="text-align:left;">Enforce serializability</td>
+        <td style="text-align:left;">S before read, X before write, release all at commit</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Waits-For Graph</strong></td>
+        <td style="text-align:left;">Detect deadlocks</td>
+        <td style="text-align:left;">Cycle = deadlock</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Wait-Die</strong></td>
+        <td style="text-align:left;">Prevent deadlocks</td>
+        <td style="text-align:left;">Old waits, young dies</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Wound-Wait</strong></td>
+        <td style="text-align:left;">Prevent deadlocks</td>
+        <td style="text-align:left;">Old wounds, young waits</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>C2PL</strong></td>
+        <td style="text-align:left;">Prevent deadlocks</td>
+        <td style="text-align:left;">Lock everything upfront</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div id="score-summary" class="section fade-in" style="text-align:center;padding-bottom:40px;">
+  <div style="font-size:2rem;font-weight:900;margin-bottom:8px;">Your Score</div>
+  <div style="font-size:3rem;font-weight:900;color:var(--yellow);" id="final-score">0 XP</div>
+  <div style="color:var(--text-dim);margin-top:8px;" id="score-message">Answer quiz questions above to earn XP!</div>
+</div>
+
+<footer>
+  COMS 4111 — Computer Systems for Data Science &nbsp;|&nbsp; Columbia University &nbsp;|&nbsp; Study Guide
+</footer>
+
+<div class="xp-toast" id="xp-toast">+0 XP</div>
+
+<script>
+  // ═══════════════ XP SYSTEM ═══════════════
+  let totalXP = 0;
+  const answeredQuizzes = new Set();
+
+  function addXP(amount) {
+    totalXP += amount;
+    document.getElementById('xp-count').textContent = totalXP;
+    document.getElementById('final-score').textContent = totalXP + ' XP';
+    const toast = document.getElementById('xp-toast');
+    toast.textContent = '+' + amount + ' XP';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+
+    if (totalXP >= 190) {
+      document.getElementById('score-message').textContent = 'Perfect score! You crushed it! 🎉';
+    } else if (totalXP >= 120) {
+      document.getElementById('score-message').textContent = 'Excellent! You know this material well.';
+    } else if (totalXP >= 60) {
+      document.getElementById('score-message').textContent = 'Good start — review the sections you missed.';
+    }
+  }
+
+  // ═══════════════ QUIZ HANDLER ═══════════════
+  const quizXP = {quiz1:15,quiz2:15,quiz3:15,quiz4:20,quiz5:20,quiz6:25,quiz7:25,quiz8:25,quiz9:30};
+  const quizExplanations = {
+    quiz1: {correct:"Exactly! Unrepeatable = the same row returns a different value. Phantom = the set of rows returned changes (new rows appear or disappear).", wrong:"Not quite. The key difference is scope: unrepeatable read = a single row's value changed between two reads. Phantom read = the set of qualifying rows changed."},
+    quiz2: {correct:"r1(A) before w2(A) gives T1→T2. r2(A) before w1(A) gives T2→T1. That's a cycle! Not serializable.", wrong:"Look carefully: r1(A) conflicts with w2(A) → T1→T2. And r2(A) conflicts with w1(A) → T2→T1. That's a cycle."},
+    quiz3: {correct:"In Strict 2PL, all locks are held until commit/abort, then released all at once. This is what makes it 'strict'.", wrong:"Strict 2PL releases ALL locks at commit/abort time, not gradually. This prevents cascading aborts."},
+    quiz4: {correct:"T1 waits for C (held by T3) → T1→T3. T3 waits for B (held by T2) → T3→T2. T2 waits for A (held by T1) → T2→T1. Cycle: T1→T3→T2→T1 = deadlock!", wrong:"Trace it: T1→T3 (waits for C), T3→T2 (waits for B), T2→T1 (waits for A). That's a cycle!"},
+    quiz5: {correct:"Without this, a transaction could get aborted repeatedly as the 'youngest' every time. Keeping its timestamp means it ages and eventually gets top priority.", wrong:"The reason is starvation prevention. Without keeping the original timestamp, a transaction could be repeatedly aborted as the 'youngest' forever."},
+    quiz6: {correct:"R-R is never a conflict! Two reads don't interfere with each other. Conflicts require at least one write.", wrong:"Remember: a conflict requires at least one WRITE. R-R (two reads) never causes any problems."},
+    quiz7: {correct:"w1(A)→r2(A) is a W-R conflict on A → T1→T2. w2(B)→r1(B) is a W-R conflict on B → T2→T1. Cycle T1↔T2 means not serializable.", wrong:"Find the conflicts: w1(A) before r2(A) → T1→T2. w2(B) before r1(B) → T2→T1. That's a cycle!"},
+    quiz8: {correct:"In Wound-Wait, the older transaction is aggressive. T1 is older, so it 'wounds' (forces abort of) the younger T2.", wrong:"In Wound-Wait: old = aggressive. T1 (ts=5) is older than T2 (ts=10), so T1 wounds T2, forcing T2 to abort."},
+    quiz9: {correct:"T2 waits for T1/T3 (needs X(A), they hold S(A)). T3 waits for T2 (needs S(C), T2 holds X(C)). But T1 isn't waiting — no cycle. T1 will finish, release S(A), and things can progress.", wrong:"Build the waits-for graph: T2→T1 (X(A) blocked by S(A)), T2→T3, T3→T2 (S(C) blocked by X(C)). T3→T2 and T2→T3? No: T2 needs X(A) from T1 and T3, not from T3's C lock. T1 is free — no deadlock."},
+  };
+
+  function checkAnswer(el, isCorrect, quizId) {
+    if (answeredQuizzes.has(quizId)) return;
+    answeredQuizzes.add(quizId);
+
+    const options = el.parentElement.querySelectorAll('.quiz-option');
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      if (opt === el) opt.classList.add(isCorrect ? 'correct' : 'wrong');
+      // highlight the correct one
+      if (!isCorrect) {
+        opt.onclick = null;
+      }
+    });
+    if (!isCorrect) {
+      options.forEach(opt => {
+        // find correct by re-checking
+      });
+    }
+
+    const fb = document.getElementById(quizId + '-feedback');
+    fb.classList.add('show');
+    if (isCorrect) {
+      fb.classList.add('correct-fb');
+      fb.innerHTML = '✓ Correct! ' + quizExplanations[quizId].correct;
+      addXP(quizXP[quizId]);
+    } else {
+      fb.classList.add('wrong-fb');
+      fb.innerHTML = '✗ ' + quizExplanations[quizId].wrong;
+    }
+  }
+
+  // ═══════════════ CONFLICT GRAPH BUILDER ═══════════════
+  let cgStep = 0;
+  const cgSteps = [
+    { explain: '<strong>Step 1:</strong> r1(A) then w2(A) — R-W conflict on A between T1 and T2. Draw edge <span style="color:var(--yellow)">T1 → T2</span>.', edges: ['cg-edge1','cg-edge1-label'] },
+    { explain: '<strong>Step 2:</strong> r1(B) then w3(B) — R-W conflict on B between T1 and T3. Draw edge <span style="color:var(--orange)">T1 → T3</span>.', edges: ['cg-edge2','cg-edge2-label'] },
+    { explain: '<strong>Step 3:</strong> w3(B) then w2(B) — W-W conflict on B between T3 and T2. Draw edge <span style="color:var(--red)">T3 → T2</span>.', edges: ['cg-edge4','cg-edge4-label'] },
+    { explain: '<strong>Result:</strong> T1→T2, T1→T3, T3→T2. <span style="color:var(--green);font-weight:700;">No cycle! ✓ Conflict serializable.</span> Equivalent serial order: T1, T3, T2.', edges: [] },
+  ];
+
+  function nextConflictStep() {
+    if (cgStep >= cgSteps.length) return;
+    const step = cgSteps[cgStep];
+    step.edges.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('opacity', '1');
+    });
+    document.getElementById('cg-explanation').innerHTML = step.explain;
+    cgStep++;
+    if (cgStep >= cgSteps.length) {
+      document.getElementById('cg-next-btn').textContent = 'Done ✓';
+      document.getElementById('cg-next-btn').disabled = true;
+    }
+  }
+
+  function resetConflictGraph() {
+    cgStep = 0;
+    ['cg-edge1','cg-edge1-label','cg-edge2','cg-edge2-label','cg-edge3','cg-edge3-label','cg-edge4','cg-edge4-label'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('opacity', '0');
+    });
+    document.getElementById('cg-explanation').innerHTML = 'Click "Next Step" to identify conflicts one by one and build the graph.';
+    document.getElementById('cg-next-btn').textContent = 'Next Step →';
+    document.getElementById('cg-next-btn').disabled = false;
+  }
+
+  // ═══════════════ 2PL SIMULATOR ═══════════════
+  let simStepNum = 0;
+  const simSteps = [
+    { log: '<span class="txn-label" style="color:var(--accent)">T1</span> requests <span class="lock-acquire">S-lock(A)</span> → <span class="lock-acquire">GRANTED</span>', lockA: 'S by T1', lockB: 'unlocked' },
+    { log: '<span class="txn-label" style="color:var(--accent)">T1</span> reads A', lockA: 'S by T1', lockB: 'unlocked' },
+    { log: '<span class="txn-label" style="color:var(--blue)">T2</span> requests <span class="lock-acquire">S-lock(B)</span> → <span class="lock-acquire">GRANTED</span>', lockA: 'S by T1', lockB: 'S by T2' },
+    { log: '<span class="txn-label" style="color:var(--blue)">T2</span> reads B', lockA: 'S by T1', lockB: 'S by T2' },
+    { log: '<span class="txn-label" style="color:var(--accent)">T1</span> requests <span class="lock-wait">X-lock(B)</span> → <span class="lock-wait">BLOCKED!</span> (T2 holds S on B)', lockA: 'S by T1', lockB: '<span style="color:var(--yellow)">S by T2 (T1 waiting)</span>' },
+    { log: '<span class="txn-label" style="color:var(--blue)">T2</span> requests <span class="lock-wait">X-lock(A)</span> → <span class="lock-wait">BLOCKED!</span> (T1 holds S on A)', lockA: '<span style="color:var(--yellow)">S by T1 (T2 waiting)</span>', lockB: '<span style="color:var(--yellow)">S by T2 (T1 waiting)</span>' },
+    { log: '<span class="deadlock">💀 DEADLOCK DETECTED! T1 waits for T2, T2 waits for T1.</span>', lockA: '<span style="color:var(--red)">DEADLOCK</span>', lockB: '<span style="color:var(--red)">DEADLOCK</span>' },
+    { log: '<span class="deadlock">→ DBMS aborts T2 (victim), releases all T2 locks</span>', lockA: 'S by T1', lockB: 'unlocked' },
+    { log: '<span class="txn-label" style="color:var(--accent)">T1</span> <span class="lock-acquire">X-lock(B)</span> → <span class="lock-acquire">GRANTED</span> (T2 aborted, lock is free)', lockA: 'S by T1', lockB: 'X by T1' },
+    { log: '<span class="txn-label" style="color:var(--accent)">T1</span> writes B. <span class="lock-release">COMMITS → releases all locks.</span>', lockA: 'unlocked', lockB: 'unlocked' },
+    { log: '<span class="txn-label" style="color:var(--blue)">T2</span> restarts (with original timestamp)...', lockA: 'unlocked', lockB: 'unlocked' },
+  ];
+
+  function simStep() {
+    if (simStepNum >= simSteps.length) return;
+    const step = simSteps[simStepNum];
+    const log = document.getElementById('sim-log');
+    if (simStepNum === 0) log.innerHTML = '';
+    log.innerHTML += '<div class="log-entry">' + step.log + '</div>';
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('lock-a').innerHTML = step.lockA;
+    document.getElementById('lock-b').innerHTML = step.lockB;
+    simStepNum++;
+    if (simStepNum >= simSteps.length) {
+      document.getElementById('sim-step-btn').textContent = 'Done ✓';
+      document.getElementById('sim-step-btn').disabled = true;
+    }
+  }
+
+  function simReset() {
+    simStepNum = 0;
+    document.getElementById('sim-log').innerHTML = '<div class="log-entry" style="color:var(--text-dim);">Click "Next Step" to begin the simulation...</div>';
+    document.getElementById('lock-a').innerHTML = 'unlocked';
+    document.getElementById('lock-b').innerHTML = 'unlocked';
+    document.getElementById('sim-step-btn').textContent = 'Next Step →';
+    document.getElementById('sim-step-btn').disabled = false;
+  }
+
+  // ═══════════════ DEADLOCK ANIMATION ═══════════════
+  function animateDeadlock() {
+    const steps = document.querySelectorAll('[id^="dl-step-"]');
+    steps.forEach(s => { s.classList.remove('active','done'); s.style.opacity = '0.4'; });
+    let i = 0;
+    function showNext() {
+      if (i >= steps.length) return;
+      if (i > 0) { steps[i-1].classList.remove('active'); steps[i-1].classList.add('done'); }
+      steps[i].classList.add('active');
+      steps[i].style.opacity = '1';
+      i++;
+      if (i < steps.length) setTimeout(showNext, 900);
+    }
+    showNext();
+  }
+
+  // ═══════════════ MATCHING GAME ═══════════════
+  // Correct mapping: src0→tgt0, src1→tgt1, src2→tgt2, src3→tgt3
+  const matchAnswers = {0:0, 1:1, 2:2, 3:3};
+  let selectedSource = null;
+  let matchedCount = 0;
+  const matchedSources = new Set();
+  const matchedTargets = new Set();
+
+  function selectMatchSource(idx) {
+    if (matchedSources.has(idx)) return;
+    document.querySelectorAll('.match-item').forEach(el => el.classList.remove('selected'));
+    document.getElementById('m-src-' + idx).classList.add('selected');
+    selectedSource = idx;
+  }
+
+  function selectMatchTarget(idx) {
+    if (selectedSource === null || matchedTargets.has(idx)) return;
+    if (matchAnswers[selectedSource] === idx) {
+      document.getElementById('m-src-' + selectedSource).classList.add('matched');
+      document.getElementById('m-src-' + selectedSource).classList.remove('selected');
+      document.getElementById('m-tgt-' + idx).classList.add('matched');
+      matchedSources.add(selectedSource);
+      matchedTargets.add(idx);
+      matchedCount++;
+      if (matchedCount === 4) {
+        document.getElementById('match-result').innerHTML = '<span style="color:var(--green);">All matched correctly! +20 XP</span>';
+        addXP(20);
+      }
+    } else {
+      document.getElementById('m-tgt-' + idx).classList.add('wrong-match');
+      document.getElementById('match-result').innerHTML = '<span style="color:var(--red);">Not quite — try again!</span>';
+      setTimeout(() => {
+        document.getElementById('m-tgt-' + idx).classList.remove('wrong-match');
+        document.getElementById('match-result').innerHTML = '';
+      }, 1000);
+    }
+    selectedSource = null;
+  }
+
+  // ═══════════════ SCROLL ANIMATIONS ═══════════════
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // ═══════════════ PROGRESS BAR ═══════════════
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('progress-bar').style.width = scrolled + '%';
+  });
+
+  // ═══════════════ NAV ACTIVE STATE ═══════════════
+  const sections = document.querySelectorAll('.section, .hero');
+  const navLinks = document.querySelectorAll('nav .nav-links a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop - 100;
+      if (pageYOffset >= sectionTop) current = section.getAttribute('id') || '';
+    });
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

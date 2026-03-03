@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRU Completion, LRU Approximations, and LFU — Part 7</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>LRU Completion, LRU Approximations, and LFU</h1>
+            <p class="subtitle">Completing the LRU trace, practical approximations, and frequency-based eviction</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: LRU Worked Example (Complete) -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. LRU Worked Example (Complete)</h2>
+
+            <p>Continuing from Part 6, here is the full LRU trace for the sequence <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. The cache is ordered by recency — leftmost is least recently used (next to be evicted).</p>
+
+            <table>
+                <tr>
+                    <th>Request</th>
+                    <th>Result</th>
+                    <th>Action</th>
+                    <th>Cache (LRU &rarr; MRU)</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 1</td>
+                    <td>[1]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 2</td>
+                    <td>[1, 2]</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 3</td>
+                    <td>[1, 2, 3]</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 4 (full)</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>Move 1 to MRU end</td>
+                    <td>[2, 3, 4, 1]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>Move 2 to MRU end</td>
+                    <td>[3, 4, 1, 2]</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 3 (LRU), insert 5</td>
+                    <td>[4, 1, 2, 5]</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>Move 1 to MRU end</td>
+                    <td>[4, 2, 5, 1]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>Move 2 to MRU end</td>
+                    <td>[4, 5, 1, 2]</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 4 (LRU), insert 3</td>
+                    <td>[5, 1, 2, 3]</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 5 (LRU), insert 4</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 1 (LRU), insert 5</td>
+                    <td>[2, 3, 4, 5]</td>
+                </tr>
+            </table>
+
+            <div class="magic-connection">
+                <h4>Result: 8 misses, 4 hits out of 12 requests</h4>
+                <p style="margin-bottom: 0.5rem;">Hit rate: 4/12 = <strong>33.3%</strong> — better than FIFO's 16.7%!</p>
+                <p style="margin-bottom: 0;">The key difference was at request 5 (item "1"): FIFO left item 1 at the front of the eviction queue (oldest inserted), so it was evicted when 5 arrived. LRU moved item 1 to the back (most recently used), so it survived. This gave LRU 2 extra hits (requests 8 and 9). However, LRU is still not optimal&hellip;</p>
+            </div>
+
+            <div class="key-insight">
+                Notice the critical mechanic: on a cache hit, LRU rearranges the cache order even though no item is inserted or evicted. This is what makes LRU more expensive to implement than FIFO — every single access (not just misses) requires updating the data structure.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: LRU Approximations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. LRU Approximations</h2>
+
+            <p>True LRU is expensive to implement: every read requires updating a linked list to move the accessed item to the most-recent position. Maintaining a full ranking of all items at every access can become a bottleneck. In practice, many caches use <strong>approximations</strong> of LRU that are cheaper but nearly as effective.</p>
+
+            <h3>Sampled LRU</h3>
+
+            <div class="explanation-box">
+                <h4>How It Works</h4>
+                <ul style="margin-bottom: 0;">
+                    <li>Instead of maintaining a full ordering (linked list) of all items, simply <strong>record the last access timestamp</strong> for each item when it is accessed</li>
+                    <li>At eviction time, <strong>randomly sample N items</strong> from the cache and evict the one with the oldest access time</li>
+                    <li>When N is large enough (e.g., 50 or 100), this approximates true LRU very well</li>
+                </ul>
+            </div>
+
+            <p>This is the approach used by Redis. It avoids the overhead of maintaining a sorted list on every access — instead, you only do work at eviction time, and even then it's just sampling rather than scanning the entire cache.</p>
+
+            <h3>CLOCK Algorithm</h3>
+
+            <div class="definition-box">
+                <strong>CLOCK:</strong> An LRU approximation that maintains just <strong>1 bit per item</strong> in the cache (a "reference bit" that can be 0 or 1). It uses a circular buffer with a "clock hand" pointer.
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>On access: set the item's bit to 1</strong>
+                </div>
+                <p style="margin-bottom: 0;">This marks the item as "recently used." This is much cheaper than moving a node in a linked list.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>On eviction: sweep the clock hand</strong>
+                </div>
+                <p style="margin-bottom: 0;">The hand moves around the circular buffer. For each item it passes: if the bit is 1, set it to 0 and move on (give it a "second chance"). If the bit is 0, evict that item — it hasn't been accessed since the last sweep.</p>
+            </div>
+
+            <p>CLOCK was originally designed for operating system page cache management. It captures the essence of LRU (recently accessed items survive) with minimal overhead (1 bit per item, no list reordering).</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: LFU -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. LFU (Least Frequently Used)</h2>
+
+            <div class="definition-box">
+                <strong>LFU Policy:</strong> Evict the item that has been <strong>accessed the fewest total times</strong> (lowest frequency count). The idea: items that have been accessed many times are likely to be accessed again in the future.
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Advantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>Works well for workloads with a <strong>relatively static set of popular items</strong></li>
+                        <li>Popular items accumulate high counts and are protected from eviction</li>
+                    </ul>
+                </div>
+                <div class="visual-item">
+                    <h4>Disadvantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>Does not adapt well when <strong>new items become popular</strong> — old items with high historical counts block new popular items from staying in cache</li>
+                        <li>Expensive to implement: must track frequency for all keys and find the minimum</li>
+                        <li>To fully implement, also need to track frequencies of <em>evicted</em> items (so they retain their count if re-inserted)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p>The key distinction from LRU: LRU cares about <em>when</em> you were last accessed (recency), while LFU cares about <em>how many times</em> you've been accessed (frequency). These can lead to very different eviction decisions.</p>
+
+            <h3>LFU Worked Example (Beginning)</h3>
+
+            <p>Same sequence: <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. Now we track access counts.</p>
+
+            <table>
+                <tr>
+                    <th>Request</th>
+                    <th>Result</th>
+                    <th>Cache</th>
+                    <th>Counts</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>[1]</td>
+                    <td>1:1</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>[1, 2]</td>
+                    <td>1:1, 2:1</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>[1, 2, 3]</td>
+                    <td>1:1, 2:1, 3:1</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:1, 2:1, 3:1, 4:1</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:<strong>2</strong>, 2:1, 3:1, 4:1</td>
+                </tr>
+            </table>
+
+            <p>After these 5 steps, item 1 has count 2 while items 2, 3, 4 each have count 1. The next request (item 2) will be a hit, raising its count to 2. Then when item 5 arrives, LFU must evict the item with the <em>lowest</em> frequency — either 3 or 4 (both at count 1). The full LFU trace continues in Part 8.</p>
+
+            <div class="key-insight">
+                Notice how LFU makes a fundamentally different decision than both FIFO and LRU. When item 5 arrives, FIFO evicts item 1 (oldest inserted), LRU evicts item 3 (least recently used), and LFU evicts item 3 or 4 (lowest frequency). Each policy "bets" on a different signal for predicting future access.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Comparison So Far -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Three Policies Compared</h2>
+
+            <table>
+                <tr>
+                    <th>Policy</th>
+                    <th>Eviction Signal</th>
+                    <th>Cost per Access</th>
+                    <th>Misses (example)</th>
+                </tr>
+                <tr>
+                    <td><strong>FIFO</strong></td>
+                    <td>Insertion time</td>
+                    <td>None (queue append)</td>
+                    <td>10 / 12</td>
+                </tr>
+                <tr>
+                    <td><strong>LRU</strong></td>
+                    <td>Last access time</td>
+                    <td>Reorder on every hit</td>
+                    <td>8 / 12</td>
+                </tr>
+                <tr>
+                    <td><strong>LFU</strong></td>
+                    <td>Total access count</td>
+                    <td>Increment counter + find min</td>
+                    <td>TBD (Part 8)</td>
+                </tr>
+            </table>
+
+            <div class="analogy">
+                Think of three different strategies for deciding which clothes to donate from a full closet. FIFO: donate whatever you bought earliest. LRU: donate whatever you wore least recently. LFU: donate whatever you've worn the fewest total times. Each captures a different aspect of "usefulness," and the best choice depends on your wearing habits.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 7</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> LRU achieves <strong>8 misses</strong> on the reference sequence vs. FIFO's 10 — a 33.3% hit rate vs. 16.7%</li>
+                    <li><span class="checkmark">&#10003;</span> LRU's advantage: on a hit, items are <strong>moved to the MRU end</strong>, protecting frequently re-accessed items from eviction</li>
+                    <li><span class="checkmark">&#10003;</span> LRU is expensive: requires <strong>reordering on every access</strong>, not just on misses</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Sampled LRU</strong>: record timestamps, sample N items at eviction time, evict the oldest — used by Redis</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>CLOCK</strong>: 1 reference bit per item + circular sweep — originally used for OS page caching</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>LFU</strong> evicts the item with the lowest total access count — good for stable popularity, bad for shifting trends</li>
+                    <li><span class="checkmark">&#10003;</span> LFU is also expensive: must track frequencies for all keys (including evicted ones) and find the minimum</li>
+                    <li><span class="checkmark">&#10003;</span> Each policy bets on a different signal: insertion time (FIFO), recency (LRU), or frequency (LFU)</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

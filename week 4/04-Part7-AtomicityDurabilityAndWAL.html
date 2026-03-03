@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomicity, Durability, and Write-Ahead Logging — Part 7</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Atomicity, Durability, and Write-Ahead Logging</h1>
+            <p class="subtitle">How databases survive crashes without losing data or corrupting state</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: ACID is Contentious -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. A Note: ACID is Contentious</h2>
+
+            <p>Before diving into the mechanisms, the lecture makes an important practical observation: <strong>ACID is not universally provided</strong>. There has been — and continues to be — significant debate over whether full ACID guarantees are necessary or even desirable in all contexts.</p>
+
+            <ul>
+                <li><strong>Many SQL databases do not provide full ACID by default.</strong> For example, most default to "Read Committed" isolation — a weaker form that allows certain anomalies in exchange for better performance.</li>
+                <li><strong>"NoSQL" databases relax ACID even more.</strong> Systems like Redis, MongoDB, Cassandra, and DynamoDB were designed for massive scale and often sacrifice strict consistency or isolation for availability and partition tolerance (the CAP theorem tradeoff).</li>
+                <li><strong>"NewSQL" databases are reintroducing ACID</strong> to NoSQL-style architectures. Systems like CockroachDB and Google Spanner aim to provide both the scalability of NoSQL and the correctness guarantees of ACID.</li>
+            </ul>
+
+            <div class="key-insight">
+                Understanding ACID is essential not because every system provides it, but because you need to know what guarantees your system actually offers — and what anomalies are possible when those guarantees are relaxed. The mechanisms we study here (WAL, serializability) are the building blocks that make ACID possible when you need it.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Goal — Atomicity and Durability -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. The Goal: Ensuring Atomicity and Durability</h2>
+
+            <p>This part of the lecture focuses on the <strong>A</strong> and <strong>D</strong> of ACID — Atomicity and Durability — and introduces the core mechanism that provides both: <strong>Write-Ahead Logging (WAL)</strong>.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Atomicity</h4>
+                    <p>Transactions should either happen completely or not at all. If there is an abort or crash during a transaction, <strong>no effects should be seen</strong>.</p>
+                    <p style="margin-bottom: 0;">Example: TXN 1 is in progress when a crash occurs. After recovery, none of TXN 1's changes are persisted — it is as if TXN 1 never started.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Durability</h4>
+                    <p>If the database stops running, changes due to <strong>completed transactions should all persist</strong>. Just store on stable disk.</p>
+                    <p style="margin-bottom: 0;">Example: TXN 2 completed before the crash. After recovery, all of TXN 2's changes are still present.</p>
+                </div>
+            </div>
+
+            <p>The lecture focuses on how to accomplish atomicity via logging. Durability is conceptually simpler (write to disk), but the two are deeply intertwined because the logging mechanism that enables atomicity also enables durability.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Physical Logging -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Basic Idea: Physical Logging</h2>
+
+            <p>Database tables themselves have no notion of history. Once you overwrite a value, the old value is gone. So we introduce a notion of history using a <strong>log</strong>.</p>
+
+            <div class="definition-box">
+                <strong>Log:</strong> An ordered list of update records for ongoing transactions. Each log record contains UNDO information for every update, stored in the format: <code>&lt;TransactionID, location, old data, new data&gt;</code>. This is sufficient to undo any transaction.
+            </div>
+
+            <p>Key properties of the log:</p>
+            <ul>
+                <li>The database <strong>owns the log service</strong> for all applications and transactions</li>
+                <li>The log is <strong>logically (and usually physically) separate</strong> from the actual data</li>
+                <li>Logging is <strong>transparent</strong> to the application or transaction — the programmer does not manage it</li>
+                <li>Writes to the log are <strong>sequential</strong>, and the log can be <strong>flushed</strong> (force-written to disk)</li>
+            </ul>
+
+            <img src="slides/physical-logging.png" alt="Physical logging — showing the log as a separate structure containing update records with old and new values">
+
+            <h3>How Logging Works: A Concrete Example</h3>
+
+            <p>Consider a transaction T that reads A (currently 0) and writes A = 1:</p>
+
+            <div class="explanation-box">
+                <h4>T: R(A=0), W(A=1)</h4>
+                <p style="margin-bottom: 0.5rem;">When T writes A = 1, two things happen in main memory:</p>
+                <ol style="margin-bottom: 0;">
+                    <li>The data page for A is updated: A changes from 0 to 1 in the memory buffer</li>
+                    <li>An <strong>update record</strong> is written to the in-memory log: <code>&lt;Tid, &amp;A, 0, 1&gt;</code> — meaning "transaction Tid changed A at address &amp;A from 0 to 1"</li>
+                </ol>
+            </div>
+
+            <p>At this point, both the updated data and the log record exist only in main memory. The disk still has A = 0 and an empty log. If the system crashes now, everything in memory is lost — but since nothing was committed, that is fine (atomicity is preserved trivially).</p>
+
+            <div class="problem-box">
+                <h4>Why not just keep everything in memory until commit?</h4>
+                <p>In theory, if we never wrote partial results to disk, atomicity would be trivial — a crash would simply lose all in-progress work. But this does not work in practice:</p>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Memory constraints:</strong> what if the transaction modifies more data than fits in RAM?</li>
+                    <li><strong>Time constraints:</strong> what if the transaction takes hours (like the monthly interest example)?</li>
+                </ul>
+            </div>
+
+            <p>We <strong>need</strong> to write partial results of transactions to disk. And so we need a log to be able to <strong>undo</strong> those partial results if the transaction does not complete.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: WAL Commit Protocol -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Write-Ahead Logging (WAL) Commit Protocol</h2>
+
+            <p>The critical question is: <strong>in what order do we write things to disk?</strong> The WAL protocol defines a precise ordering that guarantees both atomicity and durability.</p>
+
+            <div class="definition-box">
+                <strong>Write-Ahead Logging (WAL):</strong> For each record update, write an Update Record into the LOG. Then follow two flush rules:
+                <ul style="margin-top: 0.75rem; margin-bottom: 0.5rem;">
+                    <li><strong>Rule 1:</strong> Flush the Update Record into the LOG <em>before</em> the corresponding data page goes to storage. <span class="highlight-text">&rarr; Enables Durability</span></li>
+                    <li><strong>Rule 2:</strong> Before a transaction commits: flush all Update Records to LOG, then flush a COMMIT Record to LOG. <span class="highlight-text">&rarr; Enables Atomicity</span></li>
+                </ul>
+                <p style="margin-bottom: 0;"><strong>A transaction is committed once its COMMIT record is on stable storage.</strong></p>
+            </div>
+
+            <img src="slides/wal-commit-protocol.png" alt="WAL commit protocol — showing the two flush rules and their relationship to atomicity and durability">
+
+            <div class="analogy">
+                Think of the WAL like a detailed receipt system. Before you move any merchandise (data) out of the warehouse (memory) to the store floor (disk), you first write a receipt (log record) saying what was moved and where it was. Before you finalize a sale (commit), you make sure all receipts are filed (flushed to disk). If anything goes wrong, you can use the receipts to undo the entire transaction.
+            </div>
+
+            <p>The key insight is that the log is written to disk <strong>before</strong> the data — hence "write-<em>ahead</em>" logging. This means:</p>
+            <ul>
+                <li>If we crash after the log is on disk but before the data is on disk, we can <strong>redo</strong> the changes using the log</li>
+                <li>If we crash before the log is on disk, the transaction was never committed, so no changes need to persist (atomicity)</li>
+                <li>The COMMIT record on disk is the definitive answer to "did this transaction complete?"</li>
+            </ul>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Why Order Matters — Incorrect Protocols -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Why Order Matters — Incorrect Protocols</h2>
+
+            <p>To understand why WAL works, it is instructive to see what goes wrong with other approaches. The lecture walks through two incorrect commit protocols:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Incorrect Protocol #1: Commit Before Writing Anything to Disk</h4>
+                    <p>Commit <em>before</em> writing either data or log to disk. The data (A=1) and log exist only in memory.</p>
+                    <p><strong>Problem:</strong> If we crash now, both the data and the log are lost. The transaction was "committed" but its effects have vanished.</p>
+                    <p style="margin-bottom: 0;"><strong>Result:</strong> <span class="highlight-text">Lost T's update!</span> Durability is violated.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Incorrect Protocol #2: Commit After Writing Data But Before Log</h4>
+                    <p>Write data to disk (A=1 on disk), commit, but do <em>not</em> write the log to disk.</p>
+                    <p><strong>Problem:</strong> The data is durable — A=1 survives a crash. But the log is lost, so after recovery, we have no record of whether T committed or was still in progress.</p>
+                    <p style="margin-bottom: 0;"><strong>Result:</strong> <span class="highlight-text">How do we know whether T was committed??</span> We cannot distinguish a completed transaction from a half-finished one that needs to be rolled back.</p>
+                </div>
+            </div>
+
+            <img src="slides/incorrect-protocols.png" alt="Two incorrect commit protocols — showing why both data-before-log and neither-to-disk approaches fail">
+
+            <div class="magic-connection">
+                <h4>Why WAL Gets It Right</h4>
+                <p>WAL avoids both problems by committing <strong>after</strong> writing the log to disk but potentially <strong>before</strong> writing the data to disk. The log on disk serves as the authoritative record of what happened:</p>
+                <ul style="margin-bottom: 0;">
+                    <li>If the log contains a COMMIT record for T &rarr; T is committed, and we can <strong>redo</strong> any data changes that did not make it to disk</li>
+                    <li>If the log does NOT contain a COMMIT record for T &rarr; T is not committed, and we can <strong>undo</strong> any data changes that DID make it to disk</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Bank Interest Example with WAL -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Bank Interest Example — Full Run, Crash, and Recovery</h2>
+
+            <p>The lecture brings back the monthly interest example from Part 5 to show WAL in action with a realistic scenario.</p>
+
+            <h3>Full Run (No Crash)</h3>
+
+            <div class="explanation-box">
+                <h4>T-Monthly-423: Apply 10% Interest to 10M Accounts</h4>
+                <p>The WAL records every single update as the transaction processes accounts:</p>
+                <ul style="margin-bottom: 0.5rem;">
+                    <li><code>T-Monthly-423 START TRANSACTION</code></li>
+                    <li><code>T-Monthly-423, 3001, 500, 550</code> (Account 3001: $500 &rarr; $550)</li>
+                    <li><code>T-Monthly-423, 4001, 100, 110</code> (Account 4001: $100 &rarr; $110)</li>
+                    <li>... (millions more update records)</li>
+                    <li><code>T-Monthly-423, 50002, 20, 22</code> (Account 50002: $20 &rarr; $22)</li>
+                    <li><code>T-Monthly-423 COMMIT</code></li>
+                </ul>
+                <p style="margin-bottom: 0;">The COMMIT record at the end confirms the transaction completed successfully. All changes are durable.</p>
+            </div>
+
+            <img src="slides/wal-bank-example.png" alt="Bank interest example — full run showing the Money table before and after, alongside the WAL with all update records and COMMIT">
+
+            <h3>With Crash (No COMMIT Record)</h3>
+
+            <p>Now suppose a network outage occurs at 10:29 AM — about 6 hours into the 24-hour transaction. The WAL on disk has update records for accounts processed so far, but <strong>no COMMIT record</strong> (because the transaction did not finish).</p>
+
+            <div class="problem-box">
+                <h4>The Ambiguous State</h4>
+                <p>When the system comes back at 10:45 AM, the data on disk is in a messy state. Some accounts have their interest (3001 = $550), others do not (50002 = $22). Even worse, some accounts might have been modified by <em>other</em> transactions during the outage window.</p>
+                <p style="margin-bottom: 0;">Without the WAL, we would have no idea which accounts were updated by T-Monthly-423 and which were not. But the WAL tells us exactly: the log contains update records for every change T-Monthly-423 made, and since there is no COMMIT record, <strong>all of those changes must be undone</strong>.</p>
+            </div>
+
+            <h3>Recovery Process</h3>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Undo uncommitted transactions</strong>
+                </div>
+                <p style="margin-bottom: 0;">Scan the WAL for transactions that have a START but no COMMIT. For each such transaction, use the "old data" values in the log records to restore every modified item to its original value. Account 3001 goes back to $500, Account 4001 goes back to $100, and so on. Notify developers about the aborted transaction.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Redo committed transactions</strong>
+                </div>
+                <p style="margin-bottom: 0;">For any transaction that <em>does</em> have a COMMIT record in the log, use the "new data" values to ensure all changes made it to the data on disk. (The data might already be correct, but this step guarantees it.)</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Back in business</strong>
+                </div>
+                <p style="margin-bottom: 0;">After undo and redo, the database is back in a consistent state. The monthly interest transaction can be re-run from scratch.</p>
+            </div>
+
+            <img src="slides/wal-crash-recovery.png" alt="WAL crash recovery — showing the undo process that restores all accounts to their original values when no COMMIT record exists">
+
+            <div class="key-insight">
+                The COMMIT record is the single source of truth. Its presence or absence on disk is the definitive answer to "did this transaction complete?" This binary check makes recovery straightforward and unambiguous, regardless of how complex the transaction was or how many data pages were modified.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Why Sequential Writes Matter -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>7. Why Sequential Writes Matter — WAL and Performance</h2>
+
+            <p>WAL is not just about correctness — it also provides a significant <strong>performance advantage</strong>.</p>
+
+            <div class="explanation-box">
+                <h4>Why is WAL good for performance?</h4>
+                <ol>
+                    <li><strong>Updates to the WAL are sequential.</strong> Log records are appended one after another, in order. Sequential writes to disk are dramatically faster than random writes — on magnetic disks, the difference can be 100x or more.</li>
+                    <li><strong>Data flushes can be done lazily.</strong> Since the log contains all the information needed to reconstruct any committed transaction, the actual data pages in the tables can be flushed to disk later, at a convenient time. This allows the system to batch and reorder data writes for efficiency.</li>
+                </ol>
+            </div>
+
+            <div class="magic-connection">
+                <h4>The Speedup: 100,000 Seconds vs. 1 Second</h4>
+                <p>Consider the monthly interest transaction updating 10 million bank accounts. Writing 10M individual updates to random disk locations takes approximately 10M &times; 10ms = <strong>100,000 seconds</strong> (~28 hours) on a magnetic disk.</p>
+                <p style="margin-bottom: 0;">But writing 10M sequential log records to the WAL? That takes approximately <strong>1 second</strong>. The data pages can then be flushed lazily in the background. The commit itself only requires the sequential WAL write to complete — a 100,000x speedup for the commit operation.</p>
+            </div>
+
+            <img src="slides/sequential-writes.png" alt="Sequential writes performance — showing the dramatic speedup of sequential WAL writes vs random data writes">
+
+            <p>Sequential writes are critically important for both flash storage (SSDs) and magnetic disks, for different reasons. On magnetic disks, sequential access avoids costly seek times. On SSDs, sequential writes align with the erase-block structure and reduce write amplification. Future lectures will explore the underlying storage physics in detail.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 8: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>ACID is contentious</strong> — many SQL databases default to weaker isolation; NoSQL databases relax ACID further; NewSQL tries to bring ACID back at scale.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Atomicity and Durability</strong> are achieved through logging. Atomicity means "all or nothing"; durability means "committed data survives crashes."</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Physical logging</strong> records <code>&lt;TxnID, location, old data, new data&gt;</code> for every update, providing enough information to undo or redo any transaction.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>We must write partial results to disk</strong> because memory is limited and transactions can be long-running. This means we need a log to undo those partial results if the transaction fails.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>WAL has two rules:</strong> (1) flush the log record before the data page, and (2) flush all log records + COMMIT record before declaring the transaction committed.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The COMMIT record on disk</strong> is the single source of truth for whether a transaction completed. Present = committed (redo if needed). Absent = not committed (undo any partial changes).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Incorrect protocols fail</strong> — committing before writing anything to disk loses data; committing after data but before log makes it impossible to determine transaction status on recovery.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Recovery uses undo and redo:</strong> undo uncommitted transactions (restore old values), redo committed transactions (apply new values), then resume normal operation.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>WAL is great for performance</strong> — sequential log writes are ~100,000x faster than random data writes. Data pages can be flushed lazily after commit.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Atomicity, Durability &amp; WAL — Supplementary to Lecture 04, Part 7</p>
+        </footer>
+
+    </div>
+</body>
+</html>

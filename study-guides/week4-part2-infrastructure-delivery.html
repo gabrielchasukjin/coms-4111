@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infrastructure & Delivery (Layers 5-8) — Interactive Study Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --surface3: #22222e;
+    --border: #2a2a3a;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --green: #00b894;
+    --green-glow: rgba(0, 184, 148, 0.3);
+    --red: #ff6b6b;
+    --red-glow: rgba(255, 107, 107, 0.3);
+    --yellow: #ffc048;
+    --yellow-glow: rgba(255, 192, 72, 0.3);
+    --blue: #54a0ff;
+    --blue-glow: rgba(84, 160, 255, 0.3);
+    --orange: #ff9f43;
+    --pink: #fd79a8;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* --- Progress Bar --- */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px; z-index: 1000;
+    background: linear-gradient(90deg, var(--accent), var(--blue), var(--green));
+    transition: width 0.3s ease;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* --- Nav --- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: rgba(10, 10, 15, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  nav .logo { font-weight: 800; font-size: 14px; letter-spacing: 1px; color: var(--accent); }
+  nav .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav .nav-links a {
+    font-size: 12px; color: var(--text-dim); text-decoration: none;
+    padding: 4px 10px; border-radius: 6px; transition: all 0.2s;
+  }
+  nav .nav-links a:hover, nav .nav-links a.active { color: var(--text); background: var(--surface2); }
+  #xp-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--yellow); display: flex; align-items: center; gap: 6px;
+  }
+
+  /* --- Hero --- */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 120px 24px 80px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--blue) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    position: relative; margin-bottom: 16px;
+  }
+  .hero .subtitle { font-size: 1.2rem; color: var(--text-dim); max-width: 600px; position: relative; margin-bottom: 32px; }
+  .hero .prereqs {
+    position: relative; display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center; margin-bottom: 40px;
+  }
+  .prereq-tag {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--text-dim);
+  }
+  .prereq-tag .icon { margin-right: 4px; }
+  .start-btn {
+    position: relative; padding: 14px 36px; font-size: 16px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    color: #fff; border: none; border-radius: 30px; cursor: pointer;
+    transition: all 0.3s; letter-spacing: 0.5px;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+
+  /* --- Sections --- */
+  .section {
+    max-width: 860px; margin: 0 auto; padding: 80px 24px;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 40px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.8rem; font-weight: 800; }
+  .section-header .tag {
+    margin-left: auto; font-size: 11px; padding: 4px 10px;
+    border-radius: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* --- Content Cards --- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
+  .card p { color: var(--text-dim); margin-bottom: 12px; }
+
+  .callout {
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    border-left: 3px solid;
+  }
+  .callout.info { background: rgba(84, 160, 255, 0.08); border-color: var(--blue); }
+  .callout.warn { background: rgba(255, 192, 72, 0.08); border-color: var(--yellow); }
+  .callout.danger { background: rgba(255, 107, 107, 0.08); border-color: var(--red); }
+  .callout.success { background: rgba(0, 184, 148, 0.08); border-color: var(--green); }
+  .callout .callout-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .callout.info .callout-title { color: var(--blue); }
+  .callout.warn .callout-title { color: var(--yellow); }
+  .callout.danger .callout-title { color: var(--red); }
+  .callout.success .callout-title { color: var(--green); }
+
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+    background: var(--surface3); padding: 2px 7px; border-radius: 5px;
+  }
+
+  /* --- Quiz / Game Components --- */
+  .quiz-box {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent); border-radius: var(--radius);
+    padding: 28px; margin: 28px 0; position: relative; overflow: hidden;
+  }
+  .quiz-box::before {
+    content: ''; position: absolute; top: -50%; right: -50%;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .quiz-box .quiz-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    position: relative;
+  }
+  .quiz-badge {
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .quiz-xp { font-size: 12px; color: var(--yellow); font-weight: 600; }
+  .quiz-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; position: relative; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .quiz-option {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; cursor: pointer;
+    transition: all 0.2s; font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-option:hover { border-color: var(--accent); background: var(--surface3); }
+  .quiz-option.correct { border-color: var(--green); background: rgba(0,184,148,0.1); }
+  .quiz-option.wrong { border-color: var(--red); background: rgba(255,107,107,0.1); }
+  .quiz-option .opt-letter {
+    width: 28px; height: 28px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    font-size: 12px; background: var(--surface3); flex-shrink: 0;
+  }
+  .quiz-feedback {
+    margin-top: 14px; padding: 12px 16px; border-radius: 8px;
+    font-size: 13px; display: none; position: relative;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct-fb { background: rgba(0,184,148,0.1); border: 1px solid var(--green); color: var(--green); }
+  .quiz-feedback.wrong-fb { background: rgba(255,107,107,0.1); border: 1px solid var(--red); color: var(--red); }
+
+  /* --- Drag & Drop Matching Game --- */
+  .match-game {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin: 28px 0;
+  }
+  .match-game h3 { margin-bottom: 6px; }
+  .match-game .instructions { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+  .match-columns { display: flex; gap: 24px; flex-wrap: wrap; }
+  .match-col { flex: 1; min-width: 200px; }
+  .match-col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 10px; }
+  .match-item {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    cursor: grab; font-size: 13px; font-weight: 500;
+    transition: all 0.2s; user-select: none;
+  }
+  .match-item:active { cursor: grabbing; }
+  .match-item.selected { border-color: var(--accent); background: rgba(108,92,231,0.1); }
+  .match-item.matched { border-color: var(--green); background: rgba(0,184,148,0.08); opacity: 0.7; cursor: default; }
+  .match-item.wrong-match { border-color: var(--red); animation: headShake 0.5s; }
+
+  .match-target {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+    min-height: 44px; font-size: 13px; color: var(--text-dim);
+    transition: all 0.2s; cursor: pointer;
+  }
+  .match-target.active { border-color: var(--accent); background: rgba(108,92,231,0.05); }
+  .match-target.matched { border-style: solid; border-color: var(--green); color: var(--green); font-weight: 600; }
+
+  @keyframes headShake {
+    0% { transform: translateX(0); } 15% { transform: translateX(-6px); }
+    30% { transform: translateX(6px); } 45% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); }
+  }
+
+  /* --- Simulator --- */
+  .simulator {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin: 28px 0;
+  }
+  .sim-controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sim-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer;
+    transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .sim-btn:hover { border-color: var(--accent); background: var(--surface3); }
+  .sim-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sim-btn.primary:hover { background: #7d6ff0; }
+  .sim-btn:disabled { opacity: 0.5; cursor: default; }
+  .sim-log {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: var(--surface2); border-radius: 8px; padding: 16px;
+    max-height: 300px; overflow-y: auto; line-height: 1.8;
+  }
+  .sim-log .log-entry { padding: 2px 0; }
+
+  /* --- Comparison Cards --- */
+  .vs-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start; margin: 20px 0; }
+  .vs-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .vs-card h4 { font-size: 1rem; margin-bottom: 8px; }
+  .vs-divider {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.5rem; color: var(--text-dim); padding-top: 30px;
+  }
+
+  /* --- Diagram Container --- */
+  .diagram-container {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin: 24px 0;
+    position: relative;
+  }
+  .diagram-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-dim); margin-bottom: 16px;
+  }
+
+  /* --- Scenario Steps --- */
+  .scenario {
+    background: var(--surface2); border-radius: 10px;
+    padding: 20px; margin: 16px 0;
+  }
+  .scenario-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .scenario-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px; border-radius: 6px; margin: 4px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    transition: all 0.5s; opacity: 0.4;
+  }
+  .scenario-step.active { opacity: 1; background: var(--surface3); }
+  .scenario-step.done { opacity: 0.6; }
+
+  /* --- Lock Table --- */
+  .lock-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    margin: 16px 0; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .lock-table th {
+    background: var(--surface3); padding: 12px 16px;
+    font-weight: 700; font-size: 13px; text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table td {
+    padding: 12px 16px; text-align: center; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table tr:last-child td { border-bottom: none; }
+
+  /* --- XP Toast --- */
+  .xp-toast {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--surface2); border: 1px solid var(--yellow);
+    border-radius: 12px; padding: 12px 20px;
+    font-weight: 700; color: var(--yellow); font-size: 14px;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+  }
+  .xp-toast.show { transform: translateY(0); opacity: 1; }
+
+  /* --- Scroll Animations --- */
+  .fade-in {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* --- Concurrency Visual --- */
+  .conc-visual {
+    display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin: 20px 0;
+  }
+  .conc-panel {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; min-width: 260px; flex: 1; max-width: 360px;
+  }
+  .conc-panel h4 { font-size: 0.95rem; margin-bottom: 12px; text-align: center; }
+  .core-track {
+    height: 30px; border-radius: 6px; margin: 6px 0;
+    display: flex; overflow: hidden; position: relative;
+    background: var(--surface3);
+  }
+  .core-label {
+    font-size: 11px; color: var(--text-dim); font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .task-block {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+    transition: all 0.3s;
+  }
+
+  /* --- VM / Container Interactive --- */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0;
+  }
+  .compare-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .compare-item:hover { border-color: var(--accent); }
+  .compare-item .compare-label {
+    font-weight: 700; font-size: 13px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .compare-item .compare-detail {
+    font-size: 13px; color: var(--text-dim); max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s; opacity: 0;
+  }
+  .compare-item.open .compare-detail { max-height: 200px; opacity: 1; }
+  .compare-item .toggle-icon {
+    margin-left: auto; transition: transform 0.3s; font-size: 12px; color: var(--text-dim);
+  }
+  .compare-item.open .toggle-icon { transform: rotate(180deg); }
+
+  /* --- Raft Cluster Visual --- */
+  .raft-cluster {
+    display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .raft-node {
+    width: 80px; height: 80px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 3px solid var(--border); transition: all 0.4s;
+    font-size: 13px; font-weight: 700;
+  }
+  .raft-node .node-role {
+    font-size: 10px; font-weight: 600; margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .raft-node.leader { border-color: var(--green); background: rgba(0,184,148,0.1); }
+  .raft-node.leader .node-role { color: var(--green); }
+  .raft-node.follower { border-color: var(--blue); background: rgba(84,160,255,0.05); }
+  .raft-node.follower .node-role { color: var(--blue); }
+  .raft-node.candidate { border-color: var(--yellow); background: rgba(255,192,72,0.1); }
+  .raft-node.candidate .node-role { color: var(--yellow); }
+  .raft-node.dead { border-color: var(--red); background: rgba(255,107,107,0.1); opacity: 0.5; }
+  .raft-node.dead .node-role { color: var(--red); }
+
+  /* --- Footer --- */
+  footer {
+    text-align: center; padding: 60px 24px;
+    color: var(--text-dim); font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* --- Responsive --- */
+  @media (max-width: 640px) {
+    .vs-container { grid-template-columns: 1fr; }
+    .vs-divider { padding-top: 0; transform: rotate(90deg); }
+    .compare-grid { grid-template-columns: 1fr; }
+    nav .nav-links { display: none; }
+  }
+
+  /* --- Scrollbar --- */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar" style="width: 0%"></div>
+
+<nav>
+  <div class="logo">COMS 4111 STUDY GUIDE</div>
+  <div class="nav-links">
+    <a href="#stage">Intro</a>
+    <a href="#cdn">CDN</a>
+    <a href="#pods">Pods & Raft</a>
+    <a href="#vms">VMs & K8s</a>
+    <a href="#cores">Cores & Threads</a>
+    <a href="#final-boss">Final Boss</a>
+  </div>
+  <div id="xp-display">&#9889; <span id="xp-count">0</span> XP</div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<div class="hero" id="stage">
+  <h1>Infrastructure<br>& Delivery</h1>
+  <p class="subtitle">Week 4, Part 2 -- from CDN edge servers down to CPU cores. Layers 5 through 8 of the Petflix stack.</p>
+  <div class="prereqs">
+    <span class="prereq-tag"><span class="icon">&#127760;</span> DNS Resolution</span>
+    <span class="prereq-tag"><span class="icon">&#128295;</span> API Gateway</span>
+    <span class="prereq-tag"><span class="icon">&#129513;</span> Microservices</span>
+    <span class="prereq-tag"><span class="icon">&#128230;</span> Caching (Part 1)</span>
+  </div>
+  <button class="start-btn" onclick="document.getElementById('scene').scrollIntoView({behavior:'smooth'})">Begin the Journey &#8595;</button>
+</div>
+
+<!-- ===================== SETTING THE STAGE ===================== -->
+<div class="section fade-in" id="scene">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--accent-glow); color: var(--accent);">0</div>
+    <h2>Setting the Stage</h2>
+    <span class="tag" style="background: var(--accent-glow); color: var(--accent);">Context</span>
+  </div>
+
+  <div class="card">
+    <h3>Where We Are in the Stack</h3>
+    <p>Part 1 traced the <strong>request path</strong> (Layers 1-4): a user clicks play, the request hits DNS, passes through the API Gateway, reaches microservices, and gets cached results. That covered <em>how Petflix knows what to show you</em>.</p>
+    <p>Part 2 goes deeper -- the <strong>infrastructure path</strong> (Layers 5-8): how the actual video bits get delivered to your screen, how services stay alive, and what's happening at the hardware level.</p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--green);">
+        <strong>L5:</strong> CDN &mdash; <em>Content Delivery</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--blue);">
+        <strong>L6:</strong> Pods &mdash; <em>Replication & Consensus</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--yellow);">
+        <strong>L7:</strong> VMs & Containers &mdash; <em>Orchestration</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--red);">
+        <strong>L8:</strong> Cores & Threads &mdash; <em>Bare Metal</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 1: CDN ===================== -->
+<div class="section fade-in" id="cdn">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--green-glow); color: var(--green);">5</div>
+    <h2>Layer 5: CDN (Content Delivery Network)</h2>
+    <span class="tag" style="background: var(--green-glow); color: var(--green);">Delivery</span>
+  </div>
+
+  <div class="card">
+    <h3>Netflix Open Connect / "Petflix Box"</h3>
+    <p>Netflix doesn't stream video from a single datacenter. It installs <strong>physical servers</strong> (called Open Connect Appliances) directly inside ISP data centers around the world. For Petflix, think of them as <strong>"Petflix Boxes"</strong>.</p>
+    <div class="callout info">
+      <div class="callout-title">&#128225; Why physical hardware inside ISPs?</div>
+      <p style="margin:0; color: var(--text-dim); font-size: 14px;">
+        Video files are <strong>enormous</strong>. A single 4K movie can be 15+ GB. Sending that across the internet backbone for every viewer would be slow, expensive, and congest the entire network. By putting servers <em>inside</em> your ISP, the video only has to travel from a server down the hall -- not across the continent.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>CDN: The Core Idea</h3>
+    <p>A <strong>Content Delivery Network</strong> is a system of geographically distributed servers that cache and deliver content from locations <strong>close to users</strong>. Instead of one origin server handling everything, hundreds of edge servers around the globe serve content locally.</p>
+    <div style="display:flex;justify-content:center;margin:20px 0;">
+      <svg width="400" height="180" viewBox="0 0 400 180">
+        <defs>
+          <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--green)"/></marker>
+        </defs>
+        <!-- Origin -->
+        <rect x="160" y="10" width="80" height="36" rx="8" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <text x="200" y="33" text-anchor="middle" fill="var(--text)" font-weight="700" font-size="12">Origin</text>
+        <!-- Edge nodes -->
+        <circle cx="60" cy="130" r="22" fill="none" stroke="var(--green)" stroke-width="2"/>
+        <text x="60" y="135" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="600">Edge</text>
+        <circle cx="200" cy="150" r="22" fill="none" stroke="var(--green)" stroke-width="2"/>
+        <text x="200" y="155" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="600">Edge</text>
+        <circle cx="340" cy="130" r="22" fill="none" stroke="var(--green)" stroke-width="2"/>
+        <text x="340" y="135" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="600">Edge</text>
+        <!-- Lines -->
+        <line x1="175" y1="46" x2="75" y2="110" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowG)"/>
+        <line x1="200" y1="46" x2="200" y2="126" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowG)"/>
+        <line x1="225" y1="46" x2="325" y2="110" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowG)"/>
+        <!-- Users -->
+        <text x="60" y="170" text-anchor="middle" fill="var(--text-dim)" font-size="10">NYC User</text>
+        <text x="200" y="176" text-anchor="middle" fill="var(--text-dim)" font-size="10">LA User</text>
+        <text x="340" y="170" text-anchor="middle" fill="var(--text-dim)" font-size="10">London User</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Per-Title Encoding</h3>
+    <p>Not all video content is equally complex. A slow, dialogue-driven drama has much less visual complexity than a fast-paced action scene with explosions. Netflix creates a <strong>custom encoding recipe</strong> for each title.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--blue);">
+        <div style="font-size:1.3rem;margin-bottom:6px;">&#127916;</div>
+        <strong style="color:var(--blue);">Slow Drama</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Static shots, talking heads. Needs <strong>less bitrate</strong> to look great. More quality levels can be packed into a smaller encoding ladder.</p>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--orange);">
+        <div style="font-size:1.3rem;margin-bottom:6px;">&#128165;</div>
+        <strong style="color:var(--orange);">Fast Action</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Explosions, rapid motion. Needs <strong>more bitrate</strong> to avoid blurriness. Encoding ladder uses higher bitrates at each step.</p>
+      </div>
+    </div>
+    <div class="callout success" style="margin-top:16px;">
+      <div class="callout-title">&#128200; Encoding Ladder</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        Each title gets its own "ladder" of quality levels (e.g., 240p at 150kbps, 480p at 750kbps, 1080p at 4800kbps). The ladder is <strong>custom per title</strong> based on its visual complexity, ensuring each step looks perceptually good.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Adaptive Bitrate Streaming (ABR)</h3>
+    <p>Your bandwidth fluctuates constantly. ABR handles this gracefully:</p>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;margin:16px 0;line-height:2.2;">
+      <div><span style="color:var(--green);font-weight:700;">1.</span> Video is split into small <strong>chunks</strong> (2-10 seconds each)</div>
+      <div><span style="color:var(--green);font-weight:700;">2.</span> Each chunk is encoded at <strong>multiple quality levels</strong></div>
+      <div><span style="color:var(--green);font-weight:700;">3.</span> Player monitors bandwidth in <strong>real time</strong></div>
+      <div><span style="color:var(--green);font-weight:700;">4.</span> For each chunk, player picks the <strong>best quality</strong> that fits current bandwidth</div>
+      <div><span style="color:var(--green);font-weight:700;">5.</span> Quality switches happen <strong>seamlessly</strong> between chunks</div>
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">&#9888;&#65039; Why you sometimes see quality drops</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">When your WiFi stutters, the player drops to a lower quality chunk to avoid buffering. When bandwidth recovers, it ramps back up. This is ABR working as designed.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>VMAF (Video Multi-Method Assessment Fusion)</h3>
+    <p>How do you objectively measure video quality in a way that matches <strong>human perception</strong>?</p>
+    <p><strong>VMAF</strong> is a perceptual quality metric (score 0-100) developed by Netflix. It uses <strong>machine learning</strong> trained on thousands of human ratings to predict how good a video looks to viewers.</p>
+    <div style="margin:16px 0;display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--red);">
+        <strong>0-20:</strong> <span style="color:var(--red);">Unwatchable</span>
+      </div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--yellow);">
+        <strong>40-60:</strong> <span style="color:var(--yellow);">Acceptable</span>
+      </div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--green);">
+        <strong>80-100:</strong> <span style="color:var(--green);">Excellent</span>
+      </div>
+    </div>
+    <p>VMAF is used to build each title's encoding ladder, ensuring that every quality step on the ladder looks <strong>perceptually good to humans</strong>, not just technically correct.</p>
+  </div>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-box fade-in" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Why does Netflix use Per-Title Encoding instead of a single encoding ladder for all content?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">A</span> To save money on CDN storage costs
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz1')">
+        <span class="opt-letter">B</span> Different content has different visual complexity, so the same bitrate yields different quality
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">C</span> Because users in different countries prefer different quality levels
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">D</span> To comply with international video format regulations
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz1-feedback"></div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 2: PODS, RAFT ===================== -->
+<div class="section fade-in" id="pods">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--blue-glow); color: var(--blue);">6</div>
+    <h2>Layer 6: Pods, Leader Election & Replication</h2>
+    <span class="tag" style="background: var(--blue-glow); color: var(--blue);">Consensus</span>
+  </div>
+
+  <div class="card">
+    <h3>Pods: Replicated Service Groups</h3>
+    <p>A <strong>Pod</strong> is a group of replicated service instances that work together for fault tolerance. If one instance crashes, the others keep serving requests.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--green);">
+        <strong style="color:var(--green);">Leader</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">Handles <strong>all writes</strong>. The single source of truth. Propagates changes to followers.</p>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--blue);">
+        <strong style="color:var(--blue);">Followers</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">Receive copies of writes. Can serve <strong>reads</strong>. Stand by to replace the leader if it fails.</p>
+      </div>
+    </div>
+    <div class="callout danger">
+      <div class="callout-title">&#128680; The critical question</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">What happens when the leader fails? How do the followers agree on who becomes the new leader -- <em>without</em> a human intervening? This is the <strong>consensus problem</strong>.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Raft Consensus Algorithm</h3>
+    <p>Raft was designed to be <strong>understandable</strong> (unlike Paxos, which is notoriously difficult). It solves leader election and log replication.</p>
+
+    <div style="margin:16px 0;">
+      <strong>Three Node States:</strong>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+        <div style="background:rgba(0,184,148,0.1);border:1px solid var(--green);padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;color:var(--green);">Leader</div>
+        <div style="background:rgba(84,160,255,0.1);border:1px solid var(--blue);padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;color:var(--blue);">Follower</div>
+        <div style="background:rgba(255,192,72,0.1);border:1px solid var(--yellow);padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;color:var(--yellow);">Candidate</div>
+      </div>
+    </div>
+
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;margin:20px 0;line-height:2.2;">
+      <div><span style="color:var(--green);font-weight:700;">Heartbeats:</span> Leader sends periodic heartbeats to all followers</div>
+      <div><span style="color:var(--blue);font-weight:700;">Election timeout:</span> Each follower has a randomized timer, resets on heartbeat</div>
+      <div><span style="color:var(--yellow);font-weight:700;">Timeout expires:</span> Follower suspects leader is dead, becomes Candidate</div>
+      <div><span style="color:var(--accent);font-weight:700;">RequestVote:</span> Candidate asks all other nodes for their vote</div>
+      <div><span style="color:var(--green);font-weight:700;">Majority wins:</span> If candidate gets majority, it becomes the new Leader</div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-title">&#128161; Why majority is the magic number</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        Any two majorities of the same set <strong>must overlap by at least one member</strong>. This means at least one node that voted for the new leader also has the latest committed data. That guarantees no data is lost. Writes also require majority ACK before being considered committed.
+      </p>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">&#129300; Why odd-numbered clusters?</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        A 5-node cluster needs 3 votes (majority) and tolerates 2 failures. A 3-node cluster needs 2 votes and tolerates 1 failure. Even-numbered clusters waste a node: a 4-node cluster still needs 3 votes and only tolerates 1 failure -- same as 3 nodes!
+      </p>
+    </div>
+  </div>
+
+  <!-- Raft Election Simulator -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Raft Election Simulator</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Step through a leader failure and re-election in a 5-node Raft cluster.</p>
+
+    <div class="raft-cluster" id="raft-cluster">
+      <div class="raft-node leader" id="raft-n1">
+        N1
+        <div class="node-role">Leader</div>
+      </div>
+      <div class="raft-node follower" id="raft-n2">
+        N2
+        <div class="node-role">Follower</div>
+      </div>
+      <div class="raft-node follower" id="raft-n3">
+        N3
+        <div class="node-role">Follower</div>
+      </div>
+      <div class="raft-node follower" id="raft-n4">
+        N4
+        <div class="node-role">Follower</div>
+      </div>
+      <div class="raft-node follower" id="raft-n5">
+        N5
+        <div class="node-role">Follower</div>
+      </div>
+    </div>
+
+    <div class="sim-controls">
+      <button class="sim-btn primary" id="raft-step-btn" onclick="raftStep()">Next Step &#8594;</button>
+      <button class="sim-btn" onclick="raftReset()">Reset</button>
+    </div>
+    <div class="sim-log" id="raft-log">
+      <div class="log-entry" style="color:var(--text-dim);">Click "Next Step" to begin. N1 is the current leader sending heartbeats...</div>
+    </div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-box fade-in" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">In a 5-node Raft cluster, how many node failures can the system tolerate while still being able to elect a new leader?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">A</span> 1 failure
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz2')">
+        <span class="opt-letter">B</span> 2 failures (3 remaining can form a majority of 5)
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">C</span> 3 failures
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">D</span> 4 failures (only need 1 surviving node)
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz2-feedback"></div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 3: VMs, CONTAINERS, K8s ===================== -->
+<div class="section fade-in" id="vms">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--yellow-glow); color: var(--yellow);">7</div>
+    <h2>Layer 7: VMs, Containers & Kubernetes</h2>
+    <span class="tag" style="background: var(--yellow-glow); color: var(--yellow);">Orchestration</span>
+  </div>
+
+  <div class="card">
+    <h3>The Isolation Stack</h3>
+    <p>Multiple layers of abstraction sit between your code and the physical hardware:</p>
+    <div style="display:flex;flex-direction:column;gap:4px;margin:20px 0;font-family:'JetBrains Mono',monospace;font-size:13px;">
+      <div style="background:var(--surface2);padding:12px 16px;border-radius:8px;border-left:3px solid var(--green);text-align:center;">
+        <strong>Containers</strong> <span style="color:var(--text-dim);">(your app)</span>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:10px;">&#8595;</div>
+      <div style="background:var(--surface2);padding:12px 16px;border-radius:8px;border-left:3px solid var(--blue);text-align:center;">
+        <strong>Container Runtime</strong> <span style="color:var(--text-dim);">(Docker)</span>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:10px;">&#8595;</div>
+      <div style="background:var(--surface2);padding:12px 16px;border-radius:8px;border-left:3px solid var(--yellow);text-align:center;">
+        <strong>Virtual Machines</strong> <span style="color:var(--text-dim);">(full OS)</span>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:10px;">&#8595;</div>
+      <div style="background:var(--surface2);padding:12px 16px;border-radius:8px;border-left:3px solid var(--orange);text-align:center;">
+        <strong>Hypervisor</strong> <span style="color:var(--text-dim);">(VMware, KVM)</span>
+      </div>
+      <div style="text-align:center;color:var(--text-dim);font-size:10px;">&#8595;</div>
+      <div style="background:var(--surface2);padding:12px 16px;border-radius:8px;border-left:3px solid var(--red);text-align:center;">
+        <strong>Physical Server</strong> <span style="color:var(--text-dim);">(bare metal)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VM vs Container Interactive Comparison -->
+  <div class="card">
+    <h3>VMs vs Containers -- Click to Explore</h3>
+    <p>Click each attribute to reveal the comparison details.</p>
+
+    <div class="vs-container" style="margin-top:20px;">
+      <div class="vs-card" style="border-top:3px solid var(--blue);">
+        <h4 style="color:var(--blue);">&#128187; Virtual Machines</h4>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.8;">
+          <div>Full guest operating system</div>
+          <div>Strong isolation (hardware-level)</div>
+          <div>Heavy: GBs of disk space</div>
+          <div>Slow startup: seconds to minutes</div>
+          <div>Best for: security boundaries</div>
+        </div>
+      </div>
+      <div class="vs-divider">VS</div>
+      <div class="vs-card" style="border-top:3px solid var(--green);">
+        <h4 style="color:var(--green);">&#128230; Containers</h4>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.8;">
+          <div>Shared host kernel</div>
+          <div>Weaker isolation (process-level)</div>
+          <div>Minimal: MBs of disk space</div>
+          <div>Fast startup: milliseconds to seconds</div>
+          <div>Best for: microservices</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-grid" id="vm-container-compare">
+      <div class="compare-item" onclick="toggleCompare(this)">
+        <div class="compare-label">
+          <span>&#127919; Isolation</span>
+          <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="compare-detail">
+          <p style="margin:0;font-size:12px;"><strong style="color:var(--blue);">VM:</strong> Each VM runs its own kernel and OS. A compromised VM cannot affect the host. <strong>Hardware-level isolation</strong> via hypervisor.</p>
+          <p style="margin:8px 0 0;font-size:12px;"><strong style="color:var(--green);">Container:</strong> Shares the host kernel. Uses Linux namespaces and cgroups for isolation. A kernel exploit could escape the container.</p>
+        </div>
+      </div>
+      <div class="compare-item" onclick="toggleCompare(this)">
+        <div class="compare-label">
+          <span>&#128190; Resource Usage</span>
+          <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="compare-detail">
+          <p style="margin:0;font-size:12px;"><strong style="color:var(--blue);">VM:</strong> Each VM includes a full OS (1-10+ GB). Running 10 VMs = 10 copies of the OS. Significant memory and disk overhead.</p>
+          <p style="margin:8px 0 0;font-size:12px;"><strong style="color:var(--green);">Container:</strong> Only packages the app and its dependencies (10-100 MB). The OS is shared. You can run hundreds of containers where 10 VMs would fit.</p>
+        </div>
+      </div>
+      <div class="compare-item" onclick="toggleCompare(this)">
+        <div class="compare-label">
+          <span>&#9201; Startup Time</span>
+          <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="compare-detail">
+          <p style="margin:0;font-size:12px;"><strong style="color:var(--blue);">VM:</strong> Must boot an entire OS -- BIOS, kernel, init system, services. Takes <strong>30 seconds to several minutes</strong>.</p>
+          <p style="margin:8px 0 0;font-size:12px;"><strong style="color:var(--green);">Container:</strong> Just starts a process (the kernel is already running). Takes <strong>milliseconds to a few seconds</strong>. Critical for auto-scaling.</p>
+        </div>
+      </div>
+      <div class="compare-item" onclick="toggleCompare(this)">
+        <div class="compare-label">
+          <span>&#128170; Best Use Case</span>
+          <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="compare-detail">
+          <p style="margin:0;font-size:12px;"><strong style="color:var(--blue);">VM:</strong> Multi-tenant cloud (AWS), running untrusted workloads, legacy apps that need a full OS, strict security boundaries.</p>
+          <p style="margin:8px 0 0;font-size:12px;"><strong style="color:var(--green);">Container:</strong> Microservices, CI/CD pipelines, rapid scaling, dev/staging environments. Anywhere speed and density matter.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The Noisy Neighbor Problem</h3>
+    <p>When multiple workloads share the same physical machine, one workload can <strong>hog resources</strong> (CPU, memory, disk I/O, network) and degrade performance for everything else running alongside it.</p>
+    <div class="callout warn">
+      <div class="callout-title">&#127881; Real-world analogy</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">Apartment building: your neighbor throws a party that shakes the walls, clogs the elevator, and fills the parking lot. You can't sleep, even though you're paying the same rent. This is the noisy neighbor problem in cloud computing.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Kubernetes (K8s)</h3>
+    <p>Kubernetes is an open-source <strong>container orchestration</strong> platform, originally based on Google's internal system called Borg. It automates the deployment, scaling, and management of containerized applications.</p>
+    <p>Think of K8s as the <strong>operating system for your cluster</strong> -- it decides what runs where, and keeps everything healthy.</p>
+  </div>
+
+  <!-- K8s Matching Game -->
+  <div class="match-game fade-in">
+    <h3>&#127918; K8s Responsibilities -- Match Game</h3>
+    <p class="instructions">Click a K8s responsibility on the left, then click the correct description on the right.</p>
+    <div class="match-columns">
+      <div class="match-col">
+        <div class="match-col-title">Responsibility</div>
+        <div class="match-item" id="k-src-0" onclick="selectK8sSource(0)">
+          <strong>Schedule</strong>
+        </div>
+        <div class="match-item" id="k-src-1" onclick="selectK8sSource(1)">
+          <strong>Scale</strong>
+        </div>
+        <div class="match-item" id="k-src-2" onclick="selectK8sSource(2)">
+          <strong>Heal</strong>
+        </div>
+        <div class="match-item" id="k-src-3" onclick="selectK8sSource(3)">
+          <strong>Deploy</strong>
+        </div>
+      </div>
+      <div class="match-col">
+        <div class="match-col-title">Description</div>
+        <div class="match-target" id="k-tgt-0" onclick="selectK8sTarget(0)">Auto-restart crashed containers, reschedule from failed nodes</div>
+        <div class="match-target" id="k-tgt-1" onclick="selectK8sTarget(1)">Decide which machine runs each container based on resources & constraints</div>
+        <div class="match-target" id="k-tgt-2" onclick="selectK8sTarget(2)">Rolling updates, automatic rollback on failure, zero-downtime</div>
+        <div class="match-target" id="k-tgt-3" onclick="selectK8sTarget(3)">Automatically add/remove replicas based on CPU or load thresholds</div>
+      </div>
+    </div>
+    <div id="k8s-match-result" style="margin-top:16px;font-size:14px;font-weight:600;min-height:24px;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-box fade-in" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Why do containers start faster than VMs?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">A</span> Containers use faster CPUs
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">B</span> Containers skip network initialization
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz3')">
+        <span class="opt-letter">C</span> Containers share the host kernel -- they just start a process, no OS boot needed
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">D</span> Containers use SSDs while VMs use HDDs
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz3-feedback"></div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-box fade-in" id="quiz4">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Which K8s function is responsible for automatically adding more container replicas when CPU usage exceeds a threshold?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">A</span> Schedule
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz4')">
+        <span class="opt-letter">B</span> Scale
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">C</span> Heal
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">D</span> Deploy
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz4-feedback"></div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 4: CORES & THREADS ===================== -->
+<div class="section fade-in" id="cores">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--red-glow); color: var(--red);">8</div>
+    <h2>Layer 8: Cores, Threads & Video Decoding</h2>
+    <span class="tag" style="background: var(--red-glow); color: var(--red);">Bare Metal</span>
+  </div>
+
+  <div class="card">
+    <h3>Concurrency vs Parallelism</h3>
+    <p>These sound similar but are fundamentally different:</p>
+    <div class="vs-container" style="margin-top:20px;">
+      <div class="vs-card" style="border-top:3px solid var(--accent);">
+        <h4 style="color:var(--accent);">Concurrency</h4>
+        <p style="font-size:13px;color:var(--text-dim);">
+          <strong>Dealing with</strong> multiple tasks at once. One core rapidly switches between tasks (interleaving). The tasks make progress, but only one actually runs at any instant.
+        </p>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-dim);font-style:italic;">
+          1 chef juggling 4 dishes -- flipping between them, never truly doing two at once.
+        </div>
+      </div>
+      <div class="vs-divider">VS</div>
+      <div class="vs-card" style="border-top:3px solid var(--green);">
+        <h4 style="color:var(--green);">Parallelism</h4>
+        <p style="font-size:13px;color:var(--text-dim);">
+          <strong>Actually doing</strong> multiple tasks simultaneously. Multiple cores each execute a different task at the same physical instant.
+        </p>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-dim);font-style:italic;">
+          4 chefs, each working on their own dish at the same time.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concurrency vs Parallelism Visual -->
+  <div class="diagram-container fade-in">
+    <div class="diagram-label">Animated Comparison -- Concurrency vs Parallelism</div>
+    <div class="conc-visual">
+      <div class="conc-panel">
+        <h4 style="color:var(--accent);">Concurrency (1 Core)</h4>
+        <div class="core-label">Core 1:</div>
+        <div class="core-track" id="conc-track">
+          <!-- Animated via JS -->
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;">Tasks interleave on a single core</div>
+      </div>
+      <div class="conc-panel">
+        <h4 style="color:var(--green);">Parallelism (4 Cores)</h4>
+        <div class="core-label">Core 1:</div>
+        <div class="core-track" id="par-track1"></div>
+        <div class="core-label">Core 2:</div>
+        <div class="core-track" id="par-track2"></div>
+        <div class="core-label">Core 3:</div>
+        <div class="core-track" id="par-track3"></div>
+        <div class="core-label">Core 4:</div>
+        <div class="core-track" id="par-track4"></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;">Each task runs on its own core</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px;">
+      <button class="sim-btn primary" onclick="animateConcurrency()">&#9654; Animate</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Race Conditions</h3>
+    <p>When two threads access shared data and the result depends on <strong>timing</strong>, you have a <strong>race condition</strong>. The classic example: both threads try to increment a shared counter.</p>
+  </div>
+
+  <!-- Race Condition Simulator -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Race Condition Simulator</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Step through a counter increment bug where two threads race on shared variable <code>counter = 10</code>.</p>
+
+    <div style="margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="background:var(--surface2);padding:12px 20px;border-radius:8px;font-size:14px;">
+        <strong>counter =</strong> <span id="race-counter" style="color:var(--yellow);font-weight:700;font-family:'JetBrains Mono',monospace;">10</span>
+      </div>
+      <div style="background:var(--surface2);padding:12px 20px;border-radius:8px;font-size:14px;">
+        <strong>Expected:</strong> <span style="color:var(--green);font-family:'JetBrains Mono',monospace;">12</span>
+      </div>
+    </div>
+
+    <div class="sim-controls">
+      <button class="sim-btn primary" id="race-step-btn" onclick="raceStep()">Next Step &#8594;</button>
+      <button class="sim-btn" onclick="raceReset()">Reset</button>
+    </div>
+    <div class="sim-log" id="race-log">
+      <div class="log-entry" style="color:var(--text-dim);">Both threads want to do counter++. Click "Next Step" to see what happens...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Locks (Mutex)</h3>
+    <p>The fix for race conditions: <strong>mutual exclusion</strong>. Only one thread can hold the lock at a time. Any other thread that wants access must <strong>wait</strong>.</p>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;margin:16px 0;line-height:2.2;background:var(--surface2);padding:16px;border-radius:8px;">
+      <div style="color:var(--text-dim);">// With a mutex lock:</div>
+      <div><span style="color:var(--green);">Thread A</span>: lock()    <span style="color:var(--text-dim);">// acquired</span></div>
+      <div><span style="color:var(--green);">Thread A</span>: read(counter) = 10</div>
+      <div><span style="color:var(--blue);">Thread B</span>: lock()    <span style="color:var(--yellow);">// BLOCKED -- waits</span></div>
+      <div><span style="color:var(--green);">Thread A</span>: write(counter = 11)</div>
+      <div><span style="color:var(--green);">Thread A</span>: unlock()  <span style="color:var(--text-dim);">// released</span></div>
+      <div><span style="color:var(--blue);">Thread B</span>: lock()    <span style="color:var(--text-dim);">// now acquired</span></div>
+      <div><span style="color:var(--blue);">Thread B</span>: read(counter) = 11</div>
+      <div><span style="color:var(--blue);">Thread B</span>: write(counter = 12)</div>
+      <div><span style="color:var(--blue);">Thread B</span>: unlock()</div>
+      <div style="color:var(--green);font-weight:700;">// Result: counter = 12 (correct!)</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Deadlocks</h3>
+    <p>Two threads each hold a resource that the other needs. <strong>Neither can proceed.</strong> Classic circular wait.</p>
+    <div class="scenario">
+      <div class="scenario-title">&#128128; Thread Deadlock</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.2;">
+        <div><span style="color:var(--green);">Thread A</span>: lock(Resource 1) -- acquired</div>
+        <div><span style="color:var(--blue);">Thread B</span>: lock(Resource 2) -- acquired</div>
+        <div><span style="color:var(--green);">Thread A</span>: lock(Resource 2) -- <span style="color:var(--yellow);">BLOCKED</span> (B holds it)</div>
+        <div><span style="color:var(--blue);">Thread B</span>: lock(Resource 1) -- <span style="color:var(--yellow);">BLOCKED</span> (A holds it)</div>
+        <div style="color:var(--red);font-weight:700;">Neither can make progress. Deadlock.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Hardware Video Decoders</h3>
+    <p>Your device has <strong>fixed-function silicon</strong> (dedicated hardware circuits) specifically designed to decode video. This is vastly more power-efficient than using the general-purpose CPU.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--red);">
+        <strong style="color:var(--red);">Software Decode (CPU)</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">General-purpose CPU runs decode instructions. Flexible but power-hungry and slow for video. Drains battery fast.</p>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--green);">
+        <strong style="color:var(--green);">Hardware Decode (ASIC)</strong>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:6px;">Dedicated silicon circuits built specifically for video decode. Extremely efficient -- uses a fraction of the power. This is why your phone can play 4K video for hours.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz 5 -->
+  <div class="quiz-box fade-in" id="quiz5">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Two threads both read counter=10, then both write counter=11. What is this bug called?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">A</span> Deadlock
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz5')">
+        <span class="opt-letter">B</span> Race condition (lost update)
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">C</span> Buffer overflow
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">D</span> Stack overflow
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz5-feedback"></div>
+  </div>
+</div>
+
+<!-- ===================== FINAL BOSS ===================== -->
+<div class="section fade-in" id="final-boss">
+  <div class="section-header">
+    <div class="section-num" style="background:linear-gradient(135deg,var(--accent-glow),var(--yellow-glow));color:var(--yellow);">&#11088;</div>
+    <h2>Final Boss -- Comprehensive Quiz</h2>
+    <span class="tag" style="background: linear-gradient(135deg,var(--accent-glow),var(--yellow-glow)); color: var(--yellow);">Boss Fight</span>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz6">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q1</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">In Adaptive Bitrate Streaming, what happens when a user's bandwidth suddenly drops?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">A</span> The video stops and buffers until bandwidth recovers
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz6')">
+        <span class="opt-letter">B</span> The player switches to a lower quality chunk for the next segment to avoid buffering
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">C</span> The CDN compresses the video in real time
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">D</span> The server re-encodes the video at a lower bitrate
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz6-feedback"></div>
+  </div>
+
+  <div class="quiz-box fade-in" id="quiz7">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q2</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">In Raft, why is the election timeout randomized on each follower?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">A</span> To make the system more unpredictable and secure
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">B</span> To reduce network traffic from heartbeats
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz7')">
+        <span class="opt-letter">C</span> To prevent multiple followers from becoming candidates at the same time, which could split the vote
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">D</span> Because the algorithm requires prime-number timeouts for correctness
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz7-feedback"></div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="card fade-in" style="border: 1px solid var(--yellow); margin-top:40px;">
+    <h3>&#128203; Cheat Sheet -- Everything At A Glance</h3>
+    <table class="lock-table" style="margin-top:16px;">
+      <tr>
+        <th>Layer</th>
+        <th>Concept</th>
+        <th>Key Takeaway</th>
+      </tr>
+      <tr>
+        <td><strong>L5</strong></td>
+        <td style="text-align:left;"><strong>CDN / Open Connect</strong></td>
+        <td style="text-align:left;">Physical servers inside ISPs, deliver content close to users</td>
+      </tr>
+      <tr>
+        <td><strong>L5</strong></td>
+        <td style="text-align:left;"><strong>Per-Title Encoding + ABR</strong></td>
+        <td style="text-align:left;">Custom encoding per title, adaptive quality switching in real time</td>
+      </tr>
+      <tr>
+        <td><strong>L5</strong></td>
+        <td style="text-align:left;"><strong>VMAF</strong></td>
+        <td style="text-align:left;">ML-based perceptual quality metric (0-100), trained on human ratings</td>
+      </tr>
+      <tr>
+        <td><strong>L6</strong></td>
+        <td style="text-align:left;"><strong>Raft Consensus</strong></td>
+        <td style="text-align:left;">Leader election via heartbeats, timeouts, majority vote</td>
+      </tr>
+      <tr>
+        <td><strong>L7</strong></td>
+        <td style="text-align:left;"><strong>VMs vs Containers</strong></td>
+        <td style="text-align:left;">VMs = strong isolation + heavy; Containers = shared kernel + lightweight</td>
+      </tr>
+      <tr>
+        <td><strong>L7</strong></td>
+        <td style="text-align:left;"><strong>Kubernetes</strong></td>
+        <td style="text-align:left;">Schedule, Scale, Heal, Deploy containers automatically</td>
+      </tr>
+      <tr>
+        <td><strong>L8</strong></td>
+        <td style="text-align:left;"><strong>Concurrency vs Parallelism</strong></td>
+        <td style="text-align:left;">Interleaving on 1 core vs truly simultaneous on multiple cores</td>
+      </tr>
+      <tr>
+        <td><strong>L8</strong></td>
+        <td style="text-align:left;"><strong>Race Conditions & Locks</strong></td>
+        <td style="text-align:left;">Shared state + no coordination = bugs; Mutex = mutual exclusion fix</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div id="score-summary" class="section fade-in" style="text-align:center;padding-bottom:40px;">
+  <div style="font-size:2rem;font-weight:900;margin-bottom:8px;">Your Score</div>
+  <div style="font-size:3rem;font-weight:900;color:var(--yellow);" id="final-score">0 XP</div>
+  <div style="color:var(--text-dim);margin-top:8px;" id="score-message">Answer quiz questions above to earn XP!</div>
+</div>
+
+<footer>
+  COMS 4111 -- Computer Systems for Data Science &nbsp;|&nbsp; Columbia University &nbsp;|&nbsp; Study Guide
+</footer>
+
+<div class="xp-toast" id="xp-toast">+0 XP</div>
+
+<script>
+  // ============== XP SYSTEM ==============
+  let totalXP = 0;
+  const answeredQuizzes = new Set();
+
+  function addXP(amount) {
+    totalXP += amount;
+    document.getElementById('xp-count').textContent = totalXP;
+    document.getElementById('final-score').textContent = totalXP + ' XP';
+    const toast = document.getElementById('xp-toast');
+    toast.textContent = '+' + amount + ' XP';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+
+    if (totalXP >= 150) {
+      document.getElementById('score-message').textContent = 'Perfect score! You crushed it!';
+    } else if (totalXP >= 100) {
+      document.getElementById('score-message').textContent = 'Excellent! You know this material well.';
+    } else if (totalXP >= 50) {
+      document.getElementById('score-message').textContent = 'Good start -- review the sections you missed.';
+    }
+  }
+
+  // ============== QUIZ HANDLER ==============
+  const quizXP = {quiz1:15,quiz2:15,quiz3:15,quiz4:15,quiz5:15,quiz6:25,quiz7:25};
+  const quizExplanations = {
+    quiz1: {
+      correct: "A slow drama can look great at low bitrate, but the same bitrate would make a fast action scene look blurry. Per-title encoding creates custom quality ladders tuned to each title's visual complexity.",
+      wrong: "It's about visual complexity. A slow drama needs less bitrate than fast action to look equally good. One-size-fits-all encoding wastes bandwidth on simple content and under-serves complex content."
+    },
+    quiz2: {
+      correct: "A 5-node cluster needs a majority of 3. With 2 failures, 3 nodes remain -- just enough to form a majority and elect a new leader.",
+      wrong: "A 5-node cluster requires a majority (3 votes) to elect a leader. With 2 nodes down, 3 remain -- exactly a majority. With 3 down, only 2 remain, which is not a majority of 5."
+    },
+    quiz3: {
+      correct: "Containers share the host OS kernel. Starting a container is just starting a new process -- no BIOS, no kernel boot, no OS init. That's why they start in milliseconds.",
+      wrong: "The key reason is the shared kernel. VMs must boot a full OS (BIOS, kernel, init system), which takes seconds to minutes. Containers skip all of that because the kernel is already running."
+    },
+    quiz4: {
+      correct: "Scale is the K8s function that handles auto-scaling: monitoring resource utilization (like CPU) and automatically adding or removing container replicas based on thresholds.",
+      wrong: "The Scale function handles auto-scaling based on load. Schedule decides placement, Heal handles restarts, and Deploy handles rolling updates."
+    },
+    quiz5: {
+      correct: "This is a race condition, specifically a 'lost update.' Both threads read the same value, compute the same result, and one increment is lost. A mutex lock prevents this.",
+      wrong: "When two threads read the same value and both write an incremented version, one update is lost. This is a race condition (lost update), not a deadlock. A deadlock is when threads are stuck waiting for each other's locks."
+    },
+    quiz6: {
+      correct: "ABR pre-encodes each chunk at multiple quality levels. When bandwidth drops, the player simply requests the next chunk at a lower quality -- no buffering, no re-encoding. Quality is sacrificed to maintain playback continuity.",
+      wrong: "ABR doesn't buffer or re-encode in real time. Each video chunk already exists at multiple quality levels. The player just picks a lower-quality version of the next chunk when bandwidth drops."
+    },
+    quiz7: {
+      correct: "If all followers had the same timeout, they'd all become candidates simultaneously when the leader dies, splitting the vote and potentially never electing a leader. Randomized timeouts make it likely that one follower times out first and wins the election cleanly.",
+      wrong: "The randomization prevents split votes. If all followers timed out simultaneously, they'd all become candidates and split the vote. With random timeouts, one typically times out first and wins the election before others even start."
+    }
+  };
+
+  function checkAnswer(el, isCorrect, quizId) {
+    if (answeredQuizzes.has(quizId)) return;
+    answeredQuizzes.add(quizId);
+
+    const options = el.parentElement.querySelectorAll('.quiz-option');
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      if (opt === el) opt.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    const fb = document.getElementById(quizId + '-feedback');
+    fb.classList.add('show');
+    if (isCorrect) {
+      fb.classList.add('correct-fb');
+      fb.innerHTML = '&#10003; Correct! ' + quizExplanations[quizId].correct;
+      addXP(quizXP[quizId]);
+    } else {
+      fb.classList.add('wrong-fb');
+      fb.innerHTML = '&#10007; ' + quizExplanations[quizId].wrong;
+    }
+  }
+
+  // ============== RAFT ELECTION SIMULATOR ==============
+  let raftStepNum = 0;
+  const raftSteps = [
+    {
+      log: '<span style="color:var(--green);font-weight:700;">N1 (Leader)</span> sends heartbeats to N2, N3, N4, N5...',
+      nodes: {n1:'leader',n2:'follower',n3:'follower',n4:'follower',n5:'follower'}
+    },
+    {
+      log: '<span style="color:var(--red);font-weight:700;">N1 CRASHES!</span> Heartbeats stop arriving.',
+      nodes: {n1:'dead',n2:'follower',n3:'follower',n4:'follower',n5:'follower'}
+    },
+    {
+      log: 'Followers start their election timeouts... <span style="color:var(--text-dim);">(each has a random duration)</span>',
+      nodes: {n1:'dead',n2:'follower',n3:'follower',n4:'follower',n5:'follower'}
+    },
+    {
+      log: '<span style="color:var(--yellow);font-weight:700;">N3\'s timeout expires first!</span> N3 becomes a <strong>Candidate</strong> and votes for itself.',
+      nodes: {n1:'dead',n2:'follower',n3:'candidate',n4:'follower',n5:'follower'}
+    },
+    {
+      log: '<span style="color:var(--yellow);font-weight:700;">N3</span> sends <code>RequestVote</code> to N2, N4, N5. (N1 is dead, cannot respond.)',
+      nodes: {n1:'dead',n2:'follower',n3:'candidate',n4:'follower',n5:'follower'}
+    },
+    {
+      log: 'N2 votes YES, N4 votes YES, N5 votes YES. N3 has <strong>4 votes</strong> (including self) out of 5 -- <span style="color:var(--green);font-weight:700;">MAJORITY!</span>',
+      nodes: {n1:'dead',n2:'follower',n3:'candidate',n4:'follower',n5:'follower'}
+    },
+    {
+      log: '<span style="color:var(--green);font-weight:700;">N3 becomes the new LEADER!</span> Starts sending heartbeats to N2, N4, N5.',
+      nodes: {n1:'dead',n2:'follower',n3:'leader',n4:'follower',n5:'follower'}
+    },
+    {
+      log: 'Cluster is healthy again with 4/5 nodes. All writes require ACK from majority (3+ nodes) before committed.',
+      nodes: {n1:'dead',n2:'follower',n3:'leader',n4:'follower',n5:'follower'}
+    }
+  ];
+
+  function setRaftNodes(states) {
+    for (const [key, role] of Object.entries(states)) {
+      const node = document.getElementById('raft-' + key);
+      node.className = 'raft-node ' + role;
+      const roleEl = node.querySelector('.node-role');
+      roleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  }
+
+  function raftStep() {
+    if (raftStepNum >= raftSteps.length) return;
+    const step = raftSteps[raftStepNum];
+    const log = document.getElementById('raft-log');
+    if (raftStepNum === 0) log.innerHTML = '';
+    log.innerHTML += '<div class="log-entry">' + step.log + '</div>';
+    log.scrollTop = log.scrollHeight;
+    setRaftNodes(step.nodes);
+    raftStepNum++;
+    if (raftStepNum >= raftSteps.length) {
+      document.getElementById('raft-step-btn').textContent = 'Done &#10003;';
+      document.getElementById('raft-step-btn').disabled = true;
+    }
+  }
+
+  function raftReset() {
+    raftStepNum = 0;
+    document.getElementById('raft-log').innerHTML = '<div class="log-entry" style="color:var(--text-dim);">Click "Next Step" to begin. N1 is the current leader sending heartbeats...</div>';
+    setRaftNodes({n1:'leader',n2:'follower',n3:'follower',n4:'follower',n5:'follower'});
+    document.getElementById('raft-step-btn').textContent = 'Next Step \u2192';
+    document.getElementById('raft-step-btn').disabled = false;
+  }
+
+  // ============== K8S MATCHING GAME ==============
+  // Schedule->1(decide which machine), Scale->3(auto add/remove), Heal->0(auto-restart), Deploy->2(rolling updates)
+  const k8sAnswers = {0:1, 1:3, 2:0, 3:2};
+  let k8sSelectedSource = null;
+  let k8sMatchedCount = 0;
+  const k8sMatchedSources = new Set();
+  const k8sMatchedTargets = new Set();
+
+  function selectK8sSource(idx) {
+    if (k8sMatchedSources.has(idx)) return;
+    document.querySelectorAll('#k-src-0,#k-src-1,#k-src-2,#k-src-3').forEach(el => el.classList.remove('selected'));
+    document.getElementById('k-src-' + idx).classList.add('selected');
+    k8sSelectedSource = idx;
+  }
+
+  function selectK8sTarget(idx) {
+    if (k8sSelectedSource === null || k8sMatchedTargets.has(idx)) return;
+    if (k8sAnswers[k8sSelectedSource] === idx) {
+      document.getElementById('k-src-' + k8sSelectedSource).classList.add('matched');
+      document.getElementById('k-src-' + k8sSelectedSource).classList.remove('selected');
+      document.getElementById('k-tgt-' + idx).classList.add('matched');
+      k8sMatchedSources.add(k8sSelectedSource);
+      k8sMatchedTargets.add(idx);
+      k8sMatchedCount++;
+      if (k8sMatchedCount === 4) {
+        document.getElementById('k8s-match-result').innerHTML = '<span style="color:var(--green);">All matched correctly! +20 XP</span>';
+        addXP(20);
+      }
+    } else {
+      document.getElementById('k-tgt-' + idx).classList.add('wrong-match');
+      document.getElementById('k8s-match-result').innerHTML = '<span style="color:var(--red);">Not quite -- try again!</span>';
+      setTimeout(() => {
+        document.getElementById('k-tgt-' + idx).classList.remove('wrong-match');
+        document.getElementById('k8s-match-result').innerHTML = '';
+      }, 1000);
+    }
+    k8sSelectedSource = null;
+  }
+
+  // ============== RACE CONDITION SIMULATOR ==============
+  let raceStepNum = 0;
+  const raceSteps = [
+    { log: '<span style="color:var(--green);font-weight:700;">Thread A</span>: reads counter = <strong>10</strong> (stores locally)', counter: '10' },
+    { log: '<span style="color:var(--blue);font-weight:700;">Thread B</span>: reads counter = <strong>10</strong> (stores locally)', counter: '10' },
+    { log: '<span style="color:var(--green);font-weight:700;">Thread A</span>: computes 10 + 1 = <strong>11</strong>', counter: '10' },
+    { log: '<span style="color:var(--green);font-weight:700;">Thread A</span>: writes counter = <strong>11</strong>', counter: '<span style="color:var(--yellow);">11</span>' },
+    { log: '<span style="color:var(--blue);font-weight:700;">Thread B</span>: computes 10 + 1 = <strong>11</strong> <span style="color:var(--text-dim);">(still using its stale local copy!)</span>', counter: '<span style="color:var(--yellow);">11</span>' },
+    { log: '<span style="color:var(--blue);font-weight:700;">Thread B</span>: writes counter = <strong>11</strong> <span style="color:var(--red);">(OVERWRITES Thread A\'s increment!)</span>', counter: '<span style="color:var(--red);font-weight:700;">11</span>' },
+    { log: '<span style="color:var(--red);font-weight:700;">BUG! counter = 11 instead of 12. Thread A\'s increment was LOST.</span>', counter: '<span style="color:var(--red);font-weight:700;">11 (should be 12)</span>' }
+  ];
+
+  function raceStep() {
+    if (raceStepNum >= raceSteps.length) return;
+    const step = raceSteps[raceStepNum];
+    const log = document.getElementById('race-log');
+    if (raceStepNum === 0) log.innerHTML = '';
+    log.innerHTML += '<div class="log-entry">' + step.log + '</div>';
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('race-counter').innerHTML = step.counter;
+    raceStepNum++;
+    if (raceStepNum >= raceSteps.length) {
+      document.getElementById('race-step-btn').textContent = 'Done &#10003;';
+      document.getElementById('race-step-btn').disabled = true;
+    }
+  }
+
+  function raceReset() {
+    raceStepNum = 0;
+    document.getElementById('race-log').innerHTML = '<div class="log-entry" style="color:var(--text-dim);">Both threads want to do counter++. Click "Next Step" to see what happens...</div>';
+    document.getElementById('race-counter').innerHTML = '10';
+    document.getElementById('race-step-btn').textContent = 'Next Step \u2192';
+    document.getElementById('race-step-btn').disabled = false;
+  }
+
+  // ============== CONCURRENCY VS PARALLELISM ANIMATION ==============
+  function animateConcurrency() {
+    const colors = ['#6c5ce7','#00b894','#ff6b6b','#ffc048'];
+    const labels = ['A','B','C','D'];
+
+    // Concurrency: interleaved on 1 core
+    const concTrack = document.getElementById('conc-track');
+    concTrack.innerHTML = '';
+    let concBlocks = [];
+    // Create interleaved pattern: A B C D A B C D A B C D
+    for (let round = 0; round < 3; round++) {
+      for (let t = 0; t < 4; t++) {
+        const block = document.createElement('div');
+        block.className = 'task-block';
+        block.style.width = '0%';
+        block.style.background = colors[t];
+        block.textContent = labels[t];
+        concTrack.appendChild(block);
+        concBlocks.push(block);
+      }
+    }
+
+    // Parallelism: one task per core
+    const parTracks = [
+      document.getElementById('par-track1'),
+      document.getElementById('par-track2'),
+      document.getElementById('par-track3'),
+      document.getElementById('par-track4')
+    ];
+    let parBlocks = [];
+    parTracks.forEach((track, i) => {
+      track.innerHTML = '';
+      const block = document.createElement('div');
+      block.className = 'task-block';
+      block.style.width = '0%';
+      block.style.background = colors[i];
+      block.textContent = labels[i];
+      track.appendChild(block);
+      parBlocks.push(block);
+    });
+
+    // Animate concurrency blocks sequentially
+    let concIdx = 0;
+    function animateNextConc() {
+      if (concIdx >= concBlocks.length) return;
+      concBlocks[concIdx].style.width = (100 / 12) + '%';
+      concIdx++;
+      setTimeout(animateNextConc, 120);
+    }
+    animateNextConc();
+
+    // Animate parallelism blocks simultaneously
+    let parWidth = 0;
+    function animatePar() {
+      if (parWidth >= 100) return;
+      parWidth += 8.33;
+      parBlocks.forEach(b => b.style.width = Math.min(parWidth, 100) + '%');
+      setTimeout(animatePar, 120);
+    }
+    animatePar();
+  }
+
+  // ============== VM/CONTAINER COMPARE TOGGLE ==============
+  function toggleCompare(el) {
+    el.classList.toggle('open');
+  }
+
+  // ============== SCROLL ANIMATIONS ==============
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // ============== PROGRESS BAR ==============
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('progress-bar').style.width = scrolled + '%';
+  });
+
+  // ============== NAV ACTIVE STATE ==============
+  const sections = document.querySelectorAll('.section, .hero');
+  const navLinks = document.querySelectorAll('nav .nav-links a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop - 100;
+      if (pageYOffset >= sectionTop) current = section.getAttribute('id') || '';
+    });
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+    });
+  });
+
+  // Initialize concurrency animation on load
+  setTimeout(animateConcurrency, 2000);
+</script>
+</body>
+</html>

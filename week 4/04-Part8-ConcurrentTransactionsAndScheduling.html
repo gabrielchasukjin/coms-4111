@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concurrent Transactions and Scheduling — Part 8</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Concurrent Transactions and Scheduling</h1>
+            <p class="subtitle">From locks to interleavings — why some schedules are safe and others are not</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Motivation — Back to the Bank -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Motivation: Why Concurrent Transactions?</h2>
+
+            <p>In Part 7, we saw how WAL provides atomicity and durability. But we left a major problem unsolved: while the monthly interest transaction <code>T-Monthly-423</code> runs for 24 hours across 10 million accounts, other customers need to use the bank. Account 3001 wants to withdraw $600 at 10:02 AM. Account 5002 receives a $1,000 wire at 11:45 AM. Account 3001 makes a $12.37 debit card purchase at 2:02 PM.</p>
+
+            <div class="problem-box">
+                <h4>Q: How do I not wait for a day to access my money?</h4>
+                <p style="margin-bottom: 0;">If we run T-Monthly-423 as a serial transaction that blocks all other access, every customer is locked out for 24 hours. This is completely unacceptable. We need to allow other transactions to run <strong>concurrently</strong> with the long-running interest calculation — accessing the same accounts, reading and writing balances — without corrupting the data.</p>
+            </div>
+
+            <h3>The Big Idea: Locks</h3>
+
+            <p>The intuition is straightforward: <strong>lock each record for the shortest time possible</strong>. When a transaction needs to read or write a record, it acquires a lock on that record. Other transactions that need the same record must wait until the lock is released.</p>
+
+            <p>But this raises several key questions that the rest of the lecture will address:</p>
+            <ul>
+                <li><strong>Which records</strong> should be locked? (Just the ones being accessed? Entire tables?)</li>
+                <li><strong>For how long</strong> should locks be held? (Just during the operation? Until commit?)</li>
+                <li><strong>What is the algorithm</strong> for acquiring and releasing locks? (This is where 2-Phase Locking comes in, covered in later parts.)</li>
+            </ul>
+
+            <img src="slides/concurrent-txns.png" alt="Concurrent transactions motivation — the monthly interest transaction running alongside everyday bank operations">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Concurrency — Isolation and Consistency -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Concurrency: Isolation and Consistency</h2>
+
+            <p>The database is responsible for managing concurrency so that two of the ACID properties are maintained:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Isolation (the I in ACID)</h4>
+                    <p style="margin-bottom: 0;">Users must be able to execute each transaction <strong>as if they were the only user</strong>. Even though hundreds of transactions are running concurrently, each one should see a consistent view of the data, unaffected by the intermediate states of other transactions.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Consistency (the C in ACID)</h4>
+                    <p style="margin-bottom: 0;">Transactions must leave the database <strong>in a consistent state</strong>. If every individual transaction preserves integrity constraints when run alone, then the concurrent execution must also preserve those constraints.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                Isolation and consistency are the two ACID properties that concurrency control is responsible for. (Atomicity and durability are handled by WAL, as we saw in Part 7.) The goal of the scheduler is to interleave transactions for performance while guaranteeing that the result is equivalent to some serial execution.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: The Bank Transfer and Interest Example -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. The Running Example: Transfer and Interest</h2>
+
+            <p>The lecture introduces a concrete example that will be used throughout the remaining parts. Two transactions operate on the same two accounts:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>T1: Transfer $100 from B to A</h4>
+                    <p style="margin-bottom: 0.5rem;"><code>START TRANSACTION</code></p>
+                    <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;<code>UPDATE Accounts SET Amt = Amt + 100 WHERE Name = 'A'</code></p>
+                    <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;<code>UPDATE Accounts SET Amt = Amt - 100 WHERE Name = 'B'</code></p>
+                    <p style="margin-bottom: 0;"><code>COMMIT</code></p>
+                </div>
+                <div class="visual-item">
+                    <h4>T2: Apply 6% Interest to A and B</h4>
+                    <p style="margin-bottom: 0.5rem;"><code>START TRANSACTION</code></p>
+                    <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;<code>UPDATE Accounts SET Amt = Amt * 1.06</code></p>
+                    <p style="margin-bottom: 0;"><code>COMMIT</code></p>
+                </div>
+            </div>
+
+            <p>In shorthand notation:</p>
+
+            <div class="explanation-box">
+                <h4>Simplified Operations</h4>
+                <p style="margin-bottom: 0.5rem;"><strong>T1:</strong> A += 100, B -= 100 &nbsp;&nbsp;(transfer $100 from B's account to A's account)</p>
+                <p style="margin-bottom: 0;"><strong>T2:</strong> A *= 1.06, B *= 1.06 &nbsp;&nbsp;(credit both accounts with 6% interest)</p>
+            </div>
+
+            <p>Two important notes from the lecture:</p>
+            <ol>
+                <li><strong>The database does not care</strong> whether T1 executes before T2 or T2 before T1. Both serial orderings are valid.</li>
+                <li><strong>If the developer cares about the order</strong>, they should combine T1 and T2 into a single transaction. Separate transactions have no ordering guarantee.</li>
+            </ol>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Serial Execution -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Serial Execution — The Baseline</h2>
+
+            <p>Before exploring interleaving, let us establish what serial execution looks like. With A = $50 and B = $200 initially:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Serial Order: T1 then T2</h4>
+                    <p style="margin-bottom: 0.5rem;">T1 runs completely: A = $50 + $100 = $150, B = $200 - $100 = $100</p>
+                    <p style="margin-bottom: 0.5rem;">Then T2 runs: A = $150 * 1.06 = <strong>$159</strong>, B = $100 * 1.06 = <strong>$106</strong></p>
+                    <p style="margin-bottom: 0;">Total = $265</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Serial Order: T2 then T1</h4>
+                    <p style="margin-bottom: 0.5rem;">T2 runs completely: A = $50 * 1.06 = $53, B = $200 * 1.06 = $212</p>
+                    <p style="margin-bottom: 0.5rem;">Then T1 runs: A = $53 + $100 = <strong>$153</strong>, B = $212 - $100 = <strong>$112</strong></p>
+                    <p style="margin-bottom: 0;">Total = $265</p>
+                </div>
+            </div>
+
+            <p>Both serial orders produce a total of $265 (the total is preserved because T1 is a transfer and T2 is a percentage). The individual values of A and B differ depending on the order — $159/$106 vs. $153/$112 — but both are correct. The database is free to pick either ordering.</p>
+
+            <img src="slides/serial-interleaved.png" alt="Serial execution timeline — T1 then T2, showing all operations of T1 completing before T2 begins">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Interleaved Execution -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Interleaved Execution — Good and Bad</h2>
+
+            <p>The database can also <strong>interleave</strong> the transactions — executing some operations from T1, then some from T2, then back to T1. The goal of scheduling is to interleave transactions to boost performance while keeping the data in a good state after commits and/or aborts.</p>
+
+            <h3>Interleaved Schedule A (Good)</h3>
+
+            <div class="explanation-box">
+                <h4>Timeline: T2(A *= 1.06), T1(A += 100), T2(B *= 1.06), T1(B -= 100)</h4>
+                <p style="margin-bottom: 0.5rem;">Starting: A = $50, B = $200</p>
+                <p style="margin-bottom: 0.5rem;">T2 does A *= 1.06: A = $53</p>
+                <p style="margin-bottom: 0.5rem;">T1 does A += 100: A = $153</p>
+                <p style="margin-bottom: 0.5rem;">T2 does B *= 1.06: B = $212</p>
+                <p style="margin-bottom: 0.5rem;">T1 does B -= 100: B = $112</p>
+                <p style="margin-bottom: 0;">Final: A = <strong>$159</strong>, B = <strong>$106</strong>. This matches the serial order T1&rarr;T2. <span class="highlight-text">Same result!</span></p>
+            </div>
+
+            <h3>Interleaved Schedule B (Bad)</h3>
+
+            <div class="problem-box">
+                <h4>Timeline: T2(A *= 1.06), T1(A += 100), T2(B *= 1.06), T1(B -= 100)</h4>
+                <p style="margin-bottom: 0.5rem;">But with a slightly different interleaving of T1's operations:</p>
+                <p style="margin-bottom: 0.5rem;">Starting: A = $50, B = $200</p>
+                <p style="margin-bottom: 0.5rem;">T1 does A += 100: A = $150</p>
+                <p style="margin-bottom: 0.5rem;">T2 does A *= 1.06: A = $159</p>
+                <p style="margin-bottom: 0.5rem;">T2 does B *= 1.06: B = $212</p>
+                <p style="margin-bottom: 0.5rem;">T1 does B -= 100: B = $112</p>
+                <p style="margin-bottom: 0;">Final: A = <strong>$159</strong>, B = <strong>$112</strong>. Total = $271. This does NOT match T1&rarr;T2 ($265) or T2&rarr;T1 ($265). <span class="highlight-text">Different result than serial!</span> $6 has appeared from nowhere.</p>
+            </div>
+
+            <img src="slides/schedule-examples.png" alt="Scheduling examples — showing a good interleaving (Schedule A, same result) and a bad interleaving (Schedule B, $112 instead of $106)">
+
+            <div class="magic-connection">
+                <h4>Interleaving and Isolation</h4>
+                <p>The database has freedom to interleave transactions — this is essential for performance. However, it must pick an interleaving or schedule such that <strong>isolation and consistency are maintained</strong>.</p>
+                <p style="margin-bottom: 0;">The result must be <em>as if</em> the transactions had executed serially. The DB must pick a schedule which maintains isolation and consistency. This is exactly the serializability requirement — and checking it is what conflict graphs (covered in Part 4) are for.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>Long-running transactions cannot block everyone</strong> — the monthly interest transaction takes 24 hours, but customers need to access their accounts during that time. Concurrent execution is not optional.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Locks are the big idea</strong> — lock each record for the shortest time possible. Key questions: which records, for how long, and what algorithm?</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Concurrency must preserve Isolation and Consistency</strong> — each user should see the database as if they were the only user, and integrity constraints must always hold.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The DB does not care about transaction order</strong> — both T1&rarr;T2 and T2&rarr;T1 are valid serial orderings. If the developer needs a specific order, they should combine operations into one transaction.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Serial execution is always correct but slow</strong> — both serial orderings of the bank example produce valid results ($265 total).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Interleaving can be good or bad</strong> — Schedule A produces the same result as a serial execution (serializable). Schedule B produces a result that matches no serial order (not serializable, $6 created from nothing).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The scheduler's job</strong> is to allow as much interleaving as possible for performance while guaranteeing that every schedule is equivalent to some serial execution. This sets the stage for conflict serializability (Part 4) and locking protocols (later parts).</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Concurrent Transactions &amp; Scheduling — Supplementary to Lecture 04, Part 8</p>
+        </footer>
+
+    </div>
+</body>
+</html>

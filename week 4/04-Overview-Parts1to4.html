@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 4 Overview: Distributed Systems, Transactions &amp; Serializability</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 52rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1rem; line-height: 1.8; color: #333; }
+        .tldr { background-color: #f0f7ff; border-left: 4px solid #2563eb; padding: 1.25rem; margin: 1.5rem 0; border-radius: 2px; }
+        .tldr strong { color: #1e40af; }
+        .concept { background-color: #fafafa; border-left: 3px solid #000; padding: 1.25rem; margin: 1.25rem 0; }
+        .concept strong { font-weight: 600; color: #000; }
+        .warning { background-color: #fff9e6; border-left: 3px solid #d97706; padding: 1.25rem; margin: 1.25rem 0; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .slide-caption { text-align: center; font-size: 0.85rem; color: #888; margin-top: -1rem; margin-bottom: 1.5rem; font-style: italic; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.25rem 0; }
+        .col { background-color: #f5f5f5; padding: 1.25rem; border-radius: 2px; border-left: 3px solid #000; }
+        .col h4 { font-family: Georgia, serif; font-size: 1.05rem; font-weight: 400; margin: 0 0 0.5rem 0; color: #000; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; line-height: 1.7; }
+        table { width: 100%; margin: 1.25rem 0; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        .highlight { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .nav { background: #f9f9f9; padding: 1.25rem; margin-bottom: 2rem; border-radius: 4px; }
+        .nav a { color: #2563eb; text-decoration: none; margin-right: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } .two-col { grid-template-columns: 1fr; } table { font-size: 0.8rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Distributed Systems, Transactions &amp; Serializability</h1>
+            <p class="subtitle">A concise visual overview of Lecture 4 (Parts 1&ndash;4)</p>
+        </header>
+
+        <nav class="nav">
+            <strong>Jump to:</strong><br>
+            <a href="#petflix">Petflix Stack</a>
+            <a href="#dns-gateway">DNS &amp; Gateway</a>
+            <a href="#microservices">Microservices</a>
+            <a href="#infra">Infrastructure</a>
+            <a href="#oltp">OLTP vs OLAP</a>
+            <a href="#acid">ACID</a>
+            <a href="#wal">WAL</a>
+            <a href="#concurrency">Concurrency</a>
+            <a href="#serializability">Serializability</a>
+            <a href="#cheatsheet">Cheat Sheet</a>
+        </nav>
+
+        <main>
+
+            <!-- ==================== PETFLIX OVERVIEW ==================== -->
+            <section id="petflix">
+                <h2>1. The Petflix 8-Layer Stack</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> When you click play on a cat video, your request traverses 8 layers of distributed infrastructure &mdash; from DNS routing all the way down to CPU cores decoding video frames.
+                </div>
+
+                <img src="slides/eight-layer-stack.png" alt="The 8-layer Petflix stack" class="slide-img">
+                <p class="slide-caption">The full 8-layer stack: every layer solves a different distributed systems challenge</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Layer</th><th>Name</th><th>Key Concept</th><th>Problem Solved</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td><strong>DNS Routing</strong></td><td>Geo-routing, failover</td><td>Route to nearest healthy datacenter</td></tr>
+                        <tr><td>2</td><td><strong>API Gateway</strong></td><td>Circuit breaker, rate limiting</td><td>Prevent cascading failures</td></tr>
+                        <tr><td>3</td><td><strong>Microservices</strong></td><td>Parallel fan-out, backoff</td><td>Assemble response from many services</td></tr>
+                        <tr><td>4</td><td><strong>Data &amp; Caching</strong></td><td>Consistency spectrum</td><td>Fast reads, stale data management</td></tr>
+                        <tr><td>5</td><td><strong>CDN</strong></td><td>Adaptive bitrate, per-title encoding</td><td>Deliver video with optimal quality</td></tr>
+                        <tr><td>6</td><td><strong>Replication</strong></td><td>Raft consensus, leader election</td><td>Fault tolerance, data consistency</td></tr>
+                        <tr><td>7</td><td><strong>VMs/Containers</strong></td><td>Kubernetes, auto-scaling</td><td>Resource isolation, elastic scaling</td></tr>
+                        <tr><td>8</td><td><strong>Cores/Threads</strong></td><td>Concurrency vs parallelism</td><td>Efficient hardware utilization</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ==================== DNS & GATEWAY ==================== -->
+            <section id="dns-gateway">
+                <h2>2. DNS Routing &amp; API Gateway</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> DNS invisibly routes you to the nearest datacenter. The API Gateway (PetGate) authenticates, rate-limits, and routes your request &mdash; with a circuit breaker to stop cascading failures.
+                </div>
+
+                <img src="slides/dns-routing.png" alt="DNS routing diagram" class="slide-img">
+                <p class="slide-caption">DNS geo-routing: users hit the nearest healthy datacenter automatically</p>
+
+                <div class="two-col">
+                    <div class="col">
+                        <h4>DNS Routing</h4>
+                        <ul style="margin-bottom: 0;">
+                            <li><strong>Geo-routing:</strong> nearest datacenter</li>
+                            <li><strong>Failover:</strong> reroute if region is down</li>
+                            <li><strong>Weighted:</strong> proportional traffic distribution</li>
+                        </ul>
+                    </div>
+                    <div class="col">
+                        <h4>Circuit Breaker</h4>
+                        <ul style="margin-bottom: 0;">
+                            <li><strong>Closed:</strong> normal operation</li>
+                            <li><strong>Open:</strong> service failing, return fallback</li>
+                            <li><strong>Half-Open:</strong> testing recovery</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== MICROSERVICES ==================== -->
+            <section id="microservices">
+                <h2>3. Microservices, Caching &amp; Consistency</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> A single request fans out to many microservices in parallel. Caches (Memcached) sit in front of databases (Cassandra). The big tradeoff: strong consistency is slow, eventual consistency is fast but stale.
+                </div>
+
+                <img src="slides/microservices-fanout.png" alt="Microservices parallel fan-out" class="slide-img">
+                <p class="slide-caption">Parallel fan-out: one request triggers many simultaneous microservice calls</p>
+
+                <div class="concept">
+                    <strong>The Thundering Herd:</strong> When a failed service recovers, all backed-up requests hit it at once. Defenses: <span class="highlight">load shedding</span> (drop low-priority requests) and <span class="highlight">exponential backoff with jitter</span> (stagger retries randomly).
+                </div>
+
+                <img src="slides/consistency-spectrum.png" alt="Consistency spectrum" class="slide-img">
+                <p class="slide-caption">The consistency spectrum: eventual &rarr; session-level &rarr; strong</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Consistency Level</th><th>Guarantee</th><th>Trade-off</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Eventual</strong></td><td>Data converges eventually; reads may be stale</td><td>Fast, highly available</td></tr>
+                        <tr><td><strong>Session-level</strong></td><td>You always see your own writes</td><td>Good middle ground</td></tr>
+                        <tr><td><strong>Strong</strong></td><td>All reads see the latest write, always</td><td>Slow, requires coordination</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ==================== INFRASTRUCTURE ==================== -->
+            <section id="infra">
+                <h2>4. CDN, Replication &amp; Infrastructure</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> CDN boxes inside ISPs deliver video locally. Raft consensus elects leaders and ensures data survives node failures. Kubernetes orchestrates containers with auto-scaling and self-healing.
+                </div>
+
+                <div class="two-col">
+                    <div class="col">
+                        <h4>CDN &mdash; Petflix Box</h4>
+                        <ul style="margin-bottom: 0;">
+                            <li>Physical server inside your ISP</li>
+                            <li>Per-title encoding recipes</li>
+                            <li>Adaptive bitrate streaming</li>
+                            <li>VMAF perceptual quality metric</li>
+                        </ul>
+                    </div>
+                    <div class="col">
+                        <h4>Raft Consensus</h4>
+                        <ul style="margin-bottom: 0;">
+                            <li>Three states: Leader, Follower, Candidate</li>
+                            <li>Heartbeat timeout triggers election</li>
+                            <li>Majority vote to become leader</li>
+                            <li>Majority ACK for committed writes</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="two-col">
+                    <div class="col">
+                        <h4>VMs</h4>
+                        <p style="margin-bottom: 0;">Full OS isolation via hypervisor. Heavy but strong security boundaries. Each VM has its own kernel.</p>
+                    </div>
+                    <div class="col">
+                        <h4>Containers</h4>
+                        <p style="margin-bottom: 0;">Share host OS kernel. Lightweight, fast to start. Weaker isolation but much more efficient.</p>
+                    </div>
+                </div>
+
+                <div class="concept">
+                    <strong>Kubernetes (K8s) &mdash; four jobs:</strong> <em>Schedule</em> containers onto machines, <em>Scale</em> instances up/down based on load, <em>Heal</em> by restarting failed containers, <em>Deploy</em> new versions with zero downtime.
+                </div>
+
+                <div class="warning">
+                    <strong>Noisy Neighbor:</strong> In shared environments, one workload can hog CPU or memory and degrade performance for others. VMs provide stronger isolation against this than containers.
+                </div>
+            </section>
+
+            <!-- ==================== OLTP vs OLAP ==================== -->
+            <section id="oltp">
+                <h2>5. OLTP vs. OLAP</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> OLTP = many short, fast transactions (ATM, Uber, Visa). OLAP = complex analytical queries over large datasets. This lecture focuses on OLTP and the transaction guarantees it requires.
+                </div>
+
+                <img src="slides/oltp-vs-olap.png" alt="OLTP vs OLAP comparison" class="slide-img">
+                <p class="slide-caption">Two fundamentally different workload types that need different database architectures</p>
+
+                <table>
+                    <thead>
+                        <tr><th></th><th>OLTP</th><th>OLAP</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Operations</strong></td><td>Read + Write</td><td>Mostly Read</td></tr>
+                        <tr><td><strong>Data volume</strong></td><td>Small per transaction</td><td>Scans large datasets</td></tr>
+                        <tr><td><strong>Latency</strong></td><td>Milliseconds</td><td>Seconds to hours</td></tr>
+                        <tr><td><strong>Users</strong></td><td>Many concurrent</td><td>Few analysts</td></tr>
+                        <tr><td><strong>Example</strong></td><td>Visa: 65,000 txns/sec</td><td>"Total sales by region last quarter"</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ==================== ACID ==================== -->
+            <section id="acid">
+                <h2>6. The ACID Properties</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> Every transaction promises four things: all-or-nothing (Atomicity), valid state transitions (Consistency), no interference between concurrent transactions (Isolation), and permanence after commit (Durability).
+                </div>
+
+                <img src="slides/acid-properties.png" alt="ACID properties overview" class="slide-img">
+                <p class="slide-caption">ACID &mdash; the four guarantees that make transactions reliable</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Property</th><th>What it means</th><th>Enforced by</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Atomicity</strong></td><td>All or nothing &mdash; no partial transactions</td><td>Write-Ahead Logging (WAL)</td></tr>
+                        <tr><td><strong>Consistency</strong></td><td>Data stays valid (constraints hold)</td><td>Application logic + locking</td></tr>
+                        <tr><td><strong>Isolation</strong></td><td>Concurrent transactions don't interfere</td><td>Serializability / 2PL</td></tr>
+                        <tr><td><strong>Durability</strong></td><td>Committed = permanent, survives crashes</td><td>Write-Ahead Logging (WAL)</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="warning">
+                    <strong>The bank interest problem:</strong> 1,000 accounts need 6% interest applied. Crash after updating 500 accounts = 500 customers get interest, 500 don't. Atomicity prevents this: either all 1,000 get interest, or none do.
+                </div>
+            </section>
+
+            <!-- ==================== WAL ==================== -->
+            <section id="wal">
+                <h2>7. Write-Ahead Logging (WAL)</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> Before changing data, write a log record describing the change. The log is the source of truth. Two rules ensure correct recovery: flush all logs before acknowledging COMMIT, and flush logs before writing dirty pages.
+                </div>
+
+                <img src="slides/wal-commit-protocol.png" alt="WAL commit protocol" class="slide-img">
+                <p class="slide-caption">The WAL commit protocol: log first, data second</p>
+
+                <div class="concept">
+                    <strong>Log record format:</strong> <code>[TxnID, PageID, Offset, OldValue, NewValue]</code><br>
+                    <strong>UNDO:</strong> use OldValue to reverse uncommitted changes.<br>
+                    <strong>REDO:</strong> use NewValue to reapply committed changes.
+                </div>
+
+                <h3>The Two Critical Rules</h3>
+                <div class="two-col">
+                    <div class="col">
+                        <h4>Rule 1 (Durability)</h4>
+                        <p style="margin-bottom: 0;">Before acknowledging COMMIT, flush ALL of that transaction's log records to disk. Ensures committed changes can always be redone.</p>
+                    </div>
+                    <div class="col">
+                        <h4>Rule 2 (Atomicity)</h4>
+                        <p style="margin-bottom: 0;">Before writing a dirty data page to disk, flush ALL log records for changes on that page. Ensures uncommitted changes can always be undone.</p>
+                    </div>
+                </div>
+
+                <h3>Recovery after crash</h3>
+                <div class="two-col">
+                    <div class="col">
+                        <h4>COMMIT record found</h4>
+                        <p style="margin-bottom: 0;"><strong>REDO</strong> all changes. The transaction committed, so its effects must be permanent (durability).</p>
+                    </div>
+                    <div class="col">
+                        <h4>No COMMIT record</h4>
+                        <p style="margin-bottom: 0;"><strong>UNDO</strong> all changes. The transaction didn't finish, so roll everything back (atomicity).</p>
+                    </div>
+                </div>
+
+                <div class="concept">
+                    <strong>Why WAL is fast:</strong> The log is append-only (sequential writes). Random writes: ~100,000 seconds for 1M pages. Sequential writes: ~1 second. The logging overhead is essentially free.
+                </div>
+            </section>
+
+            <!-- ==================== CONCURRENCY ==================== -->
+            <section id="concurrency">
+                <h2>8. Concurrent Transactions &amp; Scheduling</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> We can't run transactions one at a time (too slow). Interleaving them is risky: some interleavings produce results that match no serial order. A <em>serializable</em> schedule is one whose result equals some serial execution.
+                </div>
+
+                <img src="slides/serial-interleaved.png" alt="Serial vs interleaved schedules" class="slide-img">
+                <p class="slide-caption">Serial schedules are always correct but slow. Interleaved schedules are fast but may be incorrect.</p>
+
+                <div class="two-col">
+                    <div class="col">
+                        <h4>Serial Schedule</h4>
+                        <p style="margin-bottom: 0;">One transaction at a time, no interleaving. Always correct. Terrible performance.</p>
+                    </div>
+                    <div class="col">
+                        <h4>Interleaved Schedule</h4>
+                        <p style="margin-bottom: 0;">Operations mixed between transactions. Good performance. May or may not be correct.</p>
+                    </div>
+                </div>
+
+                <h3>The three conflict types</h3>
+                <p>Two operations from <em>different</em> transactions on the <em>same data item</em> where <strong>at least one is a write</strong>:</p>
+
+                <table>
+                    <thead>
+                        <tr><th>Type</th><th>Pattern</th><th>Why it matters</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Read-Write (RW)</strong></td><td>T1 reads X, T2 writes X</td><td>Order determines what T1 sees</td></tr>
+                        <tr><td><strong>Write-Read (WR)</strong></td><td>T1 writes X, T2 reads X</td><td>Order determines if T2 reads old or new value</td></tr>
+                        <tr><td><strong>Write-Write (WW)</strong></td><td>T1 writes X, T2 writes X</td><td>Order determines final value of X</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="warning">
+                    <strong>Read-Read is NOT a conflict.</strong> Two reads on the same item by different transactions never cause problems &mdash; reads don't change data, so their order doesn't matter.
+                </div>
+
+                <div class="concept">
+                    <strong>Conflicts vs. Anomalies:</strong> A conflict is a <em>potential</em> problem (two operations that <em>could</em> cause issues). An anomaly is an <em>actual</em> problem (a conflict that led to incorrect results). Not every conflict causes an anomaly, but every anomaly arises from a conflict.
+                </div>
+            </section>
+
+            <!-- ==================== SERIALIZABILITY ==================== -->
+            <section id="serializability">
+                <h2>9. Conflict Serializability &amp; Conflict Graphs</h2>
+
+                <div class="tldr">
+                    <strong>TL;DR:</strong> Build a conflict graph (nodes = transactions, edges = conflicts). <span class="highlight">No cycle = serializable</span> (safe). Cycle = not serializable (bad). Topological sort of acyclic graph gives the equivalent serial order.
+                </div>
+
+                <img src="slides/conflict-graphs.png" alt="Good and bad conflict graphs" class="slide-img">
+                <p class="slide-caption">Acyclic conflict graph = safe schedule. Cyclic = unsafe, DBMS must intervene.</p>
+
+                <h3>The 3-step test</h3>
+                <ol>
+                    <li><strong>Find conflicts</strong> &mdash; scan for RW, WR, WW pairs on the same data item between different transactions</li>
+                    <li><strong>Build conflict graph</strong> &mdash; draw edge from T<sub>i</sub> &rarr; T<sub>j</sub> if T<sub>i</sub>'s conflicting operation comes first in the schedule</li>
+                    <li><strong>Check for cycles</strong> &mdash; acyclic = conflict serializable; topological sort gives an equivalent serial order</li>
+                </ol>
+
+                <img src="slides/five-txn-example.png" alt="Five transaction worked example" class="slide-img">
+                <p class="slide-caption">5-transaction example: conflicts identified &rarr; acyclic graph &rarr; equivalent serial order T3, T1, T4, T2, T5</p>
+
+                <div class="concept">
+                    <strong>Why cycles mean non-serializability:</strong> Each edge T<sub>i</sub> &rarr; T<sub>j</sub> means "T<sub>i</sub> must come before T<sub>j</sub>." A cycle T<sub>i</sub> &rarr; T<sub>j</sub> &rarr; T<sub>i</sub> would require T<sub>i</sub> before T<sub>j</sub> AND T<sub>j</sub> before T<sub>i</sub> &mdash; a logical impossibility. No serial schedule can exist.
+                </div>
+
+                <div class="concept">
+                    <strong>DAGs &amp; Topological Sort:</strong> An acyclic conflict graph is a DAG (Directed Acyclic Graph). A topological ordering places nodes so all edges point forward. Algorithm: repeatedly pick a node with no incoming edges, remove it, repeat. The resulting order is a valid equivalent serial schedule. Multiple valid orderings may exist.
+                </div>
+            </section>
+
+            <!-- ==================== CHEAT SHEET ==================== -->
+            <section id="cheatsheet">
+                <h2>Quick Reference Cheat Sheet</h2>
+
+                <table>
+                    <thead>
+                        <tr><th>Concept</th><th>Remember this</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>8-Layer Stack</strong></td><td>DNS &rarr; Gateway &rarr; Microservices &rarr; Cache &rarr; CDN &rarr; Replication &rarr; VMs/Containers &rarr; Cores</td></tr>
+                        <tr><td><strong>Circuit Breaker</strong></td><td>Closed (normal) &rarr; Open (failing, return fallback) &rarr; Half-Open (testing recovery)</td></tr>
+                        <tr><td><strong>Thundering Herd</strong></td><td>Service recovers, all backed-up requests stampede. Fix: load shedding + exponential backoff with jitter.</td></tr>
+                        <tr><td><strong>Consistency Spectrum</strong></td><td>Eventual (fast, stale) &rarr; Session-level (see your own writes) &rarr; Strong (always latest, slow)</td></tr>
+                        <tr><td><strong>Raft Consensus</strong></td><td>Heartbeat timeout &rarr; election &rarr; majority vote. Writes need majority ACK.</td></tr>
+                        <tr><td><strong>VMs vs Containers</strong></td><td>VMs: full OS, strong isolation, heavy. Containers: shared kernel, light, fast, weaker isolation.</td></tr>
+                        <tr><td><strong>Kubernetes</strong></td><td>Schedule, Scale, Heal, Deploy.</td></tr>
+                        <tr><td><strong>Concurrency vs Parallelism</strong></td><td>Concurrency: juggling tasks (interleaving). Parallelism: doing tasks simultaneously (multi-core).</td></tr>
+                        <tr><td><strong>OLTP vs OLAP</strong></td><td>OLTP: many fast transactions. OLAP: few complex analytical queries.</td></tr>
+                        <tr><td><strong>ACID</strong></td><td>Atomicity + Durability = WAL. Isolation + Consistency = Serializability/Locking.</td></tr>
+                        <tr><td><strong>WAL Rules</strong></td><td>Rule 1: flush log before COMMIT ack (durability). Rule 2: flush log before dirty page write (atomicity).</td></tr>
+                        <tr><td><strong>WAL Recovery</strong></td><td>COMMIT found &rarr; REDO. No COMMIT &rarr; UNDO.</td></tr>
+                        <tr><td><strong>Sequential vs Random Writes</strong></td><td>1M pages: random = ~100,000s. Sequential = ~1s. WAL is append-only = fast.</td></tr>
+                        <tr><td><strong>Conflict</strong></td><td>Same data item, different transactions, at least one writes. (Read-Read = NOT a conflict)</td></tr>
+                        <tr><td><strong>Conflict Graph</strong></td><td>Nodes = transactions, edges = conflicts (first &rarr; second). Acyclic = serializable.</td></tr>
+                        <tr><td><strong>Topological Sort</strong></td><td>Pick node with 0 incoming edges, remove, repeat. Gives equivalent serial schedule.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+        </main>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Lecture 04 Overview (Parts 1&ndash;4) &mdash; Distributed Systems, Transactions &amp; Serializability</p>
+        </footer>
+    </div>
+</body>
+</html>

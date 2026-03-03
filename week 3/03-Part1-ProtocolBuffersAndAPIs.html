@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol Buffers and API Design — Part 1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Protocol Buffers and API Design</h1>
+            <p class="subtitle">Lecture 3, Part 1 — From Real-World Systems to Efficient Serialization</p>
+        </header>
+
+        <!-- Section 1: Uber Docstore -->
+        <div class="section">
+            <h2>Uber's Docstore: When Schemaless Grows Up</h2>
+
+            <p>
+                Before we talk about protocol buffers, we need to understand <em>why</em> they matter. The best way to do
+                that is to look at real systems that had to make hard choices about how data is structured, stored, and
+                communicated between services. Uber's Docstore is one such system.
+            </p>
+
+            <img src="slides/01-uber-docstore.png" alt="Uber Docstore: Evolving Schemaless into a Distributed SQL Database" class="slide-img">
+
+            <p>
+                Uber originally built a storage layer called "Schemaless" — a system designed to be extremely flexible, letting
+                engineers store data without rigid table definitions. As Uber scaled to millions of rides per day across dozens
+                of cities, that flexibility became a liability. They needed stronger guarantees. Docstore is the evolution of
+                that system: a distributed SQL database that keeps the flexibility of document-style storage while adding the
+                reliability features you would expect from a traditional relational database.
+            </p>
+
+            <h3>The Six Pillars of Docstore</h3>
+
+            <p>
+                Docstore is built around six core capabilities that together solve the challenges of running a planet-scale
+                data store:
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Shard-Local Transactions (MySQL + Raft)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Each shard of data is stored in MySQL, and Raft consensus ensures that replicas of that shard agree
+                    on the order of writes. Think of it like a small democracy within each shard: the replicas vote
+                    on what happened and in what order, so even if one replica dies, the others carry on with a consistent
+                    view of the data. Transactions are "shard-local," meaning they only need agreement within one shard,
+                    which is much cheaper than a global distributed transaction.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Geo-Replication</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Uber operates in cities all over the world. Having a single data center in Iowa serving ride requests
+                    in Mumbai would mean unacceptable latency. Geo-replication copies data across data centers in different
+                    geographic regions so that reads (and sometimes writes) can be served locally. This is a classic
+                    tradeoff: you gain speed but must carefully manage the consistency of copies that may be slightly stale.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Associations (One-to-Many Relationships)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    A rider has many trips. A trip has many waypoints. A driver has many vehicles. These one-to-many
+                    relationships are so fundamental that Docstore builds them directly into the storage model rather than
+                    leaving them to application code. This is similar to how a social network might model "a user has many
+                    friends" at the storage layer rather than doing repeated lookups.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Flexible Document Model</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    This is the heritage from "Schemaless." Documents can have varying fields — not every ride record looks
+                    identical. A ride in New York might have toll information; a ride in a small town might not. The key
+                    insight is that <span class="highlight-text">flexible schema does not mean no schema</span>. There is still
+                    structure, but it can evolve without painful migrations.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    <strong>Materialized Views</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Pre-computed query results stored as actual tables. If the analytics team constantly needs "total rides
+                    per city per day," rather than computing this from raw data every time, Docstore can maintain a
+                    materialized view that updates incrementally. This trades storage space and write-time computation
+                    for dramatically faster reads.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">6</span>
+                    <strong>Change Data Capture (CDC)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Every change to the database is emitted as an event stream. Downstream systems — search indexes,
+                    analytics pipelines, machine learning features — can subscribe to these events and react in near
+                    real-time. This decouples the database from the systems that depend on it, making the overall
+                    architecture more resilient.
+                </p>
+            </div>
+
+            <h3>Lessons from Docstore</h3>
+
+            <div class="key-insight">
+                Flexible schema is not the same as no schema. Uber learned that you still need structure — you just need
+                the ability to evolve that structure gracefully. The goal is to centralize the complexity of consistency
+                in the storage layer so that hundreds of application teams do not each have to solve it independently.
+            </div>
+
+            <p>
+                There is also a pragmatic lesson here: <strong>operational reality may not be "beautiful."</strong> The
+                architecture that wins in production is not always the one that looks cleanest on a whiteboard. Docstore
+                uses MySQL (a 30-year-old relational database) under the hood, wrapped in Raft consensus, sharding logic,
+                and document-model abstractions. It is a layered system built from proven components, not a from-scratch
+                rewrite. This is a pattern you will see again and again in real-world systems engineering.
+            </p>
+        </div>
+
+        <!-- Section 2: Uber gRPC Push Platform -->
+        <div class="section">
+            <h2>Uber's Next-Gen Push Platform on gRPC</h2>
+
+            <img src="slides/02-uber-grpc.png" alt="Uber's Next Gen Push Platform on gRPC" class="slide-img">
+
+            <p>
+                Now consider a different problem at Uber: how do you push real-time updates to millions of driver and rider
+                apps simultaneously? When a rider requests a ride, nearby drivers need to be notified instantly. When a
+                driver accepts, the rider needs to know immediately. When the driver's location changes, the rider's map
+                must update in real-time.
+            </p>
+
+            <p>
+                The traditional web model is <strong>request/response</strong>: the client asks a question, the server
+                answers. This works great for loading a web page or submitting a form. But real-time push notifications
+                are fundamentally different — the server needs to initiate communication, and data flows continuously,
+                not in discrete question-answer pairs.
+            </p>
+
+            <div class="analogy">
+                Think of request/response like sending letters through the mail. You write a letter, send it, and wait
+                for a reply. Now imagine you need to coordinate a live event — you would use a phone call or a walkie-talkie
+                instead, where both sides can talk at any moment. That is the difference between REST-like and streaming
+                communication. Uber needed the walkie-talkie.
+            </div>
+
+            <h3>From REST-like to RPC-like</h3>
+
+            <p>
+                REST (Representational State Transfer) is the dominant paradigm for web APIs. You make HTTP requests to
+                URLs that represent resources: <code>GET /trips/123</code> retrieves trip 123, <code>POST /trips</code>
+                creates a new trip. It is simple, well-understood, and works with any HTTP client.
+            </p>
+
+            <p>
+                But REST has limitations for high-performance, real-time systems. Every request carries HTTP headers,
+                content negotiation, and other overhead. There is no built-in concept of streaming. The text-based
+                nature of JSON payloads adds serialization cost.
+            </p>
+
+            <p>
+                <strong>RPC (Remote Procedure Call)</strong> takes a different approach: instead of manipulating resources
+                via URLs, you call functions on a remote server as if they were local. gRPC, developed by Google, is a
+                modern RPC framework that uses HTTP/2 for transport and Protocol Buffers for serialization. It supports
+                four communication patterns:
+            </p>
+
+            <ul>
+                <li><strong>Unary:</strong> Simple request/response (like REST)</li>
+                <li><strong>Server streaming:</strong> Client sends one request, server sends a stream of responses</li>
+                <li><strong>Client streaming:</strong> Client sends a stream of messages, server responds once</li>
+                <li><strong>Bidirectional streaming:</strong> Both sides send streams of messages simultaneously</li>
+            </ul>
+
+            <div class="problem-box">
+                <h4>Why does the transport layer matter?</h4>
+                <p style="margin-bottom: 0;">
+                    It is tempting to think that the "interesting" parts of a system are the algorithms and data structures,
+                    and that how bytes travel over the network is a boring implementation detail. Uber's experience shows
+                    otherwise. <span class="highlight-text">Transport is as important as anything else.</span> The choice
+                    of HTTP/2 (which supports multiplexing and header compression) versus HTTP/1.1 (which does not) can
+                    mean the difference between a system that scales to millions of concurrent connections and one that
+                    collapses under load. The choice of binary serialization versus JSON can cut bandwidth costs in half.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                Don't reinvent the wheel. Uber adopted gRPC — an open-source framework maintained by Google and a large
+                community — rather than building a custom push protocol from scratch. By leveraging existing, battle-tested
+                infrastructure, they could focus engineering effort on their unique business problems rather than solving
+                generic networking challenges that others have already solved well.
+            </div>
+        </div>
+
+        <!-- Section 3: Protocol Buffers -->
+        <div class="section">
+            <h2>Protocol Buffers: A Better Way to Describe Data</h2>
+
+            <img src="slides/03-protocol-buffers.png" alt="Protocol Buffers overview and example" class="slide-img">
+
+            <p>
+                We have now seen two real systems at Uber that need efficient, well-defined ways to describe and transmit
+                data. This brings us to <strong>Protocol Buffers</strong> (often called "protobuf"), created by Google and
+                used as the serialization format in gRPC and countless other systems.
+            </p>
+
+            <div class="definition-box">
+                <strong>Protocol Buffers</strong> are a language-neutral, platform-neutral mechanism for serializing
+                structured data. You define the shape of your data once in a <code>.proto</code> file, and the protobuf
+                compiler generates code in your language of choice (Python, Java, Go, C++, and many others) to read and
+                write that data efficiently.
+            </div>
+
+            <p>
+                At its core, Protocol Buffers serve three roles:
+            </p>
+
+            <ol>
+                <li>
+                    <strong>An API schema definition language.</strong> The <code>.proto</code> file acts as a contract
+                    between services. If one team writes a service that produces <code>Person</code> records, and another
+                    team writes a service that consumes them, the <code>.proto</code> file is the single source of truth
+                    for what a <code>Person</code> looks like.
+                </li>
+                <li>
+                    <strong>A library generator for convenience.</strong> From a single <code>.proto</code> definition,
+                    you get auto-generated classes with getters, setters, serialization, and deserialization methods in
+                    whatever language you need. No hand-writing parsers.
+                </li>
+                <li>
+                    <strong>A compact binary wire format.</strong> Unlike JSON or XML, protobuf encodes data in a
+                    binary format that is smaller and faster to parse. It is comparable to JSON and XML in what it
+                    can express, but significantly more efficient on the wire.
+                </li>
+            </ol>
+
+            <h3>Anatomy of a Proto Definition</h3>
+
+            <p>
+                Let us look at a classic example — defining a person and an address book:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Example: Person and AddressBook</h4>
+                <p>
+                    A <code>Person</code> message has a <code>name</code> (string), an <code>id</code> (integer), and
+                    an optional <code>email</code> (string). Each person can have zero or more phone numbers, where each
+                    <code>PhoneNumber</code> is itself a message containing a <code>number</code> string and a
+                    <code>PhoneType</code> enum (MOBILE, HOME, or WORK). An <code>AddressBook</code> is simply a
+                    repeated list of <code>Person</code> messages.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Notice how each field has a numeric tag (like <code>= 1</code>, <code>= 2</code>). These tags are
+                    what actually appear in the binary encoding — not the field names. This is one of the key reasons
+                    protobuf is so compact: the string <code>"name"</code> never appears on the wire; only the integer
+                    <code>1</code> does.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Think of a protobuf definition like an architectural blueprint. The blueprint specifies that a house has
+                a kitchen, two bedrooms, and a bathroom. Different builders (languages) can construct the house from the
+                same blueprint in their own way — one might use brick, another wood — but the layout is identical. The
+                blueprint is the <code>.proto</code> file. The built houses are the generated code in Python, Java, or Go.
+            </div>
+        </div>
+
+        <!-- Section 4: JSON vs Protobuf -->
+        <div class="section">
+            <h2>JSON vs. Protocol Buffers: A Size Comparison</h2>
+
+            <img src="slides/04-json-vs-protobuf.png" alt="JSON vs Protobuf byte comparison" class="slide-img">
+
+            <p>
+                To make the efficiency difference concrete, let us encode the same person record in both JSON and
+                Protocol Buffers and compare the results.
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>JSON Encoding</h4>
+                    <p style="margin-bottom: 0.5rem;">
+                        The JSON representation includes field names as quoted strings
+                        (<code>"name"</code>, <code>"id"</code>, <code>"email"</code>),
+                        structural characters (<code>{ } , :</code>), and values encoded as
+                        human-readable text. The integer <code>1234</code> is stored as the
+                        four ASCII characters '1', '2', '3', '4'.
+                    </p>
+                    <p style="margin-bottom: 0;"><strong>Total size: 105 bytes</strong></p>
+                </div>
+                <div class="visual-item">
+                    <h4>Protobuf Encoding</h4>
+                    <p style="margin-bottom: 0.5rem;">
+                        The protobuf encoding uses integer tags instead of field name strings,
+                        varint encoding for integers, and no structural delimiters. The number
+                        <code>1234</code> is stored as a two-byte varint, not four ASCII characters.
+                    </p>
+                    <p style="margin-bottom: 0;"><strong>Total size: 45 bytes</strong></p>
+                </div>
+            </div>
+
+            <p>
+                That is a <strong>57% reduction</strong> in size for the same data. At Uber's scale — billions of
+                messages per day — that difference translates directly into bandwidth savings, lower latency, and
+                reduced infrastructure cost.
+            </p>
+
+            <h3>Why Is Protobuf Smaller?</h3>
+
+            <p>
+                The size difference comes from four specific design decisions:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>JSON</th>
+                        <th>Protocol Buffers</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Field names</strong></td>
+                        <td>Full strings on every record (<code>"name"</code>, <code>"email"</code>)</td>
+                        <td>Small integer tags (1, 2, 3)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Integer encoding</strong></td>
+                        <td>ASCII digit characters (<code>"1234"</code> = 4 bytes)</td>
+                        <td>Varint encoding (<code>1234</code> = 2 bytes)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Schema required?</strong></td>
+                        <td>No — self-describing</td>
+                        <td>Yes — <code>.proto</code> file needed</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Human-readable?</strong></td>
+                        <td>Yes — you can open it in a text editor</td>
+                        <td>No — binary, requires tooling to inspect</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="explanation-box">
+                <h4>Varint Encoding: A Closer Look</h4>
+                <p>
+                    Varint (variable-length integer) encoding is a clever trick. Small numbers take fewer bytes than
+                    large numbers. The number <code>1</code> takes just a single byte. The number <code>300</code>
+                    takes two bytes. The number <code>1234</code> also takes two bytes. In contrast, JSON always
+                    represents numbers as ASCII text, so <code>1</code> takes one byte but <code>1234</code> takes
+                    four bytes — and that does not even count the surrounding quotes if the number is treated as a
+                    string.
+                </p>
+                <p style="margin-bottom: 0;">
+                    This is particularly impactful for fields like IDs, counts, timestamps, and enumerated types,
+                    which appear in nearly every message in a large distributed system.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Imagine you are sending shipping labels for packages. JSON is like writing out the full word "Weight,"
+                "Destination," and "Sender" on every single label. Protobuf is like agreeing ahead of time that field 1
+                is always weight, field 2 is always destination, and field 3 is always sender — then you just write the
+                numbers 1, 2, 3 on each label. When you are shipping millions of packages a day, removing those
+                redundant words adds up to real savings.
+            </p>
+            </div>
+
+            <h3>The Tradeoff: Schema as a Requirement</h3>
+
+            <p>
+                Nothing is free. The price of protobuf's efficiency is that both the sender and receiver must have the
+                <code>.proto</code> schema to make sense of the data. If you receive a blob of protobuf bytes without
+                the schema, you cannot easily determine what it means — unlike JSON, where field names are right there
+                in the payload.
+            </p>
+
+            <div class="magic-connection">
+                <h4>Connecting the Dots</h4>
+                <p style="margin-bottom: 0;">
+                    This is where everything ties together. Uber's Docstore needs efficient data serialization for
+                    geo-replicated writes across continents. Uber's push platform needs compact messages for millions
+                    of concurrent streaming connections. Protocol Buffers provide both: a rigorous schema definition
+                    (so teams agree on data formats) and a compact binary encoding (so the network is not the
+                    bottleneck). The schema requirement is not a drawback — it is a feature. It forces teams to
+                    explicitly define their data contracts, which reduces bugs and makes systems easier to evolve
+                    over time.
+                </p>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways</h3>
+                <ul>
+                    <li>
+                        <span class="checkmark">1.</span> <strong>Real systems drive design choices.</strong> Uber's
+                        Docstore shows that "schemaless" eventually needs structure, and that production systems are
+                        built from layered, pragmatic components — not elegant abstractions.
+                    </li>
+                    <li>
+                        <span class="checkmark">2.</span> <strong>Streaming changes the communication model.</strong>
+                        Not everything is request/response. Real-time systems like Uber's push platform need continuous,
+                        bidirectional data flow, which gRPC and HTTP/2 provide.
+                    </li>
+                    <li>
+                        <span class="checkmark">3.</span> <strong>Transport and serialization matter.</strong> The
+                        difference between JSON and protobuf (105 bytes vs. 45 bytes for the same record) compounds
+                        at scale into massive infrastructure savings.
+                    </li>
+                    <li>
+                        <span class="checkmark">4.</span> <strong>Schemas are contracts, not constraints.</strong>
+                        Protocol Buffers require a schema, but that schema serves as documentation, a compatibility
+                        check, and an optimization opportunity all at once.
+                    </li>
+                    <li>
+                        <span class="checkmark">5.</span> <strong>Don't reinvent the wheel.</strong> Adopt proven,
+                        open-source infrastructure (gRPC, protobuf, Raft) and spend your engineering effort on what
+                        makes your system unique.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

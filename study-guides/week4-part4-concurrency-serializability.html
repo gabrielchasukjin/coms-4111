@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concurrency, Scheduling & Conflict Serializability — Interactive Study Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --surface3: #22222e;
+    --border: #2a2a3a;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --green: #00b894;
+    --green-glow: rgba(0, 184, 148, 0.3);
+    --red: #ff6b6b;
+    --red-glow: rgba(255, 107, 107, 0.3);
+    --yellow: #ffc048;
+    --yellow-glow: rgba(255, 192, 72, 0.3);
+    --blue: #54a0ff;
+    --blue-glow: rgba(84, 160, 255, 0.3);
+    --orange: #ff9f43;
+    --pink: #fd79a8;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* --- Progress Bar --- */
+  #progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px; z-index: 1000;
+    background: linear-gradient(90deg, var(--accent), var(--blue), var(--green));
+    transition: width 0.3s ease;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* --- Nav --- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: rgba(10, 10, 15, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  nav .logo { font-weight: 800; font-size: 14px; letter-spacing: 1px; color: var(--accent); }
+  nav .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav .nav-links a {
+    font-size: 12px; color: var(--text-dim); text-decoration: none;
+    padding: 4px 10px; border-radius: 6px; transition: all 0.2s;
+  }
+  nav .nav-links a:hover, nav .nav-links a.active { color: var(--text); background: var(--surface2); }
+  #xp-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--yellow); display: flex; align-items: center; gap: 6px;
+  }
+
+  /* --- Hero --- */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 120px 24px 80px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--blue) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    position: relative; margin-bottom: 16px;
+  }
+  .hero .subtitle { font-size: 1.2rem; color: var(--text-dim); max-width: 600px; position: relative; margin-bottom: 32px; }
+  .hero .prereqs {
+    position: relative; display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center; margin-bottom: 40px;
+  }
+  .prereq-tag {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--text-dim);
+  }
+  .prereq-tag .icon { margin-right: 4px; }
+  .start-btn {
+    position: relative; padding: 14px 36px; font-size: 16px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    color: #fff; border: none; border-radius: 30px; cursor: pointer;
+    transition: all 0.3s; letter-spacing: 0.5px;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+
+  /* --- Sections --- */
+  .section {
+    max-width: 860px; margin: 0 auto; padding: 80px 24px;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 40px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.8rem; font-weight: 800; }
+  .section-header .tag {
+    margin-left: auto; font-size: 11px; padding: 4px 10px;
+    border-radius: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* --- Content Cards --- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; }
+  .card p { color: var(--text-dim); margin-bottom: 12px; }
+
+  .callout {
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    border-left: 3px solid;
+  }
+  .callout.info { background: rgba(84, 160, 255, 0.08); border-color: var(--blue); }
+  .callout.warn { background: rgba(255, 192, 72, 0.08); border-color: var(--yellow); }
+  .callout.danger { background: rgba(255, 107, 107, 0.08); border-color: var(--red); }
+  .callout.success { background: rgba(0, 184, 148, 0.08); border-color: var(--green); }
+  .callout .callout-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .callout.info .callout-title { color: var(--blue); }
+  .callout.warn .callout-title { color: var(--yellow); }
+  .callout.danger .callout-title { color: var(--red); }
+  .callout.success .callout-title { color: var(--green); }
+
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+    background: var(--surface3); padding: 2px 7px; border-radius: 5px;
+  }
+
+  /* --- Diagram Container --- */
+  .diagram-container {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin: 24px 0;
+    position: relative;
+  }
+  .diagram-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-dim); margin-bottom: 16px;
+  }
+
+  /* --- Quiz / Game Components --- */
+  .quiz-box {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent); border-radius: var(--radius);
+    padding: 28px; margin: 28px 0; position: relative; overflow: hidden;
+  }
+  .quiz-box::before {
+    content: ''; position: absolute; top: -50%; right: -50%;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .quiz-box .quiz-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    position: relative;
+  }
+  .quiz-badge {
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .quiz-xp { font-size: 12px; color: var(--yellow); font-weight: 600; }
+  .quiz-question { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; position: relative; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .quiz-option {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; cursor: pointer;
+    transition: all 0.2s; font-size: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-option:hover { border-color: var(--accent); background: var(--surface3); }
+  .quiz-option.correct { border-color: var(--green); background: rgba(0,184,148,0.1); }
+  .quiz-option.wrong { border-color: var(--red); background: rgba(255,107,107,0.1); }
+  .quiz-option .opt-letter {
+    width: 28px; height: 28px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+    font-size: 12px; background: var(--surface3); flex-shrink: 0;
+  }
+  .quiz-feedback {
+    margin-top: 14px; padding: 12px 16px; border-radius: 8px;
+    font-size: 13px; display: none; position: relative;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct-fb { background: rgba(0,184,148,0.1); border: 1px solid var(--green); color: var(--green); }
+  .quiz-feedback.wrong-fb { background: rgba(255,107,107,0.1); border: 1px solid var(--red); color: var(--red); }
+
+  /* --- Simulator --- */
+  .simulator {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin: 28px 0;
+  }
+  .sim-controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sim-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer;
+    transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .sim-btn:hover { border-color: var(--accent); background: var(--surface3); }
+  .sim-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sim-btn.primary:hover { background: #7d6ff0; }
+  .sim-btn:disabled { opacity: 0.4; cursor: default; }
+  .sim-log {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: var(--surface2); border-radius: 8px; padding: 16px;
+    max-height: 300px; overflow-y: auto; line-height: 1.8;
+  }
+
+  /* --- Bank Calculator --- */
+  .bank-display {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0;
+  }
+  .bank-cell {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .bank-cell .label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .bank-cell .value { font-size: 1.5rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+  /* --- Conflict Game --- */
+  .conflict-game-pair {
+    display: flex; align-items: center; gap: 16px; padding: 14px 18px;
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 10px; margin-bottom: 10px; transition: all 0.3s;
+  }
+  .conflict-game-pair .ops {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    font-weight: 600; min-width: 180px;
+  }
+  .conflict-game-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .conflict-game-btns button {
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--surface3); color: var(--text);
+    cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+  }
+  .conflict-game-btns button:hover { border-color: var(--accent); }
+  .conflict-game-btns button.correct-btn { border-color: var(--green); background: rgba(0,184,148,0.15); color: var(--green); }
+  .conflict-game-btns button.wrong-btn { border-color: var(--red); background: rgba(255,107,107,0.15); color: var(--red); }
+  .conflict-game-pair.answered { opacity: 0.7; }
+  .conflict-game-pair.answered button { pointer-events: none; }
+
+  /* --- Topo Sort --- */
+  .topo-node {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 50%; font-weight: 800;
+    font-size: 14px; border: 2.5px solid; transition: all 0.4s; margin: 4px;
+  }
+  .topo-node.removed { opacity: 0.2; transform: scale(0.7); text-decoration: line-through; }
+  .topo-node.highlight { box-shadow: 0 0 16px var(--green-glow); transform: scale(1.15); }
+
+  /* --- Build Your Own Graph --- */
+  .byo-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px; margin: 16px 0;
+  }
+  .byo-edge-btn {
+    padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 2px solid var(--border); background: var(--surface2); color: var(--text);
+    cursor: pointer; transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+    text-align: center;
+  }
+  .byo-edge-btn:hover { border-color: var(--accent); }
+  .byo-edge-btn.selected { border-color: var(--accent); background: rgba(108,92,231,0.15); color: var(--accent); }
+  .byo-edge-btn.correct-edge { border-color: var(--green); background: rgba(0,184,148,0.15); color: var(--green); }
+  .byo-edge-btn.wrong-edge { border-color: var(--red); background: rgba(255,107,107,0.15); color: var(--red); }
+
+  /* --- Comparison Cards --- */
+  .vs-container { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start; margin: 20px 0; }
+  .vs-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .vs-card h4 { font-size: 1rem; margin-bottom: 8px; }
+  .vs-divider {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.5rem; color: var(--text-dim); padding-top: 30px;
+  }
+
+  /* --- Lock Table --- */
+  .lock-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    margin: 16px 0; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .lock-table th {
+    background: var(--surface3); padding: 12px 16px;
+    font-weight: 700; font-size: 13px; text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table td {
+    padding: 12px 16px; text-align: center; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .lock-table tr:last-child td { border-bottom: none; }
+
+  /* --- Score / XP --- */
+  .xp-toast {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--surface2); border: 1px solid var(--yellow);
+    border-radius: 12px; padding: 12px 20px;
+    font-weight: 700; color: var(--yellow); font-size: 14px;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+  }
+  .xp-toast.show { transform: translateY(0); opacity: 1; }
+
+  /* --- Scroll animations --- */
+  .fade-in {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* --- Footer --- */
+  footer {
+    text-align: center; padding: 60px 24px;
+    color: var(--text-dim); font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* --- Responsive --- */
+  @media (max-width: 640px) {
+    .vs-container { grid-template-columns: 1fr; }
+    .vs-divider { padding-top: 0; transform: rotate(90deg); }
+    nav .nav-links { display: none; }
+    .bank-display { grid-template-columns: 1fr; }
+  }
+
+  /* --- Scrollbar --- */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+  @keyframes headShake {
+    0% { transform: translateX(0); } 15% { transform: translateX(-6px); }
+    30% { transform: translateX(6px); } 45% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); } 75% { transform: translateX(-2px); } 100% { transform: translateX(0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar" style="width: 0%"></div>
+
+<nav>
+  <div class="logo">COMS 4111 STUDY GUIDE</div>
+  <div class="nav-links">
+    <a href="#stage">Intro</a>
+    <a href="#why-concurrent">Why Concurrency</a>
+    <a href="#schedules">Schedules</a>
+    <a href="#conflicts">Conflicts</a>
+    <a href="#serializability">Serializability</a>
+    <a href="#dags">DAGs</a>
+    <a href="#worked-example">Worked Example</a>
+  </div>
+  <div id="xp-display">&#9889; <span id="xp-count">0</span> XP</div>
+</nav>
+
+<!-- =================== HERO =================== -->
+<div class="hero" id="stage">
+  <h1>Concurrency, Scheduling<br>& Serializability</h1>
+  <p class="subtitle">From "why can't we just run one transaction at a time?" to building conflict graphs and proving correctness.</p>
+  <div class="prereqs">
+    <span class="prereq-tag"><span class="icon">&#128230;</span> ACID Properties</span>
+    <span class="prereq-tag"><span class="icon">&#128221;</span> WAL Protocol</span>
+    <span class="prereq-tag"><span class="icon">&#128260;</span> Transactions</span>
+    <span class="prereq-tag"><span class="icon">&#128202;</span> SQL Basics</span>
+  </div>
+  <button class="start-btn" onclick="document.getElementById('scene').scrollIntoView({behavior:'smooth'})">Begin the Journey &#8595;</button>
+</div>
+
+<!-- =================== SECTION 0: SETTING THE STAGE =================== -->
+<div class="section fade-in" id="scene">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--accent-glow); color: var(--accent);">0</div>
+    <h2>Setting the Stage</h2>
+    <span class="tag" style="background: var(--accent-glow); color: var(--accent);">Context</span>
+  </div>
+
+  <div class="card">
+    <h3>Where We Left Off</h3>
+    <p>WAL (Write-Ahead Logging) gave us <strong>Atomicity</strong> and <strong>Durability</strong> -- two pillars of ACID. But real databases serve <strong>thousands of users simultaneously</strong>. We can't run transactions one at a time -- it would be painfully slow.</p>
+    <p>This lecture is all about the <strong>I</strong> in ACID: <strong>Isolation</strong>. How do we interleave operations from multiple transactions for performance while still producing correct results?</p>
+
+    <div class="callout info">
+      <div class="callout-title">&#127859; Restaurant Kitchen Analogy</div>
+      <p style="margin:0; color: var(--text-dim); font-size: 14px;">
+        Imagine a restaurant kitchen preparing multiple orders at once. The chef interleaves steps -- while one steak is grilling, they're plating a salad. But they must never mix ingredients between orders. Your pasta sauce should never end up on someone else's burger. That's isolation in a nutshell.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The Big Picture</h3>
+    <p>Here's the roadmap we'll follow:</p>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--accent);">
+        <strong>1.</strong> Why concurrency? <em>Performance</em>
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--yellow);">
+        <strong>2.</strong> Schedules & correctness
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--red);">
+        <strong>3.</strong> Conflicts & anomalies
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--green);">
+        <strong>4.</strong> Conflict graphs & serializability
+      </div>
+      <div style="color:var(--text-dim);display:flex;align-items:center;">&#8594;</div>
+      <div style="background:var(--surface2);padding:10px 16px;border-radius:8px;font-size:13px;border-left:3px solid var(--blue);">
+        <strong>5.</strong> DAGs & topological sort
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== SECTION 1: WHY CONCURRENT TRANSACTIONS =================== -->
+<div class="section fade-in" id="why-concurrent">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--blue-glow); color: var(--blue);">1</div>
+    <h2>Why Concurrent Transactions?</h2>
+    <span class="tag" style="background: var(--blue-glow); color: var(--blue);">Motivation</span>
+  </div>
+
+  <div class="card">
+    <h3>The Bank Transfer Example</h3>
+    <p>Consider two accounts: <code>A = $50</code>, <code>B = $200</code>. Two transactions run:</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--accent);">
+        <strong style="color:var(--accent);">T1: Transfer $50 from A to B</strong>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px;line-height:2;color:var(--text-dim);">
+          read(A)<br>
+          A = A - 50<br>
+          write(A)<br>
+          read(B)<br>
+          B = B + 50<br>
+          write(B)
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border:1px solid var(--blue);">
+        <strong style="color:var(--blue);">T2: Apply 6% interest</strong>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px;line-height:2;color:var(--text-dim);">
+          read(A)<br>
+          A = A * 1.06<br>
+          write(A)<br>
+          read(B)<br>
+          B = B * 1.06<br>
+          write(B)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Bank Transfer Calculator -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Bank Transfer Calculator</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Click each scenario to see the final account values. Both serial orders are correct. The bad interleaving creates money from nowhere!</p>
+
+    <div class="sim-controls">
+      <button class="sim-btn primary" onclick="showBankScenario('serial1')">Serial: T1 &#8594; T2</button>
+      <button class="sim-btn primary" onclick="showBankScenario('serial2')">Serial: T2 &#8594; T1</button>
+      <button class="sim-btn" style="border-color:var(--red);color:var(--red);" onclick="showBankScenario('bad')">Bad Interleaving</button>
+    </div>
+
+    <div id="bank-scenario-label" style="font-size:14px;font-weight:700;margin-bottom:8px;min-height:24px;"></div>
+
+    <div id="bank-steps" class="sim-log" style="margin-bottom:16px;min-height:60px;">
+      <div style="color:var(--text-dim);">Click a scenario above to see the step-by-step execution.</div>
+    </div>
+
+    <div class="bank-display">
+      <div class="bank-cell">
+        <div class="label">Account A</div>
+        <div class="value" id="bank-a">$50</div>
+      </div>
+      <div class="bank-cell">
+        <div class="label">Account B</div>
+        <div class="value" id="bank-b">$200</div>
+      </div>
+      <div class="bank-cell">
+        <div class="label">Total</div>
+        <div class="value" id="bank-total" style="color:var(--green);">$250</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz 1 -->
+  <div class="quiz-box fade-in" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">In the bank example, why are BOTH serial orders considered "correct"?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">A</span> Because they produce the exact same values for A and B
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz1')">
+        <span class="opt-letter">B</span> Because each produces a result consistent with running transactions one at a time -- any serial order is acceptable
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">C</span> Because the total A+B is always $250 regardless of order
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz1')">
+        <span class="opt-letter">D</span> Because T1 and T2 don't access the same data items
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz1-feedback"></div>
+  </div>
+</div>
+
+<!-- =================== SECTION 2: SCHEDULES =================== -->
+<div class="section fade-in" id="schedules">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--yellow-glow); color: var(--yellow);">2</div>
+    <h2>Schedules</h2>
+    <span class="tag" style="background: var(--yellow-glow); color: var(--yellow);">Definitions</span>
+  </div>
+
+  <div class="card">
+    <h3>What is a Schedule?</h3>
+    <p>A <strong>schedule</strong> is a sequence of operations (reads and writes) from multiple transactions, where the operations of each individual transaction appear in their original order.</p>
+  </div>
+
+  <div class="card">
+    <h3>Types of Schedules</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border-top:3px solid var(--green);">
+        <strong style="color:var(--green);">Serial Schedule</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">No interleaving at all. One transaction completes entirely before the next starts. <strong>Always correct</strong>, but slow.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:8px;color:var(--text-dim);">
+          T1: r(A) w(A) r(B) w(B)<br>
+          T2: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;r(A) w(A) r(B) w(B)
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:16px;border-top:3px solid var(--yellow);">
+        <strong style="color:var(--yellow);">Interleaved Schedule</strong>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">Operations from different transactions are mixed together. May or may not be correct. Fast.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:8px;color:var(--text-dim);">
+          T1: r(A) w(A) &middot;&middot;&middot; r(B) w(B)<br>
+          T2: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;r(A) w(A) &middot;&middot;&middot; r(B) w(B)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Key Definitions</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--yellow);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">&#8801;</div>
+        <div><strong>Equivalent schedules:</strong> Two schedules are equivalent if they produce the <strong>same final state</strong> for <em>every possible initial database state</em>.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--green);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">&#10004;</div>
+        <div><strong>Serializable schedule:</strong> An interleaved schedule that is equivalent to <strong>some</strong> serial schedule. Any serial order is fine -- we just need it to match at least one.</div>
+      </div>
+    </div>
+    <div class="callout success" style="margin-top:16px;">
+      <div class="callout-title">&#127942; Gold Standard</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        <strong>Serializability</strong> is the gold standard for correctness. If a schedule is serializable, we can guarantee it's correct -- even though operations were interleaved for performance.
+      </p>
+    </div>
+  </div>
+
+  <!-- Quiz 2 -->
+  <div class="quiz-box fade-in" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">A serializable schedule must be equivalent to which serial order?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">A</span> The serial order where the oldest transaction runs first
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">B</span> Every possible serial order
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz2')">
+        <span class="opt-letter">C</span> At least one (any) serial order
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz2')">
+        <span class="opt-letter">D</span> The serial order that produces the smallest result values
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz2-feedback"></div>
+  </div>
+</div>
+
+<!-- =================== SECTION 3: CONFLICTS AND ANOMALIES =================== -->
+<div class="section fade-in" id="conflicts">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--red-glow); color: var(--red);">3</div>
+    <h2>Conflicts & Anomalies</h2>
+    <span class="tag" style="background: var(--red-glow); color: var(--red);">Danger Zone</span>
+  </div>
+
+  <div class="card">
+    <h3>What is a Conflict?</h3>
+    <p>Two operations <strong>conflict</strong> if all three conditions hold:</p>
+    <div style="margin:16px 0;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="background:var(--red);color:#000;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">1</div>
+        <span>They belong to <strong>different transactions</strong></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="background:var(--red);color:#000;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">2</div>
+        <span>They access the <strong>same data item</strong></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="background:var(--red);color:#000;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">3</div>
+        <span>At least one of them is a <strong>write</strong></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <code style="color:var(--red);">W-W conflict</code>
+      <code style="color:var(--orange);">W-R conflict</code>
+      <code style="color:var(--yellow);">R-W conflict</code>
+      <code style="color:var(--green);">R-R = NOT a conflict!</code>
+    </div>
+
+    <div class="callout info" style="margin-top:16px;">
+      <div class="callout-title">&#128221; Google Docs Analogy</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        If two people are reading a Google Doc at the same time, no problem. But if one person is editing while another reads or edits the same paragraph? Potential chaos.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Conflict vs. Anomaly -- The Critical Distinction</h3>
+    <div class="callout danger">
+      <div class="callout-title">&#128680; Don't Confuse These!</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        A <strong>conflict</strong> is a <em>potential</em> problem -- two operations that <em>could</em> interfere.<br>
+        An <strong>anomaly</strong> is an <em>actual</em> problem -- the conflict produced an incorrect result.
+      </p>
+    </div>
+    <p>Not every conflict causes an anomaly, but every anomaly arises from a conflict. Think of it like a wet floor: it's a hazard (conflict), but you only have a problem if someone actually slips (anomaly).</p>
+
+    <div class="callout warn" style="margin-top:16px;">
+      <div class="callout-title">&#9888;&#65039; Why This Matters</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        <strong>Conflict serializability</strong> is conservative: it may reject some schedules that are actually correct (because they have conflicts that don't cause anomalies). But it will <strong>NEVER</strong> accept an incorrect schedule. Safety first!
+      </p>
+    </div>
+  </div>
+
+  <!-- Conflict Identifier Game -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Conflict Identifier Game</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">For each pair of operations, identify if it's a conflict and what type. Earn XP for each correct answer!</p>
+
+    <div id="conflict-game">
+      <div class="conflict-game-pair" id="cg-pair-0">
+        <div class="ops">r1(A), r2(A)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(0, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(0, 'rw')">R-W</button>
+          <button onclick="checkConflict(0, 'wr')">W-R</button>
+          <button onclick="checkConflict(0, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+      <div class="conflict-game-pair" id="cg-pair-1">
+        <div class="ops">w1(B), r2(B)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(1, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(1, 'rw')">R-W</button>
+          <button onclick="checkConflict(1, 'wr')">W-R</button>
+          <button onclick="checkConflict(1, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+      <div class="conflict-game-pair" id="cg-pair-2">
+        <div class="ops">r1(C), w2(C)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(2, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(2, 'rw')">R-W</button>
+          <button onclick="checkConflict(2, 'wr')">W-R</button>
+          <button onclick="checkConflict(2, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+      <div class="conflict-game-pair" id="cg-pair-3">
+        <div class="ops">w1(A), w2(A)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(3, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(3, 'rw')">R-W</button>
+          <button onclick="checkConflict(3, 'wr')">W-R</button>
+          <button onclick="checkConflict(3, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+      <div class="conflict-game-pair" id="cg-pair-4">
+        <div class="ops">r1(A), w1(A)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(4, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(4, 'rw')">R-W</button>
+          <button onclick="checkConflict(4, 'wr')">W-R</button>
+          <button onclick="checkConflict(4, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+      <div class="conflict-game-pair" id="cg-pair-5">
+        <div class="ops">w3(D), r1(D)</div>
+        <div class="conflict-game-btns">
+          <button onclick="checkConflict(5, 'none')">Not a Conflict</button>
+          <button onclick="checkConflict(5, 'rw')">R-W</button>
+          <button onclick="checkConflict(5, 'wr')">W-R</button>
+          <button onclick="checkConflict(5, 'ww')">W-W</button>
+        </div>
+        <span class="cg-result" style="font-size:12px;font-weight:600;min-width:60px;"></span>
+      </div>
+    </div>
+    <div id="conflict-game-score" style="margin-top:12px;font-size:14px;font-weight:600;min-height:24px;"></div>
+  </div>
+
+  <!-- Quiz 3 -->
+  <div class="quiz-box fade-in" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">Why is R-R (two reads on the same item from different transactions) NOT a conflict?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">A</span> Because reads always happen before writes
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz3')">
+        <span class="opt-letter">B</span> Because reads don't change the data -- swapping their order produces the same result
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">C</span> Because reads are always faster than writes
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz3')">
+        <span class="opt-letter">D</span> Because the database caches all reads
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz3-feedback"></div>
+  </div>
+</div>
+
+<!-- =================== SECTION 4: CONFLICT SERIALIZABILITY =================== -->
+<div class="section fade-in" id="serializability">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--green-glow); color: var(--green);">4</div>
+    <h2>Conflict Serializability</h2>
+    <span class="tag" style="background: var(--green-glow); color: var(--green);">The Test</span>
+  </div>
+
+  <div class="card">
+    <h3>How to Test: Build a Conflict Graph</h3>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:12px;">
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--green);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+        <div><strong>Create a node</strong> for each transaction in the schedule.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--green);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+        <div><strong>For each conflict</strong>, draw a directed edge from the transaction whose operation came <em>first</em> to the one whose operation came <em>second</em>.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--green);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+        <div><strong>Check for cycles:</strong>
+          <div style="margin-top:6px;">
+            <span style="color:var(--green);font-weight:700;">No cycle &#8594; Conflict Serializable &#10004;</span><br>
+            <span style="color:var(--red);font-weight:700;">Cycle &#8594; NOT Serializable &#10008;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Why Cycles Mean Non-Serializability</h3>
+    <p>If T1 &#8594; T2 &#8594; T1 exists in the conflict graph, it means:</p>
+    <ul style="color:var(--text-dim);font-size:14px;padding-left:20px;margin:12px 0;">
+      <li>T1 must come <strong>before</strong> T2 (because of the first edge)</li>
+      <li>T2 must come <strong>before</strong> T1 (because of the second edge)</li>
+      <li>T1 must be both before AND after T2 -- a <strong>logical contradiction!</strong></li>
+    </ul>
+
+    <div class="callout info">
+      <div class="callout-title">&#127859; Breakfast/Lunch Analogy</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        It's like saying "I need to eat breakfast before lunch" AND "I need to eat lunch before breakfast." Both can't be true. There is no valid linear ordering.
+      </p>
+    </div>
+
+    <div class="callout success" style="margin-top:12px;">
+      <div class="callout-title">&#9889; Performance Note</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        Cycle detection in a directed graph runs in <strong>O(V + E)</strong> time using DFS -- very efficient! V = number of transactions, E = number of conflict edges.
+      </p>
+    </div>
+  </div>
+
+  <!-- Quiz 4 -->
+  <div class="quiz-box fade-in" id="quiz4">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">A conflict graph has edges T1&#8594;T2 and T2&#8594;T3. Is this schedule conflict serializable?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz4')">
+        <span class="opt-letter">A</span> Yes -- no cycle exists (T1&#8594;T2&#8594;T3 is a chain, not a cycle)
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">B</span> No -- three transactions always create a cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">C</span> No -- T1&#8594;T2&#8594;T3 is itself a cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz4')">
+        <span class="opt-letter">D</span> Can't tell without knowing the specific operations
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz4-feedback"></div>
+  </div>
+</div>
+
+<!-- =================== SECTION 5: DAGS AND TOPOLOGICAL ORDERINGS =================== -->
+<div class="section fade-in" id="dags">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--accent-glow); color: var(--accent);">5</div>
+    <h2>DAGs & Topological Orderings</h2>
+    <span class="tag" style="background: var(--accent-glow); color: var(--accent);">Theory</span>
+  </div>
+
+  <div class="card">
+    <h3>DAG = Directed Acyclic Graph</h3>
+    <p>When a conflict graph has <strong>no cycles</strong>, it's a DAG. This is the "safe" case -- the schedule is conflict serializable.</p>
+    <p>From a DAG, we can find a <strong>topological ordering</strong>: a linear ordering of all nodes where every edge points "forward" (from earlier to later in the ordering).</p>
+  </div>
+
+  <div class="card">
+    <h3>Topological Sort Algorithm</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+        <div>Find a node with <strong>no incoming edges</strong> (in-degree = 0)</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+        <div>Add that node to the ordering</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+        <div>Remove the node and all its outgoing edges from the graph</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start;">
+        <div style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">4</div>
+        <div>Repeat until all nodes are placed</div>
+      </div>
+    </div>
+    <div class="callout warn" style="margin-top:16px;">
+      <div class="callout-title">&#9888;&#65039; Important: Not Unique!</div>
+      <p style="margin:0;color:var(--text-dim);font-size:14px;">
+        If multiple nodes have in-degree 0 at the same step, you can pick any of them. This means the topological ordering may <strong>not be unique</strong> -- there can be multiple valid equivalent serial schedules.
+      </p>
+    </div>
+  </div>
+
+  <!-- Topological Sort Simulator -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Topological Sort Simulator</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">Graph: T1&#8594;T2, T1&#8594;T4, T3&#8594;T2, T2&#8594;T5, T4&#8594;T5 (from the worked example)</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Click "Next Step" to remove nodes with no incoming edges one by one.</p>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="topo-nodes">
+      <div class="topo-node" id="topo-T1" style="border-color:var(--accent);color:var(--accent);">T1</div>
+      <div class="topo-node" id="topo-T2" style="border-color:var(--blue);color:var(--blue);">T2</div>
+      <div class="topo-node" id="topo-T3" style="border-color:var(--green);color:var(--green);">T3</div>
+      <div class="topo-node" id="topo-T4" style="border-color:var(--orange);color:var(--orange);">T4</div>
+      <div class="topo-node" id="topo-T5" style="border-color:var(--pink);color:var(--pink);">T5</div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px;">
+      <span style="font-size:13px;color:var(--text-dim);">Edges remaining: </span>
+      <span id="topo-edges" style="font-family:'JetBrains Mono',monospace;font-size:13px;">T1&#8594;T2, T1&#8594;T4, T3&#8594;T2, T2&#8594;T5, T4&#8594;T5</span>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px;">
+      <span style="font-size:13px;color:var(--text-dim);">Topological Order: </span>
+      <span id="topo-order" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--green);">[ ]</span>
+    </div>
+
+    <div id="topo-explanation" style="font-size:13px;color:var(--text-dim);margin-bottom:16px;min-height:40px;text-align:center;">
+      Nodes with no incoming edges (in-degree 0) can be removed first.
+    </div>
+
+    <div class="sim-controls" style="justify-content:center;">
+      <button class="sim-btn primary" id="topo-next-btn" onclick="topoStep()">Next Step &#8594;</button>
+      <button class="sim-btn" onclick="topoReset()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Quiz 5 -->
+  <div class="quiz-box fade-in" id="quiz5">
+    <div class="quiz-header">
+      <span class="quiz-badge">Quiz</span>
+      <span class="quiz-xp">+15 XP</span>
+    </div>
+    <div class="quiz-question">A conflict graph has 4 transactions and no cycles. How many valid topological orderings are possible?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">A</span> Exactly 1 -- topological ordering is always unique
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">B</span> Exactly 4! = 24 orderings
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz5')">
+        <span class="opt-letter">C</span> It depends on the graph structure -- could be 1 or many
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz5')">
+        <span class="opt-letter">D</span> Zero -- DAGs don't have topological orderings
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz5-feedback"></div>
+  </div>
+</div>
+
+<!-- =================== SECTION 6: WORKED EXAMPLE =================== -->
+<div class="section fade-in" id="worked-example">
+  <div class="section-header">
+    <div class="section-num" style="background:linear-gradient(135deg,var(--accent-glow),var(--yellow-glow));color:var(--yellow);">&#11088;</div>
+    <h2>Worked Example: 5 Transactions</h2>
+    <span class="tag" style="background: linear-gradient(135deg,var(--accent-glow),var(--yellow-glow)); color: var(--yellow);">Practice</span>
+  </div>
+
+  <div class="card">
+    <h3>The Schedule</h3>
+    <div style="background:var(--surface2);border-radius:10px;padding:16px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;overflow-x:auto;">
+      <strong>S1:</strong> w1(A), r2(A), w1(B), w3(C), r2(C), r4(B), w2(D), w4(E), r5(D), w5(E)
+    </div>
+    <p style="margin-top:12px;">Five transactions (T1-T5) accessing five data items (A-E). Let's determine if this schedule is conflict serializable.</p>
+  </div>
+
+  <!-- Interactive Conflict Graph Builder for 5 Transactions -->
+  <div class="diagram-container fade-in">
+    <div class="diagram-label">Interactive Conflict Graph Builder -- Step by Step</div>
+    <div style="margin-bottom:16px;">
+      <svg id="worked-graph-svg" width="100%" height="260" viewBox="0 0 600 260">
+        <defs>
+          <marker id="arrAcc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/></marker>
+          <marker id="arrBlu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--blue)"/></marker>
+          <marker id="arrGrn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--green)"/></marker>
+          <marker id="arrOrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--orange)"/></marker>
+          <marker id="arrPnk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--pink)"/></marker>
+        </defs>
+        <!-- Nodes: T1(120,60), T2(300,60), T3(120,200), T4(480,60), T5(480,200) -->
+        <circle cx="120" cy="60" r="28" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <text x="120" y="65" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="15">T1</text>
+        <circle cx="300" cy="60" r="28" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+        <text x="300" y="65" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="15">T2</text>
+        <circle cx="120" cy="200" r="28" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+        <text x="120" y="205" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="15">T3</text>
+        <circle cx="480" cy="60" r="28" fill="none" stroke="var(--orange)" stroke-width="2.5"/>
+        <text x="480" y="65" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="15">T4</text>
+        <circle cx="480" cy="200" r="28" fill="none" stroke="var(--pink)" stroke-width="2.5"/>
+        <text x="480" y="205" text-anchor="middle" fill="var(--text)" font-weight="800" font-size="15">T5</text>
+
+        <!-- Edge 1: T1->T2 (A: w1->r2) -->
+        <line x1="148" y1="55" x2="272" y2="55" stroke="var(--accent)" stroke-width="2" id="we-edge1" opacity="0" marker-end="url(#arrAcc)"/>
+        <text x="210" y="46" fill="var(--accent)" font-size="10" font-weight="600" text-anchor="middle" id="we-edge1-label" opacity="0">A: w1&#8594;r2</text>
+
+        <!-- Edge 2: T1->T4 (B: w1->r4) -->
+        <line x1="148" y1="65" x2="452" y2="65" stroke="var(--blue)" stroke-width="2" id="we-edge2" opacity="0" marker-end="url(#arrBlu)"/>
+        <text x="300" y="85" fill="var(--blue)" font-size="10" font-weight="600" text-anchor="middle" id="we-edge2-label" opacity="0">B: w1&#8594;r4</text>
+
+        <!-- Edge 3: T3->T2 (C: w3->r2) -->
+        <line x1="148" y1="190" x2="285" y2="80" stroke="var(--green)" stroke-width="2" id="we-edge3" opacity="0" marker-end="url(#arrGrn)"/>
+        <text x="195" y="140" fill="var(--green)" font-size="10" font-weight="600" text-anchor="middle" id="we-edge3-label" opacity="0">C: w3&#8594;r2</text>
+
+        <!-- Edge 4: T2->T5 (D: w2->r5) -->
+        <line x1="325" y1="72" x2="458" y2="185" stroke="var(--orange)" stroke-width="2" id="we-edge4" opacity="0" marker-end="url(#arrOrg)"/>
+        <text x="405" y="140" fill="var(--orange)" font-size="10" font-weight="600" text-anchor="middle" id="we-edge4-label" opacity="0">D: w2&#8594;r5</text>
+
+        <!-- Edge 5: T4->T5 (E: w4->w5) -->
+        <line x1="480" y1="88" x2="480" y2="172" stroke="var(--pink)" stroke-width="2" id="we-edge5" opacity="0" marker-end="url(#arrPnk)"/>
+        <text x="508" y="140" fill="var(--pink)" font-size="10" font-weight="600" text-anchor="middle" id="we-edge5-label" opacity="0">E: w4&#8594;w5</text>
+      </svg>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="sim-btn primary" id="we-next-btn" onclick="nextWorkedStep()">Next Step &#8594;</button>
+      <button class="sim-btn" onclick="resetWorkedExample()">Reset</button>
+    </div>
+    <div id="we-explanation" style="font-size:13px;color:var(--text-dim);min-height:50px;">
+      Click "Next Step" to identify conflicts by data item and build the graph edge by edge.
+    </div>
+  </div>
+
+  <!-- Build Your Own Conflict Graph -->
+  <div class="simulator fade-in">
+    <h3 style="margin-bottom:4px;">&#127918; Build Your Own Conflict Graph</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">
+      <strong>Schedule S2:</strong> <code>r1(X), w2(X), r3(Y), w1(Y), w3(Z), r2(Z)</code>
+    </p>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Select ALL edges that should appear in the conflict graph, then check your answer.</p>
+
+    <div class="byo-grid" id="byo-edges">
+      <div class="byo-edge-btn" id="byo-t1t2" onclick="toggleBYO('t1t2')">T1 &#8594; T2</div>
+      <div class="byo-edge-btn" id="byo-t2t1" onclick="toggleBYO('t2t1')">T2 &#8594; T1</div>
+      <div class="byo-edge-btn" id="byo-t1t3" onclick="toggleBYO('t1t3')">T1 &#8594; T3</div>
+      <div class="byo-edge-btn" id="byo-t3t1" onclick="toggleBYO('t3t1')">T3 &#8594; T1</div>
+      <div class="byo-edge-btn" id="byo-t2t3" onclick="toggleBYO('t2t3')">T2 &#8594; T3</div>
+      <div class="byo-edge-btn" id="byo-t3t2" onclick="toggleBYO('t3t2')">T3 &#8594; T2</div>
+    </div>
+
+    <div class="sim-controls" style="margin-top:12px;">
+      <button class="sim-btn primary" id="byo-check-btn" onclick="checkBYO()">Check My Answer</button>
+      <button class="sim-btn" onclick="resetBYO()">Reset</button>
+    </div>
+    <div id="byo-feedback" style="margin-top:12px;font-size:13px;min-height:60px;"></div>
+  </div>
+
+  <!-- Quiz 6 -->
+  <div class="quiz-box fade-in" id="quiz6">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q1</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">In the worked example (5 transactions), what happens if we add an edge from T5 back to T1?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">A</span> Nothing changes -- the schedule is still serializable
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz6')">
+        <span class="opt-letter">B</span> A cycle T1&#8594;T2&#8594;T5&#8594;T1 (or T1&#8594;T4&#8594;T5&#8594;T1) is created -- NOT serializable
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">C</span> Only T5 needs to be aborted, the rest is fine
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz6')">
+        <span class="opt-letter">D</span> The topological sort would still work, just in reverse
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz6-feedback"></div>
+  </div>
+
+  <!-- Quiz 7 -->
+  <div class="quiz-box fade-in" id="quiz7">
+    <div class="quiz-header">
+      <span class="quiz-badge">Boss Q2</span>
+      <span class="quiz-xp">+25 XP</span>
+    </div>
+    <div class="quiz-question">When a cycle IS detected in a conflict graph, what does the DBMS do?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">A</span> Swaps the order of the conflicting operations to remove the cycle
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">B</span> Runs all transactions serially from scratch
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, true, 'quiz7')">
+        <span class="opt-letter">C</span> Aborts one transaction (victim selection) and retries it later
+      </div>
+      <div class="quiz-option" onclick="checkAnswer(this, false, 'quiz7')">
+        <span class="opt-letter">D</span> Ignores the cycle since conflict serializability is just a heuristic
+      </div>
+    </div>
+    <div class="quiz-feedback" id="quiz7-feedback"></div>
+  </div>
+
+  <!-- Summary Cheat Sheet -->
+  <div class="card fade-in" style="border: 1px solid var(--yellow); margin-top:40px;">
+    <h3>&#128203; Cheat Sheet -- Everything At A Glance</h3>
+    <table class="lock-table" style="margin-top:16px;">
+      <tr>
+        <th>Concept</th>
+        <th>What It Is</th>
+        <th>Key Point</th>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Schedule</strong></td>
+        <td style="text-align:left;">Sequence of operations from multiple txns</td>
+        <td style="text-align:left;">Must preserve each txn's internal order</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Serial Schedule</strong></td>
+        <td style="text-align:left;">No interleaving at all</td>
+        <td style="text-align:left;">Always correct, always slow</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Serializable</strong></td>
+        <td style="text-align:left;">Equivalent to SOME serial schedule</td>
+        <td style="text-align:left;">Gold standard for correctness</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Conflict</strong></td>
+        <td style="text-align:left;">Different txns, same item, at least one write</td>
+        <td style="text-align:left;">R-R is NOT a conflict</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Conflict Graph</strong></td>
+        <td style="text-align:left;">Nodes = txns, edges = conflict ordering</td>
+        <td style="text-align:left;">No cycle = serializable</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>DAG</strong></td>
+        <td style="text-align:left;">Directed Acyclic Graph</td>
+        <td style="text-align:left;">The safe case -- allows topological sort</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><strong>Topological Sort</strong></td>
+        <td style="text-align:left;">Linear ordering from a DAG</td>
+        <td style="text-align:left;">May NOT be unique</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div id="score-summary" class="section fade-in" style="text-align:center;padding-bottom:40px;">
+  <div style="font-size:2rem;font-weight:900;margin-bottom:8px;">Your Score</div>
+  <div style="font-size:3rem;font-weight:900;color:var(--yellow);" id="final-score">0 XP</div>
+  <div style="color:var(--text-dim);margin-top:8px;" id="score-message">Answer quiz questions above to earn XP!</div>
+</div>
+
+<footer>
+  COMS 4111 -- Computer Systems for Data Science &nbsp;|&nbsp; Columbia University &nbsp;|&nbsp; Week 4 Part 4 Study Guide
+</footer>
+
+<div class="xp-toast" id="xp-toast">+0 XP</div>
+
+<script>
+  // =============== XP SYSTEM ===============
+  let totalXP = 0;
+  const answeredQuizzes = new Set();
+
+  function addXP(amount) {
+    totalXP += amount;
+    document.getElementById('xp-count').textContent = totalXP;
+    document.getElementById('final-score').textContent = totalXP + ' XP';
+    const toast = document.getElementById('xp-toast');
+    toast.textContent = '+' + amount + ' XP';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+
+    if (totalXP >= 180) {
+      document.getElementById('score-message').textContent = 'Perfect score! You crushed it!';
+    } else if (totalXP >= 120) {
+      document.getElementById('score-message').textContent = 'Excellent! You know this material well.';
+    } else if (totalXP >= 60) {
+      document.getElementById('score-message').textContent = 'Good start -- review the sections you missed.';
+    }
+  }
+
+  // =============== QUIZ HANDLER ===============
+  const quizXP = {quiz1:15,quiz2:15,quiz3:15,quiz4:15,quiz5:15,quiz6:25,quiz7:25};
+  const quizExplanations = {
+    quiz1: {
+      correct:"Exactly! The bank doesn't care which order -- T1 then T2, or T2 then T1. Both are valid serial executions. Any serial order is acceptable.",
+      wrong:"Not quite. Both serial orders are correct because each represents a valid one-at-a-time execution. They don't need to produce the same values -- they just each need to be internally consistent. Note: the totals are actually $265 in both cases, but that's coincidence for this example, not the reason they're both correct."
+    },
+    quiz2: {
+      correct:"A serializable schedule only needs to match ONE serial order. Any serial order counts -- it just needs to be equivalent to at least one.",
+      wrong:"A serializable schedule is equivalent to at least one (any) serial order. It doesn't need to match all of them, just some serial ordering."
+    },
+    quiz3: {
+      correct:"Two reads on the same item don't interfere because neither changes the data. You can swap their order and the outcome is identical.",
+      wrong:"R-R is not a conflict because reads don't modify anything. Swapping the order of two reads produces the same result -- no interference."
+    },
+    quiz4: {
+      correct:"A chain T1->T2->T3 has no cycle. A cycle requires a path that returns to where it started (e.g., T1->T2->T3->T1). This schedule is serializable with order T1, T2, T3.",
+      wrong:"A chain is NOT a cycle. T1->T2->T3 means T1 before T2 before T3 -- that's perfectly orderable. A cycle would require an edge back from T3 to T1."
+    },
+    quiz5: {
+      correct:"It depends! A fully connected chain (T1->T2->T3->T4) has exactly 1 ordering. But a graph with no edges has 4! = 24 orderings. It all depends on the structure.",
+      wrong:"Topological ordering is not always unique. If multiple nodes have in-degree 0 simultaneously, different choices lead to different valid orderings."
+    },
+    quiz6: {
+      correct:"Adding T5->T1 creates cycles like T1->T2->T5->T1 and T1->T4->T5->T1. A cycle means no valid serial ordering exists -- the schedule is NOT conflict serializable.",
+      wrong:"Adding T5->T1 would create a cycle (e.g., T1->T2->T5->T1). Cycles in a conflict graph mean the schedule cannot be serializable."
+    },
+    quiz7: {
+      correct:"The DBMS picks a 'victim' transaction to abort (based on criteria like age, work done, etc.), rolls it back, and retries it later. This breaks the cycle.",
+      wrong:"When a conflict graph has a cycle, the DBMS aborts one transaction (the 'victim') to break the cycle, then retries it. It doesn't reorder operations or run everything serially."
+    },
+  };
+
+  function checkAnswer(el, isCorrect, quizId) {
+    if (answeredQuizzes.has(quizId)) return;
+    answeredQuizzes.add(quizId);
+
+    const options = el.parentElement.querySelectorAll('.quiz-option');
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      if (opt === el) opt.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    const fb = document.getElementById(quizId + '-feedback');
+    fb.classList.add('show');
+    if (isCorrect) {
+      fb.classList.add('correct-fb');
+      fb.innerHTML = '&#10003; Correct! ' + quizExplanations[quizId].correct;
+      addXP(quizXP[quizId]);
+    } else {
+      fb.classList.add('wrong-fb');
+      fb.innerHTML = '&#10007; ' + quizExplanations[quizId].wrong;
+    }
+  }
+
+  // =============== BANK TRANSFER CALCULATOR ===============
+  function showBankScenario(type) {
+    const stepsEl = document.getElementById('bank-steps');
+    const labelEl = document.getElementById('bank-scenario-label');
+    const aEl = document.getElementById('bank-a');
+    const bEl = document.getElementById('bank-b');
+    const totalEl = document.getElementById('bank-total');
+
+    if (type === 'serial1') {
+      labelEl.innerHTML = '<span style="color:var(--green);">Serial Order 1: T1 then T2</span>';
+      stepsEl.innerHTML =
+        '<div style="color:var(--accent);font-weight:600;">-- T1 runs first (transfer $50 from A to B) --</div>' +
+        '<div>T1: read(A) = $50</div>' +
+        '<div>T1: A = 50 - 50 = $0</div>' +
+        '<div>T1: write(A) = $0</div>' +
+        '<div>T1: read(B) = $200</div>' +
+        '<div>T1: B = 200 + 50 = $250</div>' +
+        '<div>T1: write(B) = $250</div>' +
+        '<div style="color:var(--blue);font-weight:600;margin-top:8px;">-- T2 runs second (6% interest) --</div>' +
+        '<div>T2: read(A) = $0</div>' +
+        '<div>T2: A = 0 * 1.06 = $0</div>' +
+        '<div>T2: write(A) = $0</div>' +
+        '<div>T2: read(B) = $250</div>' +
+        '<div>T2: B = 250 * 1.06 = $265</div>' +
+        '<div>T2: write(B) = $265</div>';
+      aEl.textContent = '$0';
+      bEl.textContent = '$265';
+      totalEl.textContent = '$265';
+      totalEl.style.color = 'var(--green)';
+    } else if (type === 'serial2') {
+      labelEl.innerHTML = '<span style="color:var(--green);">Serial Order 2: T2 then T1</span>';
+      stepsEl.innerHTML =
+        '<div style="color:var(--blue);font-weight:600;">-- T2 runs first (6% interest) --</div>' +
+        '<div>T2: read(A) = $50</div>' +
+        '<div>T2: A = 50 * 1.06 = $53</div>' +
+        '<div>T2: write(A) = $53</div>' +
+        '<div>T2: read(B) = $200</div>' +
+        '<div>T2: B = 200 * 1.06 = $212</div>' +
+        '<div>T2: write(B) = $212</div>' +
+        '<div style="color:var(--accent);font-weight:600;margin-top:8px;">-- T1 runs second (transfer $50 from A to B) --</div>' +
+        '<div>T1: read(A) = $53</div>' +
+        '<div>T1: A = 53 - 50 = $3</div>' +
+        '<div>T1: write(A) = $3</div>' +
+        '<div>T1: read(B) = $212</div>' +
+        '<div>T1: B = 212 + 50 = $262</div>' +
+        '<div>T1: write(B) = $262</div>';
+      aEl.textContent = '$3';
+      bEl.textContent = '$262';
+      totalEl.textContent = '$265';
+      totalEl.style.color = 'var(--green)';
+    } else if (type === 'bad') {
+      labelEl.innerHTML = '<span style="color:var(--red);">Bad Interleaving -- money appears from nowhere!</span>';
+      stepsEl.innerHTML =
+        '<div>T1: read(A) = $50</div>' +
+        '<div>T1: A = 50 - 50 = $0</div>' +
+        '<div>T1: write(A) = $0</div>' +
+        '<div style="color:var(--blue);">T2: read(A) = $0</div>' +
+        '<div style="color:var(--blue);">T2: A = 0 * 1.06 = $0</div>' +
+        '<div style="color:var(--blue);">T2: write(A) = $0 &nbsp;&nbsp;<span style="color:var(--text-dim);">(so far so good...)</span></div>' +
+        '<div>T1: read(B) = $200</div>' +
+        '<div>T1: B = 200 + 50 = $250</div>' +
+        '<div>T1: write(B) = $250</div>' +
+        '<div style="color:var(--blue);">T2: read(B) = $250 &nbsp;&nbsp;<span style="color:var(--yellow);">(reads T1\'s write!)</span></div>' +
+        '<div style="color:var(--blue);">T2: B = 250 * 1.06 = $265</div>' +
+        '<div style="color:var(--blue);">T2: write(B) = $265</div>' +
+        '<div style="color:var(--red);font-weight:700;margin-top:8px;">Interest was applied to B AFTER the transfer, but NOT to A. $15 appeared from nowhere!</div>';
+      aEl.textContent = '$0';  // Using $0 to show A was already transferred
+      // Actually let's match the lecture: A=$3, B=$265
+      // The lecture says bad interleaving: T2 reads A before T1 writes it
+      // Let me use a different bad interleaving that matches the lecture
+      stepsEl.innerHTML =
+        '<div style="color:var(--accent);">T1: read(A) = $50</div>' +
+        '<div style="color:var(--accent);">T1: A = 50 - 50 = $0</div>' +
+        '<div style="color:var(--blue);">T2: read(A) = $50 &nbsp;&nbsp;<span style="color:var(--yellow);">(reads BEFORE T1 writes!)</span></div>' +
+        '<div style="color:var(--blue);">T2: A = 50 * 1.06 = $53</div>' +
+        '<div style="color:var(--accent);">T1: write(A) = $0</div>' +
+        '<div style="color:var(--blue);">T2: write(A) = $53 &nbsp;&nbsp;<span style="color:var(--yellow);">(overwrites T1!)</span></div>' +
+        '<div style="color:var(--accent);">T1: read(B) = $200</div>' +
+        '<div style="color:var(--accent);">T1: B = 200 + 50 = $250</div>' +
+        '<div style="color:var(--accent);">T1: write(B) = $250</div>' +
+        '<div style="color:var(--blue);">T2: read(B) = $250</div>' +
+        '<div style="color:var(--blue);">T2: B = 250 * 1.06 = $265</div>' +
+        '<div style="color:var(--blue);">T2: write(B) = $265</div>' +
+        '<div style="color:var(--red);font-weight:700;margin-top:8px;">T1\'s withdrawal from A was lost! A=$53 instead of $0 or $3. Money created from thin air!</div>';
+      aEl.textContent = '$53';
+      bEl.textContent = '$265';
+      totalEl.textContent = '$318';
+      totalEl.style.color = 'var(--red)';
+    }
+  }
+
+  // =============== CONFLICT IDENTIFIER GAME ===============
+  const conflictAnswers = [
+    {correct: 'none', explain: 'R-R on same item = NOT a conflict (both are reads)'},
+    {correct: 'wr', explain: 'W-R conflict: w1(B) then r2(B), different txns, same item, one is write'},
+    {correct: 'rw', explain: 'R-W conflict: r1(C) then w2(C), different txns, same item, one is write'},
+    {correct: 'ww', explain: 'W-W conflict: w1(A) then w2(A), different txns, same item, both writes'},
+    {correct: 'none', explain: 'Same transaction (T1)! Conflicts must be between DIFFERENT transactions'},
+    {correct: 'wr', explain: 'W-R conflict: w3(D) then r1(D), different txns, same item, one is write'},
+  ];
+  let conflictGameCorrect = 0;
+  let conflictGameTotal = 0;
+  const conflictGameAnswered = new Set();
+
+  function checkConflict(idx, answer) {
+    if (conflictGameAnswered.has(idx)) return;
+    conflictGameAnswered.add(idx);
+    conflictGameTotal++;
+
+    const pair = document.getElementById('cg-pair-' + idx);
+    const result = pair.querySelector('.cg-result');
+    const btns = pair.querySelectorAll('button');
+
+    pair.classList.add('answered');
+
+    if (answer === conflictAnswers[idx].correct) {
+      conflictGameCorrect++;
+      btns.forEach(b => { if (b.textContent.toLowerCase().replace(/[^a-z-]/g,'').includes(answer.replace('-',''))) b.classList.add('correct-btn'); });
+      result.innerHTML = '<span style="color:var(--green);">&#10003; ' + conflictAnswers[idx].explain + '</span>';
+    } else {
+      btns.forEach(b => {
+        const btnText = b.textContent.toLowerCase().replace(/[^a-z-]/g,'');
+        if (btnText.includes(answer.replace('-',''))) b.classList.add('wrong-btn');
+      });
+      result.innerHTML = '<span style="color:var(--red);">&#10007; ' + conflictAnswers[idx].explain + '</span>';
+    }
+
+    if (conflictGameTotal === 6) {
+      const scoreEl = document.getElementById('conflict-game-score');
+      if (conflictGameCorrect >= 5) {
+        scoreEl.innerHTML = '<span style="color:var(--green);">' + conflictGameCorrect + '/6 correct! +20 XP</span>';
+        addXP(20);
+      } else if (conflictGameCorrect >= 3) {
+        scoreEl.innerHTML = '<span style="color:var(--yellow);">' + conflictGameCorrect + '/6 correct. +10 XP</span>';
+        addXP(10);
+      } else {
+        scoreEl.innerHTML = '<span style="color:var(--red);">' + conflictGameCorrect + '/6 -- review the conflict definition above!</span>';
+      }
+    }
+  }
+
+  // =============== WORKED EXAMPLE CONFLICT GRAPH BUILDER ===============
+  let weStep = 0;
+  const weSteps = [
+    {
+      explain: '<strong>Step 1 -- Data item A:</strong> <code>w1(A)</code> then <code>r2(A)</code> = <span style="color:var(--accent);">W-R conflict</span>. T1 writes A before T2 reads A. Draw edge <span style="color:var(--accent);font-weight:700;">T1 &#8594; T2</span>.',
+      edges: ['we-edge1','we-edge1-label']
+    },
+    {
+      explain: '<strong>Step 2 -- Data item B:</strong> <code>w1(B)</code> then <code>r4(B)</code> = <span style="color:var(--blue);">W-R conflict</span>. T1 writes B before T4 reads B. Draw edge <span style="color:var(--blue);font-weight:700;">T1 &#8594; T4</span>.',
+      edges: ['we-edge2','we-edge2-label']
+    },
+    {
+      explain: '<strong>Step 3 -- Data item C:</strong> <code>w3(C)</code> then <code>r2(C)</code> = <span style="color:var(--green);">W-R conflict</span>. T3 writes C before T2 reads C. Draw edge <span style="color:var(--green);font-weight:700;">T3 &#8594; T2</span>.',
+      edges: ['we-edge3','we-edge3-label']
+    },
+    {
+      explain: '<strong>Step 4 -- Data item D:</strong> <code>w2(D)</code> then <code>r5(D)</code> = <span style="color:var(--orange);">W-R conflict</span>. T2 writes D before T5 reads D. Draw edge <span style="color:var(--orange);font-weight:700;">T2 &#8594; T5</span>.',
+      edges: ['we-edge4','we-edge4-label']
+    },
+    {
+      explain: '<strong>Step 5 -- Data item E:</strong> <code>w4(E)</code> then <code>w5(E)</code> = <span style="color:var(--pink);">W-W conflict</span>. T4 writes E before T5 writes E. Draw edge <span style="color:var(--pink);font-weight:700;">T4 &#8594; T5</span>.',
+      edges: ['we-edge5','we-edge5-label']
+    },
+    {
+      explain: '<strong>Result:</strong> Edges: T1&#8594;T2, T1&#8594;T4, T3&#8594;T2, T2&#8594;T5, T4&#8594;T5. Trace all paths -- <span style="color:var(--green);font-weight:700;">NO CYCLE found! &#10004; CONFLICT SERIALIZABLE.</span><br>Valid topological orderings include: <code>T3, T1, T4, T2, T5</code> or <code>T1, T3, T2, T4, T5</code> (multiple valid!).',
+      edges: []
+    },
+  ];
+
+  function nextWorkedStep() {
+    if (weStep >= weSteps.length) return;
+    const step = weSteps[weStep];
+    step.edges.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.setAttribute('opacity', '1'); el.style.transition = 'opacity 0.5s'; }
+    });
+    document.getElementById('we-explanation').innerHTML = step.explain;
+    weStep++;
+    if (weStep >= weSteps.length) {
+      document.getElementById('we-next-btn').textContent = 'Done &#10003;';
+      document.getElementById('we-next-btn').disabled = true;
+    }
+  }
+
+  function resetWorkedExample() {
+    weStep = 0;
+    ['we-edge1','we-edge1-label','we-edge2','we-edge2-label','we-edge3','we-edge3-label','we-edge4','we-edge4-label','we-edge5','we-edge5-label'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('opacity', '0');
+    });
+    document.getElementById('we-explanation').innerHTML = 'Click "Next Step" to identify conflicts by data item and build the graph edge by edge.';
+    document.getElementById('we-next-btn').textContent = 'Next Step \u2192';
+    document.getElementById('we-next-btn').disabled = false;
+  }
+
+  // =============== TOPOLOGICAL SORT SIMULATOR ===============
+  // Graph: T1->T2, T1->T4, T3->T2, T2->T5, T4->T5
+  let topoState = {
+    removed: new Set(),
+    order: [],
+    edges: [['T1','T2'],['T1','T4'],['T3','T2'],['T2','T5'],['T4','T5']],
+  };
+
+  function getInDegree(node) {
+    let count = 0;
+    for (const [from, to] of topoState.edges) {
+      if (to === node && !topoState.removed.has(from)) count++;
+    }
+    return count;
+  }
+
+  function getZeroInDegreeNodes() {
+    const all = ['T1','T2','T3','T4','T5'];
+    return all.filter(n => !topoState.removed.has(n) && getInDegree(n) === 0);
+  }
+
+  function topoStep() {
+    if (topoState.removed.size >= 5) return;
+    const zeros = getZeroInDegreeNodes();
+    if (zeros.length === 0) return;
+
+    // Pick the first one (deterministic for this example)
+    const pick = zeros[0];
+    topoState.removed.add(pick);
+    topoState.order.push(pick);
+
+    // Update visuals
+    document.getElementById('topo-' + pick).classList.add('removed');
+
+    // Highlight remaining zero-in-degree nodes
+    ['T1','T2','T3','T4','T5'].forEach(n => {
+      document.getElementById('topo-' + n).classList.remove('highlight');
+    });
+    const newZeros = getZeroInDegreeNodes();
+    newZeros.forEach(n => document.getElementById('topo-' + n).classList.add('highlight'));
+
+    // Update edges display
+    const remainingEdges = topoState.edges.filter(([f,t]) => !topoState.removed.has(f) && !topoState.removed.has(t));
+    document.getElementById('topo-edges').textContent = remainingEdges.length > 0
+      ? remainingEdges.map(([f,t]) => f + '\u2192' + t).join(', ')
+      : '(none)';
+
+    // Update order display
+    document.getElementById('topo-order').textContent = '[ ' + topoState.order.join(', ') + ' ]';
+
+    // Explanation
+    const explainEl = document.getElementById('topo-explanation');
+    if (zeros.length > 1) {
+      explainEl.innerHTML = 'Nodes with in-degree 0: <strong>' + zeros.join(', ') + '</strong> (multiple choices!). Picked <strong>' + pick + '</strong>. Removed it and its outgoing edges.';
+    } else {
+      explainEl.innerHTML = 'Only node with in-degree 0: <strong>' + pick + '</strong>. Removed it and its outgoing edges.';
+    }
+
+    if (topoState.removed.size >= 5) {
+      explainEl.innerHTML += '<br><span style="color:var(--green);font-weight:700;">Done! Topological order: ' + topoState.order.join(', ') + '</span>';
+      document.getElementById('topo-next-btn').textContent = 'Done \u2713';
+      document.getElementById('topo-next-btn').disabled = true;
+    }
+  }
+
+  function topoReset() {
+    topoState = {
+      removed: new Set(),
+      order: [],
+      edges: [['T1','T2'],['T1','T4'],['T3','T2'],['T2','T5'],['T4','T5']],
+    };
+    ['T1','T2','T3','T4','T5'].forEach(n => {
+      const el = document.getElementById('topo-' + n);
+      el.classList.remove('removed', 'highlight');
+    });
+    document.getElementById('topo-edges').innerHTML = 'T1\u2192T2, T1\u2192T4, T3\u2192T2, T2\u2192T5, T4\u2192T5';
+    document.getElementById('topo-order').textContent = '[ ]';
+    document.getElementById('topo-explanation').textContent = 'Nodes with no incoming edges (in-degree 0) can be removed first.';
+    document.getElementById('topo-next-btn').textContent = 'Next Step \u2192';
+    document.getElementById('topo-next-btn').disabled = false;
+  }
+
+  // =============== BUILD YOUR OWN CONFLICT GRAPH ===============
+  // Schedule S2: r1(X), w2(X), r3(Y), w1(Y), w3(Z), r2(Z)
+  // Conflicts:
+  //   X: r1(X) -> w2(X) = RW, T1->T2
+  //   Y: r3(Y) -> w1(Y) = RW, T3->T1
+  //   Z: w3(Z) -> r2(Z) = WR, T3->T2
+  // Correct edges: T1->T2, T3->T1, T3->T2
+  const byoCorrectEdges = new Set(['t1t2', 't3t1', 't3t2']);
+  const byoSelected = new Set();
+  let byoChecked = false;
+
+  function toggleBYO(edge) {
+    if (byoChecked) return;
+    const el = document.getElementById('byo-' + edge);
+    if (byoSelected.has(edge)) {
+      byoSelected.delete(edge);
+      el.classList.remove('selected');
+    } else {
+      byoSelected.add(edge);
+      el.classList.add('selected');
+    }
+  }
+
+  function checkBYO() {
+    if (byoChecked) return;
+    byoChecked = true;
+
+    const allEdges = ['t1t2','t2t1','t1t3','t3t1','t2t3','t3t2'];
+    let correct = true;
+
+    allEdges.forEach(edge => {
+      const el = document.getElementById('byo-' + edge);
+      const shouldBeSelected = byoCorrectEdges.has(edge);
+      const isSelected = byoSelected.has(edge);
+
+      if (shouldBeSelected && isSelected) {
+        el.classList.add('correct-edge');
+        el.classList.remove('selected');
+      } else if (shouldBeSelected && !isSelected) {
+        el.classList.add('correct-edge');
+        correct = false;
+      } else if (!shouldBeSelected && isSelected) {
+        el.classList.add('wrong-edge');
+        el.classList.remove('selected');
+        correct = false;
+      }
+    });
+
+    const fb = document.getElementById('byo-feedback');
+    if (correct) {
+      fb.innerHTML = '<span style="color:var(--green);font-weight:700;">&#10003; Perfect! +20 XP</span><br><span style="color:var(--text-dim);font-size:12px;">r1(X)&#8594;w2(X) gives T1&#8594;T2. r3(Y)&#8594;w1(Y) gives T3&#8594;T1. w3(Z)&#8594;r2(Z) gives T3&#8594;T2. No cycle -- serializable! Order: T3, T1, T2.</span>';
+      addXP(20);
+    } else {
+      fb.innerHTML = '<span style="color:var(--red);font-weight:700;">&#10007; Not quite.</span><br><span style="color:var(--text-dim);font-size:12px;">Correct edges (highlighted green): T1&#8594;T2 (r1(X) before w2(X) = RW), T3&#8594;T1 (r3(Y) before w1(Y) = RW), T3&#8594;T2 (w3(Z) before r2(Z) = WR). No cycle -- serializable! Order: T3, T1, T2.</span>';
+    }
+  }
+
+  function resetBYO() {
+    byoChecked = false;
+    byoSelected.clear();
+    const allEdges = ['t1t2','t2t1','t1t3','t3t1','t2t3','t3t2'];
+    allEdges.forEach(edge => {
+      const el = document.getElementById('byo-' + edge);
+      el.classList.remove('selected','correct-edge','wrong-edge');
+    });
+    document.getElementById('byo-feedback').innerHTML = '';
+  }
+
+  // =============== SCROLL ANIMATIONS ===============
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // =============== PROGRESS BAR ===============
+  window.addEventListener('scroll', () => {
+    const winScroll = document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('progress-bar').style.width = scrolled + '%';
+  });
+
+  // =============== NAV ACTIVE STATE ===============
+  const sections = document.querySelectorAll('.section, .hero');
+  const navLinks = document.querySelectorAll('nav .nav-links a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop - 100;
+      if (pageYOffset >= sectionTop) current = section.getAttribute('id') || '';
+    });
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Queries and Subqueries — Part 4</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Nested Queries and Subqueries</h1>
+            <p class="subtitle">Building complex answers by composing simple queries inside one another</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: SQL is Compositional -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. SQL is Compositional</h2>
+
+            <p>
+                One of the most powerful properties of SQL is something mathematicians and programmers cherish: <strong>compositionality</strong>. Every SQL query takes in a relation (a table, or more precisely, a multiset of tuples) and produces a relation as output. Because the input type and output type are the same &mdash; both are relations &mdash; you can feed the output of one query directly into another query, just like nesting function calls in mathematics or programming.
+            </p>
+
+            <img src="slides/34-sql-compositional.png" alt="SQL is compositional: query chains like f(g(...(x)))" class="slide-img">
+
+            <div class="analogy">
+                Think of it like a factory assembly line. Each station (query) receives parts (rows in a table), does some work (filtering, joining, aggregating), and sends the result down the line. The beauty is that every station speaks the same language &mdash; tables in, tables out &mdash; so you can rearrange, nest, and chain stations in any order you like. This is what makes SQL a <strong>compositional</strong> language.
+            </div>
+
+            <p>
+                In mathematical notation, this looks like <code>f(g(...(x)))</code>. The innermost function <code>x</code> produces a result, which is consumed by <code>g</code>, whose result is consumed by <code>f</code>, and so on. In SQL, this means you can write a <code>SELECT</code> statement inside another <code>SELECT</code> statement &mdash; a <strong>subquery</strong> (also called a <strong>nested query</strong>). The inner query runs first, produces a relation, and the outer query uses that relation as if it were just another table.
+            </p>
+
+            <div class="definition-box">
+                <strong>Compositionality in SQL:</strong> Because the inputs and outputs of SQL queries are all multisets (tables with possible duplicate rows), the output of one query can serve as the input to another. This allows <em>nesting</em> &mdash; placing one query inside another &mdash; to build increasingly powerful computations from simple building blocks. You can even nest queries on the same table.
+            </div>
+
+            <p>
+                This property is not just elegant &mdash; it is deeply practical. Many real-world questions cannot be answered with a single flat query. Nesting lets you break a complex question into manageable subproblems, solve each one, and then combine the results. The rest of this section is devoted to understanding how this works in practice.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Sub-queries Return Relations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Sub-queries Return Relations</h2>
+
+            <p>
+                Let us start with a concrete example. Suppose we have three tables describing a simple e-commerce scenario:
+            </p>
+
+            <ul>
+                <li><code>Company(name, city)</code> &mdash; each company has a name and is located in a city</li>
+                <li><code>Product(name, manufacturer)</code> &mdash; each product has a name and is made by a manufacturer (a company)</li>
+                <li><code>Purchase(id, product, buyer)</code> &mdash; each purchase records which product was bought by which buyer</li>
+            </ul>
+
+            <img src="slides/35-nested-subqueries1.png" alt="Schema for Company, Product, and Purchase tables" class="slide-img">
+
+            <div class="problem-box">
+                <h4>Problem</h4>
+                <p style="margin-bottom: 0;">
+                    Find the cities of companies that manufacture products bought by Alice.
+                </p>
+            </div>
+
+            <p>
+                This question spans all three tables. Alice's purchases live in <code>Purchase</code>, the manufacturers of those products live in <code>Product</code>, and the cities of those manufacturers live in <code>Company</code>. A flat join across all three tables would work, but there is a more intuitive way to think about it: <strong>break the problem into two steps</strong>.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Inner query: Which manufacturers make products Alice bought?</strong>
+                </div>
+                <p style="margin-bottom: 0.5rem;">
+                    First, we join <code>Purchase</code> and <code>Product</code> to find the manufacturers of everything Alice purchased:
+                </p>
+                <p style="margin-bottom: 0;">
+                    <code>SELECT Product.manufacturer FROM Purchase, Product WHERE Purchase.product = Product.name AND Purchase.buyer = 'Alice'</code>
+                </p>
+            </div>
+
+            <p>
+                This inner query produces a relation &mdash; a list of manufacturer names. It might return something like <code>{'GizmoWorks', 'Canon', 'Hitachi'}</code>. Now we need the cities where those companies are located.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Outer query: What cities are those manufacturers in?</strong>
+                </div>
+                <p style="margin-bottom: 0.5rem;">
+                    We wrap the inner query inside the outer query using the <code>IN</code> keyword:
+                </p>
+                <p style="margin-bottom: 0;">
+                    <code>SELECT Company.city FROM Company WHERE Company.name IN (SELECT Product.manufacturer FROM Purchase, Product WHERE Purchase.product = Product.name AND Purchase.buyer = 'Alice')</code>
+                </p>
+            </div>
+
+            <img src="slides/36-nested-subqueries-in.png" alt="Nested subquery using IN to find cities of Alice's product manufacturers" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>How IN works with a subquery</h4>
+                <p style="margin-bottom: 0.5rem;">
+                    The <code>IN</code> operator checks whether a value appears anywhere in the result of a subquery. Conceptually, <code>Company.name IN (subquery)</code> means: "Is this company's name one of the values returned by the subquery?" The database evaluates the inner query first, collects its results into a set, and then the outer query filters <code>Company</code> rows by checking membership in that set.
+                </p>
+                <p style="margin-bottom: 0;">
+                    This is equivalent to writing a three-way join across <code>Company</code>, <code>Product</code>, and <code>Purchase</code>, but the nested version often reads more naturally because it mirrors the way you would think through the problem step by step.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                The key idea: a subquery is just a query that returns a relation. Wherever SQL expects a table or a set of values, you can substitute a subquery. This is compositionality at work.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: ALL, ANY, EXISTS -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. ALL, ANY, and EXISTS</h2>
+
+            <p>
+                The <code>IN</code> operator is the simplest way to use a subquery, but SQL provides three more powerful operators that let you express richer comparisons against subquery results: <code>ALL</code>, <code>ANY</code>, and <code>EXISTS</code>.
+            </p>
+
+            <img src="slides/37-subqueries-all-any-exists.png" alt="ALL, ANY, and EXISTS operators with examples" class="slide-img">
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>s &gt; ALL R</code></td>
+                        <td><code>s</code> is greater than <em>every</em> value in the result set <code>R</code></td>
+                        <td>Find products more expensive than <em>all</em> Gizmo-Works products</td>
+                    </tr>
+                    <tr>
+                        <td><code>s &lt; ANY R</code></td>
+                        <td><code>s</code> is less than <em>at least one</em> value in <code>R</code></td>
+                        <td>Find products cheaper than <em>some</em> Gizmo-Works product</td>
+                    </tr>
+                    <tr>
+                        <td><code>EXISTS R</code></td>
+                        <td>True if <code>R</code> contains at least one row</td>
+                        <td>Find "copycat" products made by a competitor under the same name</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>ALL &mdash; Compare against every value</h3>
+
+            <p>
+                Suppose you want to find products whose price is higher than the price of every product made by Gizmo-Works. The <code>ALL</code> keyword makes this straightforward:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Example: More expensive than ALL Gizmo-Works products</h4>
+                <p style="margin-bottom: 0;">
+                    <code>SELECT name FROM Product WHERE price &gt; ALL (SELECT price FROM Product WHERE manufacturer = 'Gizmo-Works')</code>
+                </p>
+            </div>
+
+            <p>
+                The subquery returns the set of all prices for Gizmo-Works products &mdash; say <code>{20, 35, 50}</code>. The outer query then keeps only those products whose price is greater than <em>every</em> value in that set, meaning greater than 50 (the maximum). In effect, <code>&gt; ALL</code> is equivalent to "greater than the maximum," but it reads more declaratively.
+            </p>
+
+            <h3>ANY &mdash; Compare against at least one value</h3>
+
+            <p>
+                The <code>ANY</code> keyword is the existential counterpart of <code>ALL</code>. Where <code>ALL</code> requires the comparison to hold for every value in the subquery result, <code>ANY</code> requires it to hold for at least one. So <code>price &lt; ANY (subquery)</code> means "the price is less than at least one value returned by the subquery" &mdash; effectively, less than the maximum.
+            </p>
+
+            <div class="analogy">
+                Think of ALL and ANY as the "every" and "some" quantifiers from logic. "Is this student's GPA higher than ALL admitted students' GPAs?" versus "Is this student's GPA higher than ANY (at least one) admitted student's GPA?" The first is a much stricter test than the second.
+            </div>
+
+            <h3>EXISTS &mdash; Does the subquery return anything?</h3>
+
+            <p>
+                <code>EXISTS</code> is different from <code>ALL</code> and <code>ANY</code> because it does not compare a specific value against the subquery results. Instead, it simply checks whether the subquery returns <em>at least one row</em>. If the subquery result is non-empty, <code>EXISTS</code> evaluates to true.
+            </p>
+
+            <div class="explanation-box">
+                <h4>Example: Find "copycat" products</h4>
+                <p style="margin-bottom: 0.5rem;">
+                    A copycat product is one where two different manufacturers make a product with the same name. We can find them with:
+                </p>
+                <p style="margin-bottom: 0.5rem;">
+                    <code>SELECT p1.name FROM Product p1 WHERE EXISTS (SELECT * FROM Product p2 WHERE p1.name = p2.name AND p1.manufacturer &lt;&gt; p2.manufacturer)</code>
+                </p>
+                <p style="margin-bottom: 0;">
+                    Note the <code>&lt;&gt;</code> operator, which means "not equal to" in SQL. For each product <code>p1</code>, the subquery checks whether there is some other product <code>p2</code> with the same name but a different manufacturer. If such a <code>p2</code> exists, the product is a copycat.
+                </p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Scoping of variables</h4>
+                <p style="margin-bottom: 0;">
+                    Pay careful attention to the scoping in the EXISTS example above. The subquery references <code>p1.name</code> and <code>p1.manufacturer</code>, which are defined in the <em>outer</em> query. This is legal &mdash; an inner query can reference variables from the outer query that contains it, just like an inner function in programming can reference variables from its enclosing scope. This is called a <strong>correlated subquery</strong>, and it is the subject of the next section.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Correlated Subqueries -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Correlated Subqueries</h2>
+
+            <p>
+                In the examples so far, the inner subquery could in principle be evaluated once, independently of the outer query. The subquery "find all Gizmo-Works prices" does not depend on which row the outer query is currently examining. But in the <code>EXISTS</code> copycat example, the inner query references <code>p1</code> from the outer query. This means the inner query must be re-evaluated <em>for each row</em> of the outer query &mdash; because its result depends on which outer row is being considered. This is a <strong>correlated subquery</strong>.
+            </p>
+
+            <img src="slides/38-correlated-query.png" alt="Correlated subquery: inner query references outer query variable" class="slide-img">
+
+            <div class="definition-box">
+                <strong>Correlated Subquery:</strong> A subquery that references one or more columns from the outer query. Because the subquery's result depends on the current row of the outer query, it must (conceptually) be re-executed for every row the outer query processes. This makes correlated subqueries more expressive but potentially more expensive to execute.
+            </div>
+
+            <p>
+                Consider a more complex example using a single table:
+            </p>
+
+            <p>
+                <code>Product(name, price, category, maker, year)</code>
+            </p>
+
+            <div class="problem-box">
+                <h4>Problem</h4>
+                <p style="margin-bottom: 0;">
+                    Find products that are more expensive than ALL products made by the same manufacturer before 1972.
+                </p>
+            </div>
+
+            <p>
+                This is a self-referential question &mdash; we are comparing products against other products from the <em>same maker</em>. The subquery must know which maker we are currently looking at, so it needs to reference the outer query:
+            </p>
+
+            <div class="explanation-box">
+                <h4>The correlated query</h4>
+                <p style="margin-bottom: 0.5rem;">
+                    <code>SELECT x.name, x.price FROM Product x WHERE x.price &gt; ALL (SELECT y.price FROM Product y WHERE x.maker = y.maker AND y.year &lt; 1972)</code>
+                </p>
+                <p style="margin-bottom: 0;">
+                    Here, <code>x</code> is the outer alias and <code>y</code> is the inner alias &mdash; both refer to the same <code>Product</code> table, but they represent different roles. For each product <code>x</code>, the subquery finds all prices of products made by <code>x</code>'s manufacturer before 1972. If <code>x</code>'s price exceeds all of those, it passes the filter.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Imagine you are a hiring manager reviewing candidates. For each candidate, you look up the salaries of everyone previously hired from the same university before a certain year. If this candidate's salary demand exceeds all of those historical salaries, they make your shortlist. The "lookup" changes for every candidate because each one comes from a different university &mdash; that is exactly what correlation means. The inner query is parameterized by the outer row.
+            </div>
+
+            <p>
+                Correlated subqueries are powerful but come with a performance caveat. Because the inner query must conceptually be re-executed for every row of the outer query, they can be expensive on large tables. Modern query optimizers often rewrite correlated subqueries into equivalent joins behind the scenes, but this is not always possible. Understanding the performance implications of correlation is important when writing production SQL.
+            </p>
+
+            <div class="key-insight">
+                Correlated subqueries let you ask "for each row, does some condition hold about related rows?" &mdash; a pattern that is extremely common in practice. The inner query is like a function that takes the current outer row as a parameter.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Aggregates Inside Nested Queries -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Aggregates Inside Nested Queries</h2>
+
+            <p>
+                Because SQL is compositional, you are not limited to using simple selects in your subqueries. You can use <strong>aggregation functions</strong> like <code>MAX</code>, <code>MIN</code>, <code>COUNT</code>, <code>SUM</code>, and <code>AVG</code> inside nested queries as well. This opens up a huge range of analytical questions that would be difficult or impossible to express with flat queries alone.
+            </p>
+
+            <img src="slides/39-aggregates-nested-example.png" alt="Aggregates inside nested queries: precipitation example setup" class="slide-img">
+
+            <p>
+                The general strategy for writing complex nested queries with aggregates is:
+            </p>
+
+            <ol>
+                <li><strong>Break the question into subproblems.</strong> What intermediate result do you need? Can you write a standalone query for it?</li>
+                <li><strong>Go back to definitions.</strong> What does each SQL clause do? What shape of data does it produce? Use that knowledge to assemble the pieces.</li>
+            </ol>
+
+            <p>
+                Let us walk through a detailed example.
+            </p>
+
+            <h3>The Precipitation Example</h3>
+
+            <p>
+                Suppose we have a table recording daily precipitation measurements at various weather stations:
+            </p>
+
+            <p>
+                <code>Precipitation(station_id, day, precipitation)</code>
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>station_id</th>
+                        <th>day</th>
+                        <th>precipitation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>122</td><td>1</td><td>1.5</td></tr>
+                    <tr><td>122</td><td>4</td><td>2.1</td></tr>
+                    <tr><td>122</td><td>7</td><td>0.8</td></tr>
+                    <tr><td>191</td><td>1</td><td>0.9</td></tr>
+                    <tr><td>191</td><td>4</td><td>1.2</td></tr>
+                    <tr><td>191</td><td>7</td><td>1.4</td></tr>
+                </tbody>
+            </table>
+
+            <div class="problem-box">
+                <h4>Problem</h4>
+                <p style="margin-bottom: 0;">
+                    Find the stations that recorded the highest daily precipitation on any given day. In other words, for each day, which station had the most rain?
+                </p>
+            </div>
+
+            <p>
+                This is a classic "find the row with the maximum value per group" problem, and it is surprisingly tricky to express in SQL without subqueries. The difficulty is that <code>GROUP BY</code> with <code>MAX</code> gives you the maximum precipitation per day, but it does not directly tell you <em>which station</em> achieved that maximum. You need to link the aggregate result back to the original rows. This is where nesting shines.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Subquery: Find the maximum precipitation for each day</strong>
+                </div>
+                <p style="margin-bottom: 0.5rem;">
+                    First, we write a subquery that groups by day and computes the maximum precipitation:
+                </p>
+                <p style="margin-bottom: 0.5rem;">
+                    <code>SELECT day AS maxd, MAX(precipitation) AS maxp FROM Precipitation GROUP BY day</code>
+                </p>
+                <p style="margin-bottom: 0;">
+                    This produces a small derived table with two columns: <code>maxd</code> (the day) and <code>maxp</code> (the highest precipitation recorded on that day). For our sample data, this would return: day 1 with max 1.5, day 4 with max 2.1, and day 7 with max 1.4.
+                </p>
+            </div>
+
+            <img src="slides/40-aggregates-nested-step1.png" alt="Step 1: subquery computing MAX precipitation per day" class="slide-img">
+
+            <p>
+                Notice that this subquery produces a perfectly valid relation. It has rows and columns, just like any table. Now we can use it as if it were a table in a <code>FROM</code> clause &mdash; this is sometimes called a <strong>derived table</strong> or <strong>inline view</strong>.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Outer query: Join the original table with the subquery result</strong>
+                </div>
+                <p style="margin-bottom: 0.5rem;">
+                    Now we join the original <code>Precipitation</code> table with the derived table from Step 1. We match on both the day and the precipitation value, so we recover the <code>station_id</code> that achieved the maximum:
+                </p>
+                <p style="margin-bottom: 0.5rem;">
+                    <code>SELECT p.station_id, p.day, p.precipitation FROM Precipitation p, (SELECT day AS maxd, MAX(precipitation) AS maxp FROM Precipitation GROUP BY day) m WHERE p.day = m.maxd AND p.precipitation = m.maxp</code>
+                </p>
+                <p style="margin-bottom: 0;">
+                    The <code>WHERE</code> clause ensures we only keep rows from the original table where the day matches and the precipitation equals the daily maximum. This effectively "looks up" which station achieved the highest reading each day.
+                </p>
+            </div>
+
+            <img src="slides/41-aggregates-nested-step2.png" alt="Step 2: joining original table with subquery to find stations with max precipitation" class="slide-img">
+
+            <p>
+                For our sample data, the result is:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>station_id</th>
+                        <th>day</th>
+                        <th>precipitation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>122</td><td>1</td><td>1.5</td></tr>
+                    <tr><td>122</td><td>4</td><td>2.1</td></tr>
+                    <tr><td>191</td><td>7</td><td>1.4</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                Station 122 had the highest precipitation on days 1 and 4, while station 191 had the highest on day 7. The nested query approach made this problem manageable by decomposing it: first compute the per-day maximums, then find which rows match those maximums.
+            </p>
+
+            <div class="explanation-box">
+                <h4>Why not just use GROUP BY alone?</h4>
+                <p style="margin-bottom: 0;">
+                    A common mistake is to write <code>SELECT station_id, day, MAX(precipitation) FROM Precipitation GROUP BY day</code>. This is invalid in standard SQL (and most databases will reject it) because <code>station_id</code> is not in the <code>GROUP BY</code> clause and is not inside an aggregate function. The database does not know <em>which</em> station_id to return for each group. The subquery approach solves this cleanly by separating the "compute the max" step from the "find the matching row" step.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                When you need to find the row associated with an aggregate value (the station with the max, the employee with the highest salary, the product with the lowest price per category), the pattern is almost always the same: compute the aggregate in a subquery, then join it back to the original table to recover the full row.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Figma PostgreSQL Postmortem -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. When Nested Queries Go Wrong &mdash; The Figma Postmortem</h2>
+
+            <p>
+                Everything we have discussed so far has been about the <em>logical</em> correctness of SQL queries &mdash; how to express the right question. But in production systems, <em>how</em> the database executes your query matters just as much. A logically correct query can still bring down a service if the query planner chooses a bad execution strategy. The Figma PostgreSQL incident of January 2020 is a sobering real-world illustration.
+            </p>
+
+            <img src="slides/42-figma-postmortem.png" alt="Figma PostgreSQL postmortem: service disruption from a bad query plan" class="slide-img">
+
+            <div class="problem-box">
+                <h4>What happened?</h4>
+                <p style="margin-bottom: 0;">
+                    On January 21&ndash;22, 2020, Figma experienced a significant service disruption. The root cause was a long-running, expensive query that overwhelmed their PostgreSQL database.
+                </p>
+            </div>
+
+            <p>
+                Here is the chain of events, and why it connects directly to the SQL concepts we have been studying:
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Database statistics changed</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    PostgreSQL maintains internal statistics about table sizes, value distributions, and index selectivity. These statistics help the <strong>query planner</strong> decide how to execute a query &mdash; whether to use an index scan, a sequential table scan, a hash join, a nested loop join, and so on. When the underlying data changed, the statistics became stale or shifted in a way that misled the planner.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>The query planner chose a bad execution plan</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Based on the inaccurate statistics, the planner estimated that a certain execution strategy would be cheap. In reality, it was catastrophically expensive. The plan involved <strong>full table scans</strong> &mdash; reading every row in large tables &mdash; combined with writing massive amounts of intermediate data to temporary buffers on disk.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Autovacuuming backlog made it worse</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    PostgreSQL uses a process called <em>autovacuum</em> to clean up dead rows and update statistics. An existing backlog in this process meant the statistics were even more out of date than usual, compounding the planner's mistakes. The expensive query consumed so many resources that it blocked other operations, creating a cascading failure.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>The fix: upgrade PostgreSQL</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Figma resolved the issue by upgrading from PostgreSQL 9 to PostgreSQL 11. The newer version had a significantly improved query planner that made better decisions about execution strategies, along with better autovacuuming behavior that kept statistics more current.
+                </p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Why this matters for nested queries</h4>
+                <p style="margin-bottom: 0;">
+                    Nested queries and subqueries give the query planner more choices &mdash; and more opportunities to make poor decisions. A correlated subquery, for example, could be executed naively (re-running the inner query for every outer row) or cleverly rewritten as a join. The planner makes this decision based on statistics. When those statistics are wrong, the planner might choose the naive approach on a table with millions of rows, turning a query that should take milliseconds into one that runs for minutes and saturates the disk. Understanding SQL execution &mdash; not just SQL syntax &mdash; is essential for anyone working with data at scale.
+                </p>
+            </div>
+
+            <div class="analogy">
+                It is like giving a GPS navigator outdated traffic data. The navigator might route you through what it thinks is a clear highway, but which is actually gridlocked. The route is "correct" in the sense that it leads to the destination, but the estimated travel time is wildly wrong. In databases, the query planner is the navigator, the statistics are the traffic data, and a bad execution plan is the gridlocked highway.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways</h3>
+                <ul>
+                    <li><span class="checkmark">&#10003;</span> <strong>SQL is compositional.</strong> Queries take relations in and produce relations out, so you can nest queries inside one another like function calls: <code>f(g(x))</code>.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Subqueries return relations.</strong> You can use a subquery anywhere SQL expects a set of values &mdash; in a <code>WHERE ... IN</code> clause, in a <code>FROM</code> clause (as a derived table), or as an operand to <code>ALL</code>, <code>ANY</code>, or <code>EXISTS</code>.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>IN, ALL, ANY, EXISTS</strong> are the four main operators for using subquery results. <code>IN</code> checks membership, <code>ALL</code> and <code>ANY</code> perform universal and existential comparisons, and <code>EXISTS</code> checks for non-emptiness.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Correlated subqueries</strong> reference columns from the outer query, making the inner query dependent on the current outer row. They are powerful but can be expensive.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Aggregates inside subqueries</strong> let you compute summaries (MAX, MIN, AVG, etc.) as intermediate results and then join them back to find the associated rows.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Break complex problems into steps.</strong> Write the inner query first, verify it produces the right intermediate result, then wrap it in the outer query. This is both a debugging strategy and a design pattern.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Execution matters.</strong> The Figma postmortem shows that logically correct queries can still cause outages if the query planner makes bad decisions. Understanding how nested queries are executed &mdash; not just what they mean &mdash; is critical for production systems.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+    </footer>
+</body>
+</html>

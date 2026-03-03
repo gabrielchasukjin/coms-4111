@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice Midterm — COMS 4111</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        .stats { margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+        .stat { font-size: 0.9rem; color: #666; }
+        .stat strong { color: #000; }
+
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .ctrl-btn {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #333;
+            padding: 0.5rem 1.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        .ctrl-btn:hover { border-color: #000; color: #000; }
+
+        /* Question card */
+        .question-card {
+            background-color: #fafafa;
+            border-left: 4px solid #000;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .question-top {
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .q-number {
+            background-color: #000;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-top: 0.15rem;
+        }
+        .q-text {
+            font-size: 1rem;
+            color: #1a1a1a;
+            line-height: 1.7;
+            flex: 1;
+        }
+        .toggle-btn {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: none;
+            border: 1px solid #ccc;
+            color: #666;
+            padding: 0.2rem 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+        .toggle-btn:hover { border-color: #000; color: #000; }
+
+        /* Choices */
+        .choices {
+            padding: 0.75rem 0 0 2.5rem;
+        }
+        .choice {
+            padding: 0.6rem 0.85rem;
+            margin-bottom: 0.4rem;
+            border-radius: 4px;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            font-size: 0.95rem;
+            color: #333;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            line-height: 1.6;
+        }
+        .choice-label {
+            font-weight: 600;
+            color: #999;
+            flex-shrink: 0;
+            min-width: 1.2rem;
+        }
+
+        /* Answer section */
+        .answer-section {
+            display: none;
+            margin-top: 1.25rem;
+            padding-left: 2.5rem;
+        }
+        .answer-section.show { display: block; }
+        .correct-answer {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left: 4px solid #16a34a;
+            padding: 1rem 1.25rem;
+            border-radius: 0 4px 4px 0;
+        }
+        .correct-answer .label {
+            font-weight: 600;
+            color: #16a34a;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+        .correct-answer .text {
+            color: #15803d;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .explanation {
+            margin-top: 0.75rem;
+            background-color: #f0f4f8;
+            padding: 1rem 1.25rem;
+            border-radius: 4px;
+            color: #333;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        .explanation strong { color: #000; }
+        .explanation code {
+            background-color: #e2e8f0;
+            padding: 0.1em 0.35em;
+            border-radius: 2px;
+            font-size: 0.88em;
+        }
+
+        /* Topic colors */
+        .topic-perf { border-left-color: #3b82f6; }
+        .topic-sql { border-left-color: #16a34a; }
+        .topic-schema { border-left-color: #f59e0b; }
+        .topic-joins { border-left-color: #dc2626; }
+        .topic-iso { border-left-color: #7c3aed; }
+        .topic-conc { border-left-color: #0891b2; }
+        .topic-index { border-left-color: #ea580c; }
+        .topic-bloom { border-left-color: #d946ef; }
+        .topic-cache { border-left-color: #059669; }
+        .topic-net { border-left-color: #6366f1; }
+
+        .toc { background-color: #fafafa; padding: 1.5rem 2rem; border-radius: 4px; margin-bottom: 2rem; }
+        .toc h3 { font-family: Georgia, serif; font-weight: 400; margin-bottom: 1rem; font-size: 1.1rem; }
+        .toc ol { margin-left: 1.25rem; }
+        .toc li { margin-bottom: 0.35rem; font-size: 0.95rem; }
+        .toc a { color: #333; text-decoration: none; border-bottom: 1px solid #ccc; }
+        .toc a:hover { color: #000; border-color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+    <h1>Practice Midterm</h1>
+    <p class="subtitle">COMS 4111 &mdash; Computer Systems for Data Science</p>
+    <div class="stats">
+        <span class="stat"><strong>50</strong> questions</span>
+        <span class="stat"><strong>50</strong> points</span>
+        <span class="stat">Click any question to reveal the answer</span>
+    </div>
+</header>
+
+<div class="controls">
+    <button class="ctrl-btn" onclick="showAll()">Show All Answers</button>
+    <button class="ctrl-btn" onclick="hideAll()">Hide All Answers</button>
+</div>
+
+<div class="toc">
+    <h3>Topics Covered</h3>
+    <ol>
+        <li><a href="#perf">Performance &amp; Systems Design</a> (Q1&ndash;4)</li>
+        <li><a href="#sql">SQL Basics</a> (Q5&ndash;7)</li>
+        <li><a href="#schema">Serialization &amp; Schema Design</a> (Q8&ndash;11)</li>
+        <li><a href="#joins">Joins &amp; Aggregation</a> (Q12&ndash;16)</li>
+        <li><a href="#iso">Isolation Levels &amp; Anomalies</a> (Q17&ndash;19)</li>
+        <li><a href="#conc">Concurrency Control &amp; Locking</a> (Q20&ndash;26)</li>
+        <li><a href="#index">Indexing</a> (Q27&ndash;31)</li>
+        <li><a href="#bloom">Bloom Filters</a> (Q32&ndash;35)</li>
+        <li><a href="#cache">Caching &amp; Eviction Policies</a> (Q36&ndash;42)</li>
+        <li><a href="#net">Networking</a> (Q43&ndash;50)</li>
+    </ol>
+</div>
+
+
+<!-- ==================== PERFORMANCE ==================== -->
+<h2 id="perf">Performance &amp; Systems Design</h2>
+
+<div class="question-card topic-perf">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q1</span>
+        <span class="q-text">According to Amdahl's Law, if 80% of a program's runtime can be parallelized (p = 0.8) and you improve that portion with speedup S &rarr; &infin;, what is the absolute upper bound on overall speedup?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> 5&times; (upper bound is 1 / (1 &minus; p))</div>
+        <div class="choice"><span class="choice-label">B.</span> 10&times; (upper bound is 1 / p)</div>
+        <div class="choice"><span class="choice-label">C.</span> Unlimited</div>
+        <div class="choice"><span class="choice-label">D.</span> 1.8&times; (average of the parallelizable and sequential fractions)</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. 5&times; (upper bound is 1 / (1 &minus; p))</div>
+        </div>
+        <div class="explanation">
+            Amdahl's Law: Speedup = 1 / ((1 &minus; p) + p/S). As S &rarr; &infin;, the p/S term vanishes, leaving <strong>1 / (1 &minus; 0.8) = 1 / 0.2 = 5</strong>. The sequential portion (20%) is the bottleneck &mdash; no matter how fast you make the parallel part, you can never exceed 5&times;.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-perf">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q2</span>
+        <span class="q-text">The course describes throughput and latency as orthogonal metrics. Which example best illustrates that optimizing one does not automatically improve the other?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> A faster CPU that reduces both the time per request and the number of requests processed per second simultaneously</div>
+        <div class="choice"><span class="choice-label">B.</span> A pizzeria that adds more ovens (raises throughput) but still makes each pizza take just as long to bake (latency unchanged)</div>
+        <div class="choice"><span class="choice-label">C.</span> A network switch that increases bandwidth and reduces round-trip time in equal proportion</div>
+        <div class="choice"><span class="choice-label">D.</span> A disk that reads data faster while also reading more bytes per second</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. A pizzeria that adds more ovens (raises throughput) but each pizza still takes just as long to bake (latency unchanged)</div>
+        </div>
+        <div class="explanation">
+            <strong>Throughput</strong> = how many items per unit time. <strong>Latency</strong> = how long one item takes. Adding ovens increases pizzas/hour (throughput) but each pizza still bakes for the same duration (latency). The other options conflate the two or improve both simultaneously.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-perf">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q3</span>
+        <span class="q-text">When Petflix fans out one user request to four microservices (Auth, Playback, Recommendations, Analytics) simultaneously via gRPC, the total latency experienced by the user equals:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The sum of all four service response times</div>
+        <div class="choice"><span class="choice-label">B.</span> The average of the four service response times</div>
+        <div class="choice"><span class="choice-label">C.</span> The slowest of the four individual service response times</div>
+        <div class="choice"><span class="choice-label">D.</span> The fastest of the four individual service response times</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. The slowest of the four individual service response times</div>
+        </div>
+        <div class="explanation">
+            When requests fan out <strong>in parallel</strong>, you must wait for all to complete. The total latency = <strong>max(all response times)</strong>. You're only as fast as your slowest service.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-perf">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q4</span>
+        <span class="q-text">In the Petflix case study, keeping DNS TTL values very short (e.g., 30 seconds) trades off which two properties against each other?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Security and availability</div>
+        <div class="choice"><span class="choice-label">B.</span> Compression efficiency and bandwidth</div>
+        <div class="choice"><span class="choice-label">C.</span> Encryption strength and query speed</div>
+        <div class="choice"><span class="choice-label">D.</span> Failover speed versus DNS query volume</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. Failover speed versus DNS query volume</div>
+        </div>
+        <div class="explanation">
+            Short TTL = clients re-resolve DNS frequently, so if a server goes down, traffic reroutes quickly (<strong>fast failover</strong>). But this means <strong>more DNS queries</strong> hitting the infrastructure. Long TTL = fewer queries but slower failover.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== SQL BASICS ==================== -->
+<h2 id="sql">SQL Basics</h2>
+
+<div class="question-card topic-sql">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q5</span>
+        <span class="q-text">In the SQL SELECT-FROM-WHERE model, the term "selection" refers to:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Choosing which columns (attributes) appear in the output table</div>
+        <div class="choice"><span class="choice-label">B.</span> Specifying which tables are involved in the query using the FROM clause</div>
+        <div class="choice"><span class="choice-label">C.</span> Filtering a relation's rows based on a condition in the WHERE clause, keeping only rows that satisfy the predicate</div>
+        <div class="choice"><span class="choice-label">D.</span> Sorting and deduplicating the result set before returning it to the client</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Filtering a relation's rows based on a condition in the WHERE clause</div>
+        </div>
+        <div class="explanation">
+            In relational algebra, <strong>selection (&sigma;)</strong> = filtering rows. <strong>Projection (&pi;)</strong> = choosing columns. Common trap: the SQL keyword <code>SELECT</code> actually does <em>projection</em>, while the <code>WHERE</code> clause does <em>selection</em>.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-sql">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q6</span>
+        <span class="q-text">When <code>ORDER BY Price, PName</code> is used and two rows have the same Price, the ordering between those tied rows is determined by:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The value of PName as the secondary sort key</div>
+        <div class="choice"><span class="choice-label">B.</span> The physical insertion order of the rows in the table</div>
+        <div class="choice"><span class="choice-label">C.</span> Random assignment</div>
+        <div class="choice"><span class="choice-label">D.</span> The primary key of the table, applied automatically by the database engine</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. The value of PName as the secondary sort key</div>
+        </div>
+        <div class="explanation">
+            <code>ORDER BY Price, PName</code> sorts first by Price, then breaks ties using PName. The second column listed is the <strong>tiebreaker</strong>.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-sql">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q7</span>
+        <span class="q-text">Which of the following correctly describes SQL's case sensitivity rules as covered in the course?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Both SQL keywords and string literal values are fully case-insensitive</div>
+        <div class="choice"><span class="choice-label">B.</span> SQL keywords are case-sensitive, but string literal values are case-insensitive</div>
+        <div class="choice"><span class="choice-label">C.</span> SQL keywords (SELECT, FROM, WHERE) are case-insensitive, but string values are case-sensitive</div>
+        <div class="choice"><span class="choice-label">D.</span> Case sensitivity is identical for both keywords and values, both requiring exact case matching</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. SQL keywords are case-insensitive, but string values are case-sensitive</div>
+        </div>
+        <div class="explanation">
+            <code>SELECT</code>, <code>select</code>, and <code>SeLeCt</code> are all the same. But <code>'Smith'</code> &ne; <code>'smith'</code> in string comparisons. Keywords are structural; string literals are data.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== SERIALIZATION & SCHEMA ==================== -->
+<h2 id="schema">Serialization &amp; Schema Design</h2>
+
+<div class="question-card topic-schema">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q8</span>
+        <span class="q-text">Protocol Buffers produce a smaller on-wire payload than JSON primarily because they:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Use integer field tags instead of repeated string field names, and encode integers as varints rather than ASCII digit sequences</div>
+        <div class="choice"><span class="choice-label">B.</span> Automatically apply gzip compression during serialization before any bytes are sent</div>
+        <div class="choice"><span class="choice-label">C.</span> Strip all optional fields from the payload, transmitting only mandatory fields</div>
+        <div class="choice"><span class="choice-label">D.</span> Limit field values to fixed 32-bit or 64-bit binary representations, regardless of the actual value magnitude</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. Integer field tags + varint encoding</div>
+        </div>
+        <div class="explanation">
+            JSON repeats field names as strings in every object (<code>"name": "..."</code>). Protobuf replaces names with small integer tags and uses <strong>varints</strong> &mdash; variable-length encoding where small numbers take fewer bytes. No compression is applied automatically.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-schema">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q9</span>
+        <span class="q-text">In the Uber Docstore design, the phrase "flexible schema, not no schema" means:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Schema definitions are written per-row at insertion time, with no global table-level schema enforced anywhere</div>
+        <div class="choice"><span class="choice-label">B.</span> Consistency constraints and schema logic are centralized at the system layer, allowing the data format to evolve while still maintaining coherent cross-row guarantees</div>
+        <div class="choice"><span class="choice-label">C.</span> The database engine auto-detects schema from observed query patterns and adjusts column types at runtime</div>
+        <div class="choice"><span class="choice-label">D.</span> Tables may have an unlimited number of columns, with each column's type determined at query time</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. Consistency constraints centralized at the system layer, allowing evolution while maintaining guarantees</div>
+        </div>
+        <div class="explanation">
+            "Flexible schema" doesn't mean no rules at all. It means the schema can <strong>evolve</strong> (add fields, change types) without downtime, but constraints and validation are still enforced at a centralized layer.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-schema">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q10</span>
+        <span class="q-text"><code>FOREIGN KEY (student_id) REFERENCES Students(cuid)</code> is declared on the Enrolled table. An INSERT into Enrolled specifies a student_id that does not exist in Students. What happens?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The row is inserted with student_id silently set to NULL</div>
+        <div class="choice"><span class="choice-label">B.</span> The row is inserted but a warning is logged in the error log</div>
+        <div class="choice"><span class="choice-label">C.</span> A new placeholder row is automatically created in Students to satisfy the constraint</div>
+        <div class="choice"><span class="choice-label">D.</span> The INSERT is rejected</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. The INSERT is rejected</div>
+        </div>
+        <div class="explanation">
+            Foreign keys enforce <strong>referential integrity</strong>: every value in the child column must exist in the parent column. If the referenced value doesn't exist, the database refuses the insert outright.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-schema">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q11</span>
+        <span class="q-text">Which of the following is NOT a valid DBA-configurable option for handling deletion of a parent row referenced by a child table's foreign key?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Cascade the deletion to all referencing child rows (ON DELETE CASCADE)</div>
+        <div class="choice"><span class="choice-label">B.</span> Set the child rows' foreign key column to NULL (ON DELETE SET NULL)</div>
+        <div class="choice"><span class="choice-label">C.</span> Automatically re-create the deleted parent row to preserve referential integrity</div>
+        <div class="choice"><span class="choice-label">D.</span> Disallow the deletion entirely if any child rows reference the parent (ON DELETE RESTRICT)</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Automatically re-create the deleted parent row (not a real option)</div>
+        </div>
+        <div class="explanation">
+            Valid options: <code>CASCADE</code>, <code>SET NULL</code>, <code>SET DEFAULT</code>, <code>RESTRICT</code> / <code>NO ACTION</code>. There is no "auto-recreate parent" option &mdash; that is not part of the SQL standard.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== JOINS & AGGREGATION ==================== -->
+<h2 id="joins">Joins &amp; Aggregation</h2>
+
+<div class="question-card topic-joins">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q12</span>
+        <span class="q-text">According to the course, the cross-product model of SQL join semantics (compute all combinations, then filter on the WHERE condition) describes:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The actual physical execution strategy used internally by all relational databases</div>
+        <div class="choice"><span class="choice-label">B.</span> An approximation that applies only to OUTER JOINs, not INNER JOINs</div>
+        <div class="choice"><span class="choice-label">C.</span> The logical definition of what a join means &mdash; real databases use far more efficient internal strategies such as hash joins or index nested-loop joins</div>
+        <div class="choice"><span class="choice-label">D.</span> The execution model for subqueries in the FROM clause only</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. The logical definition &mdash; real databases use far more efficient strategies</div>
+        </div>
+        <div class="explanation">
+            The cross-product model is a <strong>conceptual / logical</strong> definition: "imagine all combinations, then filter." Real databases never actually materialize the full cross product &mdash; they use hash joins, merge joins, index lookups, etc.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-joins">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q13</span>
+        <span class="q-text">The maximum number of rows that can result from an INNER JOIN between a table with L rows and a table with R rows is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> L + R</div>
+        <div class="choice"><span class="choice-label">B.</span> max(L, R)</div>
+        <div class="choice"><span class="choice-label">C.</span> min(L, R)</div>
+        <div class="choice"><span class="choice-label">D.</span> L &times; R</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. L &times; R</div>
+        </div>
+        <div class="explanation">
+            In the worst case (every row matches every other row), you get the full <strong>Cartesian product</strong>: L &times; R rows.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-joins">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q14</span>
+        <span class="q-text">The HAVING clause differs from WHERE in that:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> HAVING filters individual rows before they are grouped; WHERE filters aggregated groups after computation</div>
+        <div class="choice"><span class="choice-label">B.</span> HAVING filters groups after aggregation and can reference aggregate functions (e.g., HAVING COUNT(*) > 5); WHERE filters individual rows before grouping and cannot reference aggregate functions</div>
+        <div class="choice"><span class="choice-label">C.</span> HAVING and WHERE are interchangeable and always produce identical results</div>
+        <div class="choice"><span class="choice-label">D.</span> HAVING can only appear in queries that also use ORDER BY</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. HAVING filters groups after aggregation; WHERE filters rows before grouping</div>
+        </div>
+        <div class="explanation">
+            Execution order: <code>FROM</code> &rarr; <code>WHERE</code> (filter rows) &rarr; <code>GROUP BY</code> &rarr; <strong><code>HAVING</code></strong> (filter groups) &rarr; <code>SELECT</code> &rarr; <code>ORDER BY</code>. Only HAVING can use aggregate functions like <code>COUNT(*)</code>, <code>SUM()</code>, etc.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-joins">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q15</span>
+        <span class="q-text">The SQL condition <code>price > ALL (SELECT price FROM Product WHERE maker = 'GWorks')</code> is satisfied when:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The price exceeds every single value in the GWorks list</div>
+        <div class="choice"><span class="choice-label">B.</span> The price exceeds the average of all GWorks prices</div>
+        <div class="choice"><span class="choice-label">C.</span> The price exceeds at least one GWorks price</div>
+        <div class="choice"><span class="choice-label">D.</span> The subquery returns no rows (vacuously true regardless of price value)</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. The price exceeds every single value in the GWorks list</div>
+        </div>
+        <div class="explanation">
+            <code>> ALL</code> means "greater than <strong>every</strong> value in the set" &mdash; i.e., greater than the maximum. Compare with <code>> ANY</code> / <code>> SOME</code> which means "greater than at least one."
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-joins">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q16</span>
+        <span class="q-text">The SQL <code>EXISTS (subquery)</code> predicate evaluates to TRUE when:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The subquery returns at least one row whose values are all non-NULL</div>
+        <div class="choice"><span class="choice-label">B.</span> The subquery returns exactly one row</div>
+        <div class="choice"><span class="choice-label">C.</span> Every row in the outer table has a matching row returned by the subquery</div>
+        <div class="choice"><span class="choice-label">D.</span> The subquery produces at least one row, regardless of the content of that row</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. The subquery produces at least one row, regardless of the content</div>
+        </div>
+        <div class="explanation">
+            <code>EXISTS</code> only checks <strong>whether any rows are returned</strong> &mdash; it doesn't care what's in them. Even a row of all NULLs counts. That's why <code>SELECT 1</code> or <code>SELECT *</code> inside EXISTS are functionally identical.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== ISOLATION & ANOMALIES ==================== -->
+<h2 id="iso">Isolation Levels &amp; Anomalies</h2>
+
+<div class="question-card topic-iso">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q17</span>
+        <span class="q-text">A dirty read occurs when:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Transaction Tx reads data written by Transaction Ty that has not yet committed</div>
+        <div class="choice"><span class="choice-label">B.</span> Two concurrent transactions write to the same row, causing one update to be permanently lost</div>
+        <div class="choice"><span class="choice-label">C.</span> Transaction Tx reads the same single row twice and gets two different values because Ty committed between reads</div>
+        <div class="choice"><span class="choice-label">D.</span> Transaction Tx re-reads a set of rows and finds new rows inserted by a committed Ty</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. Tx reads data written by Ty that has not yet committed</div>
+        </div>
+        <div class="explanation">
+            <strong>Dirty read</strong> = reading <em>uncommitted</em> data. If Ty later aborts, Tx has read data that never officially existed. B = lost update, C = unrepeatable read, D = phantom read.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-iso">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q18</span>
+        <span class="q-text">The "Read Committed" isolation level prevents which anomaly, while still permitting others?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> It prevents all anomalies including phantom reads, unrepeatable reads, and lost updates</div>
+        <div class="choice"><span class="choice-label">B.</span> It prevents dirty reads only</div>
+        <div class="choice"><span class="choice-label">C.</span> It prevents dirty reads and unrepeatable reads but still allows phantom reads and lost updates</div>
+        <div class="choice"><span class="choice-label">D.</span> It prevents phantom reads only</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. It prevents dirty reads only</div>
+        </div>
+        <div class="explanation">
+            Isolation levels from weakest to strongest: Read Uncommitted (allows everything) &rarr; <strong>Read Committed</strong> (prevents dirty reads) &rarr; Repeatable Read (also prevents unrepeatable reads) &rarr; Serializable (prevents all anomalies including phantoms).
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-iso">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q19</span>
+        <span class="q-text">A phantom read anomaly occurs when:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Transaction Tx reads an uncommitted update written by Transaction Ty</div>
+        <div class="choice"><span class="choice-label">B.</span> Two transactions both write to the same row simultaneously, causing one write to be silently discarded</div>
+        <div class="choice"><span class="choice-label">C.</span> Transaction Tx re-executes the same range query and finds different rows because Ty inserted or deleted rows matching the predicate between the two reads</div>
+        <div class="choice"><span class="choice-label">D.</span> Transaction Tx reads the same individual row twice and gets different values due to Ty updating that specific row</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Tx re-executes a range query and finds different rows due to Ty's inserts/deletes</div>
+        </div>
+        <div class="explanation">
+            <strong>Phantom read</strong> = new "ghost" rows appear (or disappear) in a repeated <em>range</em> query. Unlike unrepeatable reads (same row, different value), phantoms involve the <em>set of rows</em> changing. A = dirty read, D = unrepeatable read.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== CONCURRENCY CONTROL ==================== -->
+<h2 id="conc">Concurrency Control &amp; Locking</h2>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q20</span>
+        <span class="q-text">A conflict graph (precedence graph) is used to test conflict serializability. A schedule is conflict serializable if and only if:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The conflict graph contains no self-loops</div>
+        <div class="choice"><span class="choice-label">B.</span> Every edge points from an earlier to a later transaction in submission order</div>
+        <div class="choice"><span class="choice-label">C.</span> The conflict graph has exactly one strongly connected component</div>
+        <div class="choice"><span class="choice-label">D.</span> The conflict graph is acyclic</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. The conflict graph is acyclic</div>
+        </div>
+        <div class="explanation">
+            If there's a cycle (T1 must come before T2, but T2 must come before T1), no valid serial ordering exists. <strong>Acyclic = DAG = conflict serializable</strong>. A topological sort of the DAG gives the equivalent serial order.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q21</span>
+        <span class="q-text">Strict serializability provides a stronger guarantee than ordinary conflict serializability because it additionally requires that:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> If transaction Y starts after transaction X commits (they are non-concurrent), then X must precede Y in any equivalent serial order, preserving real-time ordering</div>
+        <div class="choice"><span class="choice-label">B.</span> All transactions must acquire only exclusive locks throughout their entire execution</div>
+        <div class="choice"><span class="choice-label">C.</span> No two transactions may execute concurrently under any circumstances</div>
+        <div class="choice"><span class="choice-label">D.</span> Transactions must commit in strictly increasing order of their start timestamps</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. If Y starts after X commits, X must precede Y in the equivalent serial order (real-time ordering)</div>
+        </div>
+        <div class="explanation">
+            Regular conflict serializability only guarantees equivalence to <em>some</em> serial order. <strong>Strict serializability</strong> adds: the serial order must respect <strong>real-time precedence</strong>. If X finished before Y started, X must appear first.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q22</span>
+        <span class="q-text">Under Strict 2PL, when Transaction Tx holds a shared (S) lock on an object, which is true?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> No other transaction can acquire any lock (S or X) on that object</div>
+        <div class="choice"><span class="choice-label">B.</span> Other transactions may also acquire S locks, but no other transaction may acquire an X (exclusive) lock</div>
+        <div class="choice"><span class="choice-label">C.</span> Tx is automatically permitted to upgrade its S lock to an X lock at any time without waiting</div>
+        <div class="choice"><span class="choice-label">D.</span> The S lock is released as soon as Tx finishes reading the object for the first time</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. Other transactions may acquire S locks, but not X locks</div>
+        </div>
+        <div class="explanation">
+            <strong>Shared locks are compatible with other shared locks</strong> (multiple readers allowed) but <strong>incompatible with exclusive locks</strong> (no writer while someone is reading). Lock compatibility: S+S = OK, S+X = BLOCK, X+X = BLOCK.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q23</span>
+        <span class="q-text">In the "Wait-Die" deadlock prevention scheme, what happens when a lower-priority transaction Tx requests a lock currently held by higher-priority transaction Ty?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Ty is immediately aborted so that Tx can proceed</div>
+        <div class="choice"><span class="choice-label">B.</span> Both Tx and Ty are aborted and restarted with freshly assigned priorities</div>
+        <div class="choice"><span class="choice-label">C.</span> Tx is aborted (dies)</div>
+        <div class="choice"><span class="choice-label">D.</span> Tx waits for Ty to finish and release the lock naturally</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Tx is aborted (dies)</div>
+        </div>
+        <div class="explanation">
+            <strong>Wait-Die</strong>: Older (higher priority) transactions <em>wait</em>; younger (lower priority) transactions <em>die</em>. Here Tx is lower-priority (younger), so it dies. Mnemonic: "Old waits, young dies."
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q24</span>
+        <span class="q-text">The waits-for graph used in deadlock detection is correctly defined as:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> A graph identical to the conflict graph, with edges between any two transactions that access the same data item</div>
+        <div class="choice"><span class="choice-label">B.</span> A graph with a node for each data object and edges from each lock holder to each waiting requester</div>
+        <div class="choice"><span class="choice-label">C.</span> A bipartite graph with transactions on one side and data objects on the other</div>
+        <div class="choice"><span class="choice-label">D.</span> A directed graph with a node per transaction and an edge from Ti &rarr; Tj if Ti is waiting for a lock currently held by Tj</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. Directed graph: node per transaction, edge Ti &rarr; Tj if Ti waits for Tj's lock</div>
+        </div>
+        <div class="explanation">
+            The <strong>waits-for graph</strong> has transactions as nodes. An edge Ti &rarr; Tj means "Ti is blocked, waiting for Tj to release a lock." A <strong>cycle</strong> in this graph = deadlock.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q25</span>
+        <span class="q-text">Conservative 2PL (C2PL) prevents deadlocks by requiring that:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> A transaction must acquire all locks it will ever need before any operations begin. If it cannot obtain all at once, it releases them all and retries later</div>
+        <div class="choice"><span class="choice-label">B.</span> Locks are acquired in a globally defined total ordering of data objects</div>
+        <div class="choice"><span class="choice-label">C.</span> Each transaction is assigned a priority at start time and always preempts lower-priority lock holders</div>
+        <div class="choice"><span class="choice-label">D.</span> Locks are released immediately after each operation rather than waiting until commit</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. Acquire all locks before any operations begin; release all and retry if unable</div>
+        </div>
+        <div class="explanation">
+            <strong>Conservative 2PL</strong> = "all or nothing" lock acquisition. A transaction declares all locks upfront. If any lock is unavailable, it <em>doesn't hold partial locks</em> &mdash; it backs off entirely. No transaction ever holds some locks while waiting for others, so deadlocks are impossible.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-conc">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q26</span>
+        <span class="q-text">In the "Wound-Wait" deadlock prevention scheme, if higher-priority transaction Tx requests a lock currently held by lower-priority transaction Ty:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Tx waits for Ty to finish, since Ty was first to acquire the lock</div>
+        <div class="choice"><span class="choice-label">B.</span> Ty is aborted ("wounded") so that Tx can immediately acquire the lock</div>
+        <div class="choice"><span class="choice-label">C.</span> Both transactions are aborted and restarted</div>
+        <div class="choice"><span class="choice-label">D.</span> Tx is aborted and restarted while Ty continues</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. Ty is aborted ("wounded") so that Tx can immediately acquire the lock</div>
+        </div>
+        <div class="explanation">
+            <strong>Wound-Wait</strong>: Older (higher priority) transactions <em>wound</em> (abort) younger ones; younger transactions <em>wait</em> for older ones. Here Tx is higher-priority, so it wounds Ty. Mnemonic: "Old wounds, young waits."
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== INDEXING ==================== -->
+<h2 id="index">Indexing</h2>
+
+<div class="question-card topic-index">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q27</span>
+        <span class="q-text">The key difference between a dense index and a sparse index is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> A dense index is stored in memory; a sparse index is stored on disk</div>
+        <div class="choice"><span class="choice-label">B.</span> A dense index contains an index entry for every search-key value in the file; a sparse index has entries for only some values (e.g., one per block)</div>
+        <div class="choice"><span class="choice-label">C.</span> A dense index supports only equality lookups; a sparse index additionally supports range queries</div>
+        <div class="choice"><span class="choice-label">D.</span> A dense index always corresponds to the primary key; a sparse index always corresponds to a secondary attribute</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. Dense = entry for every value; Sparse = entries for only some values</div>
+        </div>
+        <div class="explanation">
+            <strong>Dense</strong>: every search-key value has a pointer in the index. <strong>Sparse</strong>: only some values (typically one per data block) have pointers. Sparse is smaller but requires sequential scan within the block.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-index">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q28</span>
+        <span class="q-text">A primary index is defined as:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> An index whose search key specifies the sequential (physical) ordering of records in the file on disk</div>
+        <div class="choice"><span class="choice-label">B.</span> Any index built on the column declared as PRIMARY KEY in the table schema</div>
+        <div class="choice"><span class="choice-label">C.</span> The index with the highest query hit rate in the workload</div>
+        <div class="choice"><span class="choice-label">D.</span> Any index that enforces uniqueness on its search-key values</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. An index whose search key specifies the physical ordering of records on disk</div>
+        </div>
+        <div class="explanation">
+            A <strong>primary (clustering) index</strong> matches the physical sort order of the data file. Note: "primary index" &ne; "index on the PRIMARY KEY" &mdash; they are different concepts!
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-index">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q29</span>
+        <span class="q-text">Why must a secondary index always be dense?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The SQL standard mandates that all non-primary indexes must have complete key coverage</div>
+        <div class="choice"><span class="choice-label">B.</span> Secondary indexes are always stored in memory</div>
+        <div class="choice"><span class="choice-label">C.</span> Secondary indexes are always built on non-unique attributes</div>
+        <div class="choice"><span class="choice-label">D.</span> Because the secondary index's search key does not determine the physical file ordering</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. The search key does not determine the physical file ordering</div>
+        </div>
+        <div class="explanation">
+            A sparse index works by finding the nearest entry and then <strong>scanning sequentially</strong>. But if the file isn't sorted by that key, sequential scan won't find the right record &mdash; it could be anywhere on disk. So secondary indexes <strong>must</strong> be dense.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-index">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q30</span>
+        <span class="q-text">To look up a record with search-key value K using a sparse index, the procedure is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Perform a binary search directly on the raw data file, bypassing the index</div>
+        <div class="choice"><span class="choice-label">B.</span> Scan the entire index sequentially from beginning to end, then fetch the matching record</div>
+        <div class="choice"><span class="choice-label">C.</span> Find the index entry with the largest search-key value &le; K, then scan the data file sequentially from that point</div>
+        <div class="choice"><span class="choice-label">D.</span> Hash K to find its block number and read that block directly from disk</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Find largest key &le; K in the index, then scan data sequentially from there</div>
+        </div>
+        <div class="explanation">
+            Since a sparse index only has some keys, you find the <strong>floor entry</strong> (largest key &le; K). That entry points to the right block, then you <strong>scan forward</strong> in the sorted data file until you find K.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-index">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q31</span>
+        <span class="q-text">The primary motivation for building a multilevel index is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> To enable range query support that a single-level flat index cannot provide</div>
+        <div class="choice"><span class="choice-label">B.</span> To enforce referential integrity constraints across multiple tables</div>
+        <div class="choice"><span class="choice-label">C.</span> To reduce the number of distinct search key values maintained as the table grows</div>
+        <div class="choice"><span class="choice-label">D.</span> To handle the case where the index itself is too large to fit entirely in memory</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. The index itself is too large to fit in memory</div>
+        </div>
+        <div class="explanation">
+            If your index has millions of entries, it doesn't fit in RAM. Solution: build an <strong>index on the index</strong>. The upper-level index is smaller and can fit in memory. This is exactly the idea behind <strong>B-trees</strong>.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== BLOOM FILTERS ==================== -->
+<h2 id="bloom">Bloom Filters</h2>
+
+<div class="question-card topic-bloom">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q32</span>
+        <span class="q-text">A Bloom filter can produce false positives but never false negatives. In practical terms, this means:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> "Definitely not in the set" is always correct (skip disk); "might be in the set" needs confirmation via disk lookup</div>
+        <div class="choice"><span class="choice-label">B.</span> "In the set" is guaranteed to be present &mdash; no further verification needed</div>
+        <div class="choice"><span class="choice-label">C.</span> False positives and false negatives occur at the same rate</div>
+        <div class="choice"><span class="choice-label">D.</span> The filter perfectly detects absent items but occasionally misses present items</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. "Definitely not" is always correct; "might be" needs confirmation</div>
+        </div>
+        <div class="explanation">
+            Bloom filters are great as a <strong>negative filter</strong>: "No" means definitely no (skip the expensive lookup). "Yes" means maybe yes (still check). This saves work by eliminating guaranteed misses before they hit disk.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-bloom">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q33</span>
+        <span class="q-text">A Bloom filter uses k hash functions. When checking membership of element x, the filter returns "possibly present" if and only if:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> At least one of the k hash positions is set to 1</div>
+        <div class="choice"><span class="choice-label">B.</span> All k hash positions are set to 1</div>
+        <div class="choice"><span class="choice-label">C.</span> More than half of the k hash positions are set to 1</div>
+        <div class="choice"><span class="choice-label">D.</span> The bitwise XOR of all k hash positions equals a predefined checksum value</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. All k hash positions must be set to 1</div>
+        </div>
+        <div class="explanation">
+            On insert: set all k bit positions to 1. On lookup: check all k positions. If <strong>all are 1</strong>, the item is <em>possibly</em> present. If <strong>any is 0</strong>, the item is <em>definitely</em> absent.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-bloom">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q34</span>
+        <span class="q-text">Why do standard Bloom filters not support deletion of elements?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Multiple elements may hash to the same bit positions, so clearing a bit could cause other elements to be falsely reported as absent</div>
+        <div class="choice"><span class="choice-label">B.</span> Deletion requires re-hashing all remaining elements, which is computationally prohibitive</div>
+        <div class="choice"><span class="choice-label">C.</span> The hash functions are one-way, so given a set bit it's impossible to determine which elements caused it</div>
+        <div class="choice"><span class="choice-label">D.</span> Deletion would require tracking exact insertion counts, which the standard structure doesn't maintain</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. Multiple elements share bit positions; clearing a bit could break other elements</div>
+        </div>
+        <div class="explanation">
+            Bits are <strong>shared</strong> across elements. If "apple" and "banana" both set bit 7, clearing bit 7 when deleting "apple" would make "banana" appear absent &mdash; introducing <strong>false negatives</strong>, which Bloom filters must never have.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-bloom">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q35</span>
+        <span class="q-text">The optimal number of hash functions k for a Bloom filter with m bits and n expected insertions is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> k = (m / n) &times; ln 2</div>
+        <div class="choice"><span class="choice-label">B.</span> k = m / n</div>
+        <div class="choice"><span class="choice-label">C.</span> k = n / m</div>
+        <div class="choice"><span class="choice-label">D.</span> k = ln(m &times; n)</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. k = (m / n) &times; ln 2</div>
+        </div>
+        <div class="explanation">
+            The optimal k minimizes the false positive rate. <strong>k = (m/n) &times; ln 2 &approx; 0.693 &times; (m/n)</strong>. At this point, approximately half the bits in the array are set to 1.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== CACHING ==================== -->
+<h2 id="cache">Caching &amp; Eviction Policies</h2>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q36</span>
+        <span class="q-text">The CLOCK algorithm approximates LRU while being cheaper to implement. How does it work?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> It maintains a fully sorted list of items by last access timestamp, updated on every cache read</div>
+        <div class="choice"><span class="choice-label">B.</span> It evicts items in strict round-robin fashion from a ring buffer, ignoring access history</div>
+        <div class="choice"><span class="choice-label">C.</span> It maintains one reference bit per cached item</div>
+        <div class="choice"><span class="choice-label">D.</span> It counts accesses in fixed-size time windows and evicts the item with fewest accesses</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. It maintains one reference bit per cached item</div>
+        </div>
+        <div class="explanation">
+            CLOCK arranges entries in a circular buffer with a "clock hand." Each entry has a <strong>reference bit</strong> (set to 1 on access). When evicting: if ref=1, clear to 0 and advance. If ref=0, evict it. This approximates LRU without a full sorted list.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q37</span>
+        <span class="q-text">LFU's key weakness compared to LRU for workloads with shifting popularity patterns is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> LFU requires significantly more memory per cached item</div>
+        <div class="choice"><span class="choice-label">B.</span> LFU cannot handle cache sizes larger than a predefined threshold</div>
+        <div class="choice"><span class="choice-label">C.</span> LFU is computationally slower on all hardware architectures</div>
+        <div class="choice"><span class="choice-label">D.</span> Past-popular items accumulate high counts and resist eviction; newly popular items get unfairly evicted</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. Past-popular items resist eviction; newly popular items get unfairly evicted</div>
+        </div>
+        <div class="explanation">
+            LFU's Achilles heel: <strong>frequency pollution</strong>. An item accessed 10,000 times last week but never again still has count 10,000. A brand-new trending item with count 5 gets evicted first. LFU can't adapt to shifting popularity.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q38</span>
+        <span class="q-text">Increasing cache hit rate from 98% to 99% (1% absolute), given hits cost 100&mu;s and misses cost 5,000&mu;s, produces:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Approximately a 1% improvement in average latency</div>
+        <div class="choice"><span class="choice-label">B.</span> Approximately a 25% reduction in average latency (from ~198&mu;s to ~149&mu;s)</div>
+        <div class="choice"><span class="choice-label">C.</span> No meaningful change</div>
+        <div class="choice"><span class="choice-label">D.</span> A 50% improvement because misses are 50&times; more expensive</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. Approximately a 25% reduction in average latency</div>
+        </div>
+        <div class="explanation">
+            At 98%: avg = 0.98 &times; 100 + 0.02 &times; 5000 = <strong>198&mu;s</strong>. At 99%: avg = 0.99 &times; 100 + 0.01 &times; 5000 = <strong>149&mu;s</strong>. Reduction = (198 &minus; 149) / 198 &approx; <strong>25%</strong>. A tiny hit rate improvement has outsized impact because misses are 50&times; more expensive.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q39</span>
+        <span class="q-text">The fundamental behavioral difference between FIFO and LRU is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> FIFO tracks access frequency; LRU tracks insertion order</div>
+        <div class="choice"><span class="choice-label">B.</span> FIFO and LRU produce identical results when all items are accessed at equal intervals</div>
+        <div class="choice"><span class="choice-label">C.</span> FIFO evicts the item inserted earliest regardless of subsequent accesses; LRU evicts the item accessed least recently, so a cache hit refreshes its position</div>
+        <div class="choice"><span class="choice-label">D.</span> LRU evicts the item inserted earliest; FIFO evicts the item accessed least recently</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. FIFO evicts by insertion order; LRU evicts by last access time</div>
+        </div>
+        <div class="explanation">
+            The key difference: <strong>FIFO ignores cache hits</strong> &mdash; once in the queue, your position never changes. <strong>LRU promotes on every access</strong> &mdash; a hit moves the item to the front. This makes LRU better at keeping frequently-accessed items.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q40</span>
+        <span class="q-text">The LFU (Least Frequently Used) eviction policy is best suited for workloads where:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> The set of popular items is relatively stable over time</div>
+        <div class="choice"><span class="choice-label">B.</span> New items become popular very quickly and old items rapidly lose relevance</div>
+        <div class="choice"><span class="choice-label">C.</span> Items are accessed in a strict sequential scan with no item accessed more than once</div>
+        <div class="choice"><span class="choice-label">D.</span> All items are accessed with exactly uniform probability</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. The set of popular items is relatively stable over time</div>
+        </div>
+        <div class="explanation">
+            LFU excels when popularity is <strong>stable</strong> &mdash; the same items keep getting accessed. Frequency counts accurately reflect future demand. If popularity shifts, LFU struggles because stale high-count items block new popular ones.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q41</span>
+        <span class="q-text">Belady's Algorithm (OPT) is called the optimal eviction policy. Why is it not used in production?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> It requires too much memory to maintain access frequency counts</div>
+        <div class="choice"><span class="choice-label">B.</span> It requires knowing the future sequence of cache accesses in advance</div>
+        <div class="choice"><span class="choice-label">C.</span> It is computationally equivalent to FIFO</div>
+        <div class="choice"><span class="choice-label">D.</span> It was designed only for read-only workloads</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. It requires knowing the future sequence of cache accesses in advance</div>
+        </div>
+        <div class="explanation">
+            Belady's OPT evicts the item needed <strong>farthest in the future</strong>. Provably optimal but requires a crystal ball. It's used as a <strong>theoretical benchmark</strong> to evaluate how close real algorithms get to perfection.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-cache">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q42</span>
+        <span class="q-text">Segmented LRU avoids cache pollution from one-hit items. How does it differ from standard LRU on first insertion?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> New items are inserted into the middle of the LRU ordering</div>
+        <div class="choice"><span class="choice-label">B.</span> New items bypass the cache entirely on first access and are only cached after two accesses</div>
+        <div class="choice"><span class="choice-label">C.</span> New items are assigned an initial frequency count of 2</div>
+        <div class="choice"><span class="choice-label">D.</span> New items are inserted at the tail (least-recently-used end), making them first to be evicted if not re-accessed</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. New items inserted at the tail (LRU end), first to be evicted if not re-accessed</div>
+        </div>
+        <div class="explanation">
+            Segmented LRU has two segments: <strong>probationary</strong> (new items enter at the LRU end) and <strong>protected</strong> (promoted on second access). One-hit wonders get evicted quickly from probation. Only items that prove their worth get protection.
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== NETWORKING ==================== -->
+<h2 id="net">Networking</h2>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q43</span>
+        <span class="q-text">The Physical layer (Layer 1) is primarily responsible for:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Assigning logical IP addresses and routing packets across multiple networks</div>
+        <div class="choice"><span class="choice-label">B.</span> Organizing bits into frames and managing local network delivery using MAC addresses</div>
+        <div class="choice"><span class="choice-label">C.</span> Converting bits into physical signals suitable for the transmission medium</div>
+        <div class="choice"><span class="choice-label">D.</span> Providing reliable end-to-end delivery using acknowledgments and retransmission</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Converting bits into physical signals suitable for the transmission medium</div>
+        </div>
+        <div class="explanation">
+            Layer 1 (Physical) = raw bits &harr; physical signals (electrical voltage, light pulses, radio waves). It doesn't know about addresses or reliability. A = Layer 3, B = Layer 2, D = Layer 4.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q44</span>
+        <span class="q-text">Which statement about MAC addresses is accurate according to the course material?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> 32-bit logical addresses assigned dynamically by DHCP</div>
+        <div class="choice"><span class="choice-label">B.</span> 128-bit globally unique identifiers assigned by OS software</div>
+        <div class="choice"><span class="choice-label">C.</span> MAC addresses are globally routable</div>
+        <div class="choice"><span class="choice-label">D.</span> 48-bit hardware identifiers burned in at manufacture, used only for local network delivery</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. 48-bit hardware identifiers, burned in at manufacture, local delivery only</div>
+        </div>
+        <div class="explanation">
+            MAC addresses are <strong>48 bits</strong> (6 bytes, like <code>AA:BB:CC:DD:EE:FF</code>), set in hardware by the manufacturer, and used at <strong>Layer 2 for local delivery</strong> only. They are NOT routable across the internet &mdash; that's what IP addresses (Layer 3) are for.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q45</span>
+        <span class="q-text">QUIC (RFC 9000, used in HTTP/3) improves upon TCP in several ways. Which accurately describes QUIC's key advantages?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> QUIC operates at the Network layer, eliminating the need for IP-level routing</div>
+        <div class="choice"><span class="choice-label">B.</span> QUIC runs over UDP, reimplements reliable delivery, integrates TLS 1.3 (0-RTT reconnection), eliminates head-of-line blocking, and survives network handoffs</div>
+        <div class="choice"><span class="choice-label">C.</span> QUIC replaces both TCP and UDP at the OS level</div>
+        <div class="choice"><span class="choice-label">D.</span> QUIC eliminates the need for encryption</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. QUIC over UDP with TLS 1.3, 0-RTT, independent streams, and network handoff survival</div>
+        </div>
+        <div class="explanation">
+            QUIC's key innovations: (1) Built on <strong>UDP</strong>, (2) <strong>TLS 1.3 built-in</strong> with 0-RTT reconnection, (3) <strong>No head-of-line blocking</strong> &mdash; loss in one stream doesn't stall others, (4) <strong>Connection migration</strong> &mdash; switching WiFi to cellular doesn't drop the connection.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q46</span>
+        <span class="q-text">Microwave links travel faster than fiber optic cables over the same distance. The reason is:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Microwave signals propagate through air at close to the speed of light in a vacuum, whereas light in fiber is slowed to roughly 2/3 of vacuum speed</div>
+        <div class="choice"><span class="choice-label">B.</span> Microwave transmitters operate at higher power</div>
+        <div class="choice"><span class="choice-label">C.</span> Microwave links use fewer intermediate repeaters and switches</div>
+        <div class="choice"><span class="choice-label">D.</span> Microwave signals travel at the speed of sound in air, which exceeds photon speed in glass</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">A. Microwave in air &approx; speed of light in vacuum; light in fiber &approx; 2/3 vacuum speed</div>
+        </div>
+        <div class="explanation">
+            Light in fiber travels through <strong>glass</strong> (refractive index ~1.5), slowing to about <strong>2/3 of c</strong>. Microwave signals travel through <strong>air</strong> (refractive index ~1.0), at nearly <strong>c</strong>. HFT firms pay millions for microwave links to shave microseconds off trades.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q47</span>
+        <span class="q-text">ARP (Address Resolution Protocol) serves what purpose in the network stack?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Translates domain names into IP addresses</div>
+        <div class="choice"><span class="choice-label">B.</span> Dynamically assigns IP addresses to new devices</div>
+        <div class="choice"><span class="choice-label">C.</span> Bridges Layer 2 (MAC addresses) and Layer 3 (IP addresses)</div>
+        <div class="choice"><span class="choice-label">D.</span> Encrypts Ethernet frames at the Data Link layer</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">C. Bridges Layer 2 (MAC addresses) and Layer 3 (IP addresses)</div>
+        </div>
+        <div class="explanation">
+            ARP answers: "I know the IP &mdash; what's the MAC?" It broadcasts on the local network: "Who has 192.168.1.5?" and the owner responds with its MAC. This <strong>bridges Layer 3 (IP) to Layer 2 (MAC)</strong>. A = DNS, B = DHCP.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q48</span>
+        <span class="q-text">The Network layer (Layer 3) is responsible for:</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> Reliable, ordered byte-stream delivery between applications</div>
+        <div class="choice"><span class="choice-label">B.</span> Encoding bits as electrical or optical signals</div>
+        <div class="choice"><span class="choice-label">C.</span> Local delivery of frames using MAC addresses</div>
+        <div class="choice"><span class="choice-label">D.</span> Global routing of packets across multiple networks using IP addresses</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. Global routing of packets across multiple networks using IP addresses</div>
+        </div>
+        <div class="explanation">
+            Layer 3 (Network) = <strong>IP addresses + routing</strong>. It moves packets across network boundaries (router to router). A = Layer 4, B = Layer 1, C = Layer 2.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q49</span>
+        <span class="q-text">TCP and UDP represent the core reliability-vs-speed tradeoff in the Transport layer. Which description is correct?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> TCP is always lower latency than UDP</div>
+        <div class="choice"><span class="choice-label">B.</span> TCP provides reliable, ordered delivery with acknowledgments, flow control, and retransmission</div>
+        <div class="choice"><span class="choice-label">C.</span> UDP guarantees in-order delivery but leaves reliability to the application</div>
+        <div class="choice"><span class="choice-label">D.</span> TCP and UDP are interchangeable for all applications</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">B. TCP provides reliable, ordered delivery with ACKs, flow control, and retransmission</div>
+        </div>
+        <div class="explanation">
+            <strong>TCP</strong>: reliable, ordered, connection-oriented (web, email, file transfer). <strong>UDP</strong>: unreliable, unordered, connectionless, but fast (video streaming, gaming, DNS). TCP guarantees delivery + ordering; UDP guarantees neither.
+        </div>
+    </div>
+</div>
+
+<div class="question-card topic-net">
+    <div class="question-top" onclick="toggle(this)">
+        <span class="q-number">Q50</span>
+        <span class="q-text">According to the course slides, DNS operates by default over which transport protocol and port number?</span>
+        <button class="toggle-btn">Show</button>
+    </div>
+    <div class="choices">
+        <div class="choice"><span class="choice-label">A.</span> TCP, port 80</div>
+        <div class="choice"><span class="choice-label">B.</span> TCP, port 443</div>
+        <div class="choice"><span class="choice-label">C.</span> UDP, port 25</div>
+        <div class="choice"><span class="choice-label">D.</span> UDP, port 53</div>
+    </div>
+    <div class="answer-section">
+        <div class="correct-answer">
+            <div class="label">Correct Answer</div>
+            <div class="text">D. UDP, port 53</div>
+        </div>
+        <div class="explanation">
+            DNS uses <strong>UDP port 53</strong> by default because queries are small and need to be fast. Common ports to know: 53 = DNS, 80 = HTTP, 443 = HTTPS, 25 = SMTP.
+        </div>
+    </div>
+</div>
+
+</div><!-- end container -->
+
+<script>
+function toggle(el) {
+    const card = el.closest('.question-card');
+    const ans = card.querySelector('.answer-section');
+    const btn = card.querySelector('.toggle-btn');
+    if (ans.classList.contains('show')) {
+        ans.classList.remove('show');
+        btn.textContent = 'Show';
+    } else {
+        ans.classList.add('show');
+        btn.textContent = 'Hide';
+    }
+}
+function showAll() {
+    document.querySelectorAll('.answer-section').forEach(a => a.classList.add('show'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.textContent = 'Hide');
+}
+function hideAll() {
+    document.querySelectorAll('.answer-section').forEach(a => a.classList.remove('show'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.textContent = 'Show');
+}
+</script>
+
+</body>
+</html>

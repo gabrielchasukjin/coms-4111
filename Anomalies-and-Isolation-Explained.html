@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anomalies, Isolation Levels &amp; Serializability — Explained</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        strong { color: #000; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+
+        .toc { background-color: #fafafa; padding: 1.5rem 2rem; border-radius: 4px; margin-bottom: 2rem; }
+        .toc h3 { font-family: Georgia, serif; font-weight: 400; margin-bottom: 1rem; margin-top: 0; font-size: 1.1rem; }
+        .toc ol { margin-left: 1.25rem; }
+        .toc li { margin-bottom: 0.35rem; font-size: 0.95rem; }
+        .toc a { color: #333; text-decoration: none; border-bottom: 1px solid #ccc; }
+        .toc a:hover { color: #000; border-color: #000; }
+
+        /* Scenario timeline tables */
+        .timeline { width: 100%; margin: 1.5rem 0; border-collapse: collapse; font-size: 0.9rem; }
+        .timeline th { background-color: #1a1a2e; color: #fff; padding: 0.7rem 1rem; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: none; }
+        .timeline td { padding: 0.65rem 1rem; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; border-bottom: 1px solid #eee; vertical-align: top; }
+        .timeline .step-num { color: #999; font-family: -apple-system, sans-serif; font-size: 0.8rem; width: 3rem; text-align: center; }
+        .timeline .empty { color: #ccc; }
+        .timeline .bad { background-color: #fff5f5; }
+        .timeline .bad-text { color: #dc2626; font-weight: 600; font-family: -apple-system, sans-serif; }
+        .timeline .note { font-family: -apple-system, sans-serif; font-style: italic; color: #666; font-size: 0.85rem; }
+
+        /* Colored boxes matching week 4 style */
+        .danger-box {
+            background: linear-gradient(135deg, #fff5f5, #ffe8e8);
+            border-left: 4px solid #dc2626;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .danger-box h3 { color: #dc2626; margin-top: 0; }
+        .danger-box strong { color: #991b1b; }
+        .danger-box p { color: #450a0a; }
+
+        .success-box {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left: 4px solid #16a34a;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .success-box h3 { color: #16a34a; margin-top: 0; }
+        .success-box strong { color: #15803d; }
+
+        .concept-box {
+            background-color: #f0f4ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.95rem;
+        }
+        .concept-box strong { color: #1d4ed8; }
+
+        .purple-box {
+            background: linear-gradient(135deg, #f3e8ff, #ede4ff);
+            border-left: 4px solid #7c3aed;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .purple-box h3 { color: #5b21b6; margin-top: 0; }
+        .purple-box h4 { color: #5b21b6; margin-top: 1.25rem; margin-bottom: 0.5rem; font-size: 1rem; }
+        .purple-box p { color: #3b0764; }
+        .purple-box strong { color: #5b21b6; }
+
+        .amber-box {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border-left: 4px solid #f59e0b;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .amber-box h3 { color: #b45309; margin-top: 0; }
+        .amber-box strong { color: #92400e; }
+        .amber-box p { color: #451a03; }
+
+        .gray-box {
+            background-color: #fafafa;
+            border-left: 4px solid #000;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .gray-box h3 { margin-top: 0; }
+
+        .analogy {
+            background-color: #fff9e6;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .analogy::before { content: "Analogy: "; font-weight: 600; color: #000; font-style: normal; }
+
+        .key-insight {
+            background-color: #fafafa;
+            border-left: 3px solid #000;
+            padding: 1.25rem 1.5rem;
+            margin: 2rem 0;
+            font-style: italic;
+            color: #333;
+        }
+
+        .vs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .vs-item {
+            padding: 1.25rem;
+            border-radius: 6px;
+        }
+        .vs-item h4 { margin-bottom: 0.5rem; font-size: 1rem; }
+        .vs-item p { margin-bottom: 0; font-size: 0.95rem; }
+        .vs-bad { background-color: #fef2f2; border: 1px solid #fecaca; }
+        .vs-bad h4 { color: #dc2626; }
+        .vs-good { background-color: #f0fdf4; border: 1px solid #bbf7d0; }
+        .vs-good h4 { color: #16a34a; }
+
+        .iso-table td.yes { background-color: #f0fdf4; color: #16a34a; font-weight: 600; text-align: center; }
+        .iso-table td.no { background-color: #fef2f2; color: #dc2626; font-weight: 600; text-align: center; }
+        .iso-table td.level { font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+    <h1>Anomalies, Isolation &amp; Serializability</h1>
+    <p class="subtitle">The four concurrency anomalies, how isolation levels prevent them, and how strict serializability ties it all together</p>
+</header>
+
+<div class="toc">
+    <h3>Contents</h3>
+    <ol>
+        <li><a href="#big-picture">The Big Picture &mdash; Why Anomalies Exist</a></li>
+        <li><a href="#dirty">Dirty Read</a></li>
+        <li><a href="#lost">Lost Update</a></li>
+        <li><a href="#unrepeatable">Unrepeatable Read</a></li>
+        <li><a href="#phantom">Phantom Read</a></li>
+        <li><a href="#comparison">Side-by-Side Comparison</a></li>
+        <li><a href="#acid">Which ACID Property Prevents Each Anomaly?</a></li>
+        <li><a href="#isolation">Isolation Levels &mdash; The Defense System</a></li>
+        <li><a href="#strict-serial">Strict Serializability &mdash; The Ultimate Guarantee</a></li>
+    </ol>
+</div>
+
+
+<!-- ==================== BIG PICTURE ==================== -->
+<h2 id="big-picture">The Big Picture &mdash; Why Anomalies Exist</h2>
+
+<p>When multiple transactions run concurrently, their operations can <strong>interleave</strong> in ways that produce incorrect results. These incorrect results are called <strong>anomalies</strong>.</p>
+
+<div class="analogy">A shared Google Doc where two people edit the same paragraph at the same time. Without coordination, one person's changes can silently overwrite the other's.</div>
+
+<p>There are four major anomalies. Each one is a different way that interleaving can go wrong:</p>
+
+<div class="gray-box">
+    <h3>The Four Anomalies at a Glance</h3>
+    <table>
+        <tr><th>Anomaly</th><th>What Goes Wrong</th><th>One-Line Summary</th></tr>
+        <tr><td><strong>Dirty Read</strong></td><td>Reading uncommitted data</td><td>You read a draft that gets thrown away</td></tr>
+        <tr><td><strong>Lost Update</strong></td><td>Two writes clobber each other</td><td>Your edit silently disappears</td></tr>
+        <tr><td><strong>Unrepeatable Read</strong></td><td>Same row, different value on re-read</td><td>The number changes while you're looking at it</td></tr>
+        <tr><td><strong>Phantom Read</strong></td><td>Same query, different rows on re-read</td><td>New rows magically appear mid-transaction</td></tr>
+    </table>
+</div>
+
+
+<!-- ==================== DIRTY READ ==================== -->
+<h2 id="dirty">1. Dirty Read</h2>
+
+<div class="concept-box">
+    <strong>Definition:</strong> Transaction Tx reads data that was written by Transaction Ty, but <strong>Ty has not yet committed</strong>. If Ty later aborts, Tx has used data that never officially existed.
+</div>
+
+<h3>Real-World Scenario</h3>
+<p>You're checking your bank balance. Meanwhile, a transfer of $500 into your account is being processed but hasn't finalized yet. You see $1,500 (including the $500). Then the transfer fails and is rolled back. Your actual balance is $1,000, but you already made a spending decision based on $1,500.</p>
+
+<h3>Step-by-Step Timeline</h3>
+
+<table class="timeline">
+    <tr>
+        <th>Step</th>
+        <th>T1 (Balance Check)</th>
+        <th>T2 (Transfer)</th>
+        <th>Balance of Account A</th>
+    </tr>
+    <tr>
+        <td class="step-num">1</td>
+        <td class="empty">&mdash;</td>
+        <td>BEGIN</td>
+        <td>$1,000</td>
+    </tr>
+    <tr>
+        <td class="step-num">2</td>
+        <td class="empty">&mdash;</td>
+        <td>UPDATE A SET bal = 1500</td>
+        <td>$1,500 (uncommitted)</td>
+    </tr>
+    <tr class="bad">
+        <td class="step-num">3</td>
+        <td class="bad-text">READ A &rarr; sees $1,500</td>
+        <td class="empty">&mdash;</td>
+        <td class="bad-text">DIRTY READ!</td>
+    </tr>
+    <tr>
+        <td class="step-num">4</td>
+        <td class="note">Makes decision based on $1,500</td>
+        <td class="empty">&mdash;</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="step-num">5</td>
+        <td class="empty">&mdash;</td>
+        <td>ABORT (transfer fails)</td>
+        <td>$1,000 (rolled back)</td>
+    </tr>
+</table>
+
+<div class="danger-box">
+    <h3>Why It's Dangerous</h3>
+    <p>T1 used data that <strong>never existed in any committed state</strong>. If T1 already acted on this information (e.g., approved a loan, sent a confirmation), those actions are based on a lie. The data T1 read was a ghost &mdash; it was written and then erased.</p>
+</div>
+
+<div class="analogy">You read someone's unsent draft email, then they delete the draft. You just acted on a message that was never actually sent.</div>
+
+
+<!-- ==================== LOST UPDATE ==================== -->
+<h2 id="lost">2. Lost Update</h2>
+
+<div class="concept-box">
+    <strong>Definition:</strong> Two transactions both read the same value, compute new values based on it, and write back. The <strong>second write overwrites the first</strong>, and T1's update is silently lost.
+</div>
+
+<h3>Real-World Scenario</h3>
+<p>A concert has 100 tickets left. Two people try to buy 1 ticket each at the same time. Both read "100 tickets left," both compute 100 &minus; 1 = 99, and both write 99. Result: only 1 ticket was subtracted instead of 2. One sale was lost.</p>
+
+<h3>Step-by-Step Timeline</h3>
+
+<table class="timeline">
+    <tr>
+        <th>Step</th>
+        <th>T1 (Buyer Alice)</th>
+        <th>T2 (Buyer Bob)</th>
+        <th>Tickets Remaining</th>
+    </tr>
+    <tr>
+        <td class="step-num">1</td>
+        <td>READ tickets &rarr; 100</td>
+        <td class="empty">&mdash;</td>
+        <td>100</td>
+    </tr>
+    <tr>
+        <td class="step-num">2</td>
+        <td class="empty">&mdash;</td>
+        <td>READ tickets &rarr; 100</td>
+        <td>100</td>
+    </tr>
+    <tr>
+        <td class="step-num">3</td>
+        <td>WRITE tickets = 99</td>
+        <td class="empty">&mdash;</td>
+        <td>99</td>
+    </tr>
+    <tr class="bad">
+        <td class="step-num">4</td>
+        <td class="empty">&mdash;</td>
+        <td class="bad-text">WRITE tickets = 99</td>
+        <td class="bad-text">99 (should be 98!)</td>
+    </tr>
+    <tr>
+        <td class="step-num">5</td>
+        <td>COMMIT</td>
+        <td>COMMIT</td>
+        <td class="bad-text">Alice's update is LOST</td>
+    </tr>
+</table>
+
+<div class="danger-box">
+    <h3>Why It's Dangerous</h3>
+    <p>No error is raised. No transaction aborts. Both commit successfully. But <strong>Alice's purchase silently vanished</strong> &mdash; the system sold 2 tickets but only decremented by 1. Over time, this leads to overselling, double-spending, or incorrect inventory.</p>
+</div>
+
+<div class="analogy">Two people both edit cell B2 in a spreadsheet at the same time. The person who saves second unknowingly overwrites the first person's change. No warning is shown.</div>
+
+
+<!-- ==================== UNREPEATABLE READ ==================== -->
+<h2 id="unrepeatable">3. Unrepeatable Read</h2>
+
+<div class="concept-box">
+    <strong>Definition:</strong> Transaction Tx reads the <strong>same row twice</strong> within one transaction and gets <strong>different values</strong> because another committed transaction Ty modified that row between the two reads.
+</div>
+
+<h3>Real-World Scenario</h3>
+<p>You're generating a financial report. You read a customer's balance at the start: $5,000. Halfway through the report, you read the same balance again to double-check. Now it says $3,000 because another transaction transferred $2,000 out and committed. Your report has contradictory numbers.</p>
+
+<h3>Step-by-Step Timeline</h3>
+
+<table class="timeline">
+    <tr>
+        <th>Step</th>
+        <th>T1 (Report Generator)</th>
+        <th>T2 (Transfer)</th>
+        <th>Balance of Account A</th>
+    </tr>
+    <tr>
+        <td class="step-num">1</td>
+        <td>READ A &rarr; $5,000</td>
+        <td class="empty">&mdash;</td>
+        <td>$5,000</td>
+    </tr>
+    <tr>
+        <td class="step-num">2</td>
+        <td class="empty">&mdash;</td>
+        <td>UPDATE A SET bal = 3000</td>
+        <td>$3,000 (uncommitted)</td>
+    </tr>
+    <tr>
+        <td class="step-num">3</td>
+        <td class="empty">&mdash;</td>
+        <td>COMMIT</td>
+        <td>$3,000 (committed)</td>
+    </tr>
+    <tr class="bad">
+        <td class="step-num">4</td>
+        <td class="bad-text">READ A &rarr; $3,000</td>
+        <td class="empty">&mdash;</td>
+        <td class="bad-text">UNREPEATABLE!</td>
+    </tr>
+</table>
+
+<div class="danger-box">
+    <h3>Why It's Dangerous</h3>
+    <p>T1 sees <strong>two different values for the exact same row</strong> within a single transaction. The report now contains $5,000 on page 1 and $3,000 on page 3 for the same account. The data T2 wrote is perfectly valid (it committed!), but T1's <em>view</em> of the world is inconsistent.</p>
+</div>
+
+<div class="key-insight">
+    Key difference from dirty read: In an unrepeatable read, the data T1 reads the second time <strong>is committed and valid</strong>. The problem isn't reading garbage &mdash; it's that T1's snapshot of reality changed mid-transaction.
+</div>
+
+
+<!-- ==================== PHANTOM READ ==================== -->
+<h2 id="phantom">4. Phantom Read</h2>
+
+<div class="concept-box">
+    <strong>Definition:</strong> Transaction Tx executes the same <strong>range query</strong> twice and gets a <strong>different set of rows</strong> because another transaction Ty inserted or deleted rows matching the query's predicate between the two executions.
+</div>
+
+<h3>Real-World Scenario</h3>
+<p>You query "all employees in department 'Engineering'" and get 50 rows. While you're processing the list, HR hires 3 new engineers and commits. You re-run the same query and now get 53 rows. Three "phantom" rows appeared out of nowhere.</p>
+
+<h3>Step-by-Step Timeline</h3>
+
+<table class="timeline">
+    <tr>
+        <th>Step</th>
+        <th>T1 (Report: Engineering headcount)</th>
+        <th>T2 (HR: New hires)</th>
+        <th>Engineering Rows</th>
+    </tr>
+    <tr>
+        <td class="step-num">1</td>
+        <td>SELECT * WHERE dept='Eng' &rarr; 50 rows</td>
+        <td class="empty">&mdash;</td>
+        <td>50</td>
+    </tr>
+    <tr>
+        <td class="step-num">2</td>
+        <td class="note">Processing the 50 rows...</td>
+        <td>INSERT 3 new engineers</td>
+        <td>53 (uncommitted)</td>
+    </tr>
+    <tr>
+        <td class="step-num">3</td>
+        <td class="empty">&mdash;</td>
+        <td>COMMIT</td>
+        <td>53 (committed)</td>
+    </tr>
+    <tr class="bad">
+        <td class="step-num">4</td>
+        <td class="bad-text">SELECT * WHERE dept='Eng' &rarr; 53 rows</td>
+        <td class="empty">&mdash;</td>
+        <td class="bad-text">3 PHANTOMS!</td>
+    </tr>
+</table>
+
+<div class="danger-box">
+    <h3>Why It's Dangerous</h3>
+    <p>The report header says "50 engineers" but the detail section lists 53. Or worse: a sum computed over 50 rows doesn't match a count computed over 53 rows. <strong>The set of rows changed under T1's feet</strong> &mdash; not the values of existing rows, but which rows exist at all.</p>
+</div>
+
+<div class="key-insight">
+    Key difference from unrepeatable read: Unrepeatable read = same row, different <strong>value</strong>. Phantom read = same query, different <strong>rows</strong>. Unrepeatable reads involve UPDATE; phantom reads involve INSERT or DELETE.
+</div>
+
+
+<!-- ==================== SIDE-BY-SIDE ==================== -->
+<h2 id="comparison">Side-by-Side Comparison</h2>
+
+<table>
+    <tr>
+        <th>Property</th>
+        <th>Dirty Read</th>
+        <th>Lost Update</th>
+        <th>Unrepeatable Read</th>
+        <th>Phantom Read</th>
+    </tr>
+    <tr>
+        <td><strong>Trigger</strong></td>
+        <td>Read uncommitted write</td>
+        <td>Two read-modify-write cycles overlap</td>
+        <td>Re-read same row after committed update</td>
+        <td>Re-run range query after committed insert/delete</td>
+    </tr>
+    <tr>
+        <td><strong>Involves</strong></td>
+        <td>Single row</td>
+        <td>Single row</td>
+        <td>Single row</td>
+        <td>Set of rows</td>
+    </tr>
+    <tr>
+        <td><strong>The other Tx</strong></td>
+        <td>Not yet committed (may abort)</td>
+        <td>Both committed</td>
+        <td>Committed</td>
+        <td>Committed</td>
+    </tr>
+    <tr>
+        <td><strong>Data read is valid?</strong></td>
+        <td>No (may be rolled back)</td>
+        <td>N/A (data is written, not read)</td>
+        <td>Yes (but inconsistent view)</td>
+        <td>Yes (but inconsistent view)</td>
+    </tr>
+    <tr>
+        <td><strong>Operation type</strong></td>
+        <td>Write + Read</td>
+        <td>Read + Write + Write</td>
+        <td>Read + Update + Read</td>
+        <td>Range query + Insert/Delete + Range query</td>
+    </tr>
+</table>
+
+<div class="vs-grid">
+    <div class="vs-item vs-bad">
+        <h4>Unrepeatable Read</h4>
+        <p>Same row read twice &rarr; different <strong>values</strong>.<br>Caused by UPDATE between reads.</p>
+    </div>
+    <div class="vs-item vs-bad">
+        <h4>Phantom Read</h4>
+        <p>Same query run twice &rarr; different <strong>rows</strong>.<br>Caused by INSERT/DELETE between reads.</p>
+    </div>
+</div>
+
+
+<!-- ==================== ISOLATION LEVELS ==================== -->
+<h2 id="isolation">Isolation Levels &mdash; The Defense System</h2>
+
+<p>SQL defines four <strong>isolation levels</strong>, each preventing progressively more anomalies. Higher isolation = safer but slower (more locking/blocking). The DBA chooses the right tradeoff for the workload.</p>
+
+<table class="iso-table">
+    <tr>
+        <th>Isolation Level</th>
+        <th>Dirty Read</th>
+        <th>Lost Update</th>
+        <th>Unrepeatable Read</th>
+        <th>Phantom Read</th>
+    </tr>
+    <tr>
+        <td class="level">Read Uncommitted</td>
+        <td class="no">Possible</td>
+        <td class="no">Possible</td>
+        <td class="no">Possible</td>
+        <td class="no">Possible</td>
+    </tr>
+    <tr>
+        <td class="level">Read Committed</td>
+        <td class="yes">Prevented</td>
+        <td class="no">Possible</td>
+        <td class="no">Possible</td>
+        <td class="no">Possible</td>
+    </tr>
+    <tr>
+        <td class="level">Repeatable Read</td>
+        <td class="yes">Prevented</td>
+        <td class="yes">Prevented</td>
+        <td class="yes">Prevented</td>
+        <td class="no">Possible</td>
+    </tr>
+    <tr>
+        <td class="level">Serializable</td>
+        <td class="yes">Prevented</td>
+        <td class="yes">Prevented</td>
+        <td class="yes">Prevented</td>
+        <td class="yes">Prevented</td>
+    </tr>
+</table>
+
+<div class="amber-box">
+    <h3>How Each Level Works</h3>
+
+    <p><strong>Read Uncommitted</strong> &mdash; No protection at all. Transactions can read anything, even uncommitted writes. Almost never used in practice.</p>
+
+    <p><strong>Read Committed</strong> &mdash; You can only read data that has been committed. This prevents dirty reads (no reading drafts). But if another transaction commits an update between your two reads, you'll see the new value &mdash; so unrepeatable reads and phantoms are still possible.</p>
+
+    <p><strong>Repeatable Read</strong> &mdash; Once you read a row, its value is "locked in" for the rest of your transaction. No one can change it until you're done. This prevents dirty reads and unrepeatable reads. But new rows can still be <em>inserted</em> into a range you queried &mdash; so phantom reads are still possible.</p>
+
+    <p><strong>Serializable</strong> &mdash; The strongest level. Your transaction behaves as if it ran completely alone. All anomalies are prevented. Typically implemented using strict 2PL with predicate/range locks or MVCC with serializable snapshot isolation.</p>
+</div>
+
+<div class="analogy">Read Uncommitted is an open office with no doors. Read Committed adds doors that lock while someone is writing. Repeatable Read adds locks on the rows you've already read. Serializable locks entire ranges so no one can even add new rows in your query's territory.</div>
+
+<h3>Why Not Always Use Serializable?</h3>
+
+<p>Because it's <strong>expensive</strong>. More locking = more transactions waiting = lower throughput. The tradeoff:</p>
+
+<div class="vs-grid">
+    <div class="vs-item vs-good">
+        <h4>Higher Isolation</h4>
+        <p>Safer. Fewer anomalies. Easier to reason about correctness.</p>
+    </div>
+    <div class="vs-item vs-bad">
+        <h4>Higher Isolation</h4>
+        <p>Slower. More contention. Lower throughput. More deadlocks.</p>
+    </div>
+</div>
+
+<p>Most production databases default to <strong>Read Committed</strong> (PostgreSQL, Oracle, SQL Server) because it's a good balance. Applications handle the remaining anomalies in application logic or use explicit locks for critical sections.</p>
+
+
+<!-- ==================== STRICT SERIALIZABILITY ==================== -->
+<h2 id="strict-serial">Strict Serializability &mdash; The Ultimate Guarantee</h2>
+
+<p>Now we can understand the concept from Q21 on the practice midterm. There are actually <strong>two levels</strong> of "serializable" guarantees:</p>
+
+<div class="purple-box">
+    <h3>Conflict Serializability vs. Strict Serializability</h3>
+
+    <h4>Conflict Serializability (what we learned in Week 4)</h4>
+    <p>A schedule is conflict serializable if it is equivalent to <strong>some</strong> serial order. The database checks this using the conflict graph (precedence graph). If the graph is acyclic (a DAG), the schedule is safe.</p>
+    <p><strong>But it doesn't care about real-world time.</strong> If transaction X finishes at 2:00 PM and transaction Y starts at 3:00 PM, conflict serializability might still produce a serial order where Y comes before X. Logically correct, but <em>confusing to humans</em>.</p>
+
+    <h4>Strict Serializability (the stronger version)</h4>
+    <p>Strict serializability = conflict serializability <strong>+ real-time ordering</strong>.</p>
+    <p>The additional rule: <strong>If X finishes before Y starts (they don't overlap in real time), then X must appear before Y in the equivalent serial order.</strong></p>
+    <p>This means the database's behavior matches what you'd expect from watching the clock.</p>
+</div>
+
+<h3>Why Does the Difference Matter?</h3>
+
+<p>Consider this scenario:</p>
+
+<table class="timeline">
+    <tr>
+        <th>Real Time</th>
+        <th>Transaction X</th>
+        <th>Transaction Y</th>
+    </tr>
+    <tr>
+        <td class="step-num">2:00</td>
+        <td>BEGIN</td>
+        <td class="empty">&mdash;</td>
+    </tr>
+    <tr>
+        <td class="step-num">2:01</td>
+        <td>WRITE A = 10</td>
+        <td class="empty">&mdash;</td>
+    </tr>
+    <tr>
+        <td class="step-num">2:02</td>
+        <td>COMMIT</td>
+        <td class="empty">&mdash;</td>
+    </tr>
+    <tr>
+        <td class="step-num">3:00</td>
+        <td class="empty">&mdash;</td>
+        <td>BEGIN</td>
+    </tr>
+    <tr>
+        <td class="step-num">3:01</td>
+        <td class="empty">&mdash;</td>
+        <td>READ A &rarr; ???</td>
+    </tr>
+    <tr>
+        <td class="step-num">3:02</td>
+        <td class="empty">&mdash;</td>
+        <td>COMMIT</td>
+    </tr>
+</table>
+
+<div class="vs-grid">
+    <div class="vs-item" style="background-color: #faf5ff; border: 1px solid #e9d5ff;">
+        <h4 style="color: #7c3aed;">Conflict Serializable</h4>
+        <p>Y could read A = 10 <strong>or</strong> the old value of A (if equivalent to serial order Y, X). Both are technically "correct" &mdash; they match <em>some</em> serial schedule.</p>
+    </div>
+    <div class="vs-item" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+        <h4 style="color: #16a34a;">Strictly Serializable</h4>
+        <p>Y <strong>must</strong> read A = 10. Because X committed at 2:02 and Y started at 3:00, X must precede Y. Any other result would violate real-time ordering.</p>
+    </div>
+</div>
+
+<div class="success-box">
+    <h3>In Plain English</h3>
+    <p><strong>Conflict serializable</strong> says: "The end result matches <em>some</em> serial order."</p>
+    <p><strong>Strictly serializable</strong> says: "The end result matches the serial order <em>you'd expect from looking at the clock</em>."</p>
+    <p>Strict serializability is what users intuitively assume databases do. If I deposit money at 2 PM and you check at 3 PM, you should see my deposit. Conflict serializability alone doesn't guarantee this &mdash; strict serializability does.</p>
+</div>
+
+<h3>The Hierarchy</h3>
+
+<div class="gray-box">
+    <p style="text-align: center; font-family: 'SF Mono', monospace; font-size: 0.95rem; line-height: 2.2; margin-bottom: 0;">
+        Serial Schedules (run one at a time)<br>
+        &nbsp;&nbsp;&nbsp;&sub; Strictly Serializable (respects real-time order)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&sub; Conflict Serializable (equivalent to <em>some</em> serial order)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&sub; Serializable (result-equivalent to <em>some</em> serial order)
+    </p>
+</div>
+
+<p>Every serial schedule is strictly serializable. Every strictly serializable schedule is conflict serializable. But not the other way around. Each level relaxes the constraint slightly, allowing more concurrency but giving a weaker guarantee.</p>
+
+<div class="key-insight">
+    The midterm tests whether you understand the <em>additional constraint</em> that strict serializability adds: real-time ordering of non-concurrent transactions. Conflict serializability guarantees correctness. Strict serializability guarantees correctness <strong>and</strong> matches human intuition about time.
+</div>
+
+</div><!-- end container -->
+</body>
+</html>

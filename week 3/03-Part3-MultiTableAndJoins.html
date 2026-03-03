@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 3, Part 3: Multi-Table Queries, Foreign Keys, and JOINs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Multi-Table Queries, Foreign Keys, and JOINs</h1>
+            <p class="subtitle">Lecture 3, Part 3 — Connecting Tables and Combining Data</p>
+        </header>
+
+        <!-- ==================== SECTION 1: FOREIGN KEY CONSTRAINTS ==================== -->
+        <div class="section">
+            <h2>Foreign Key Constraints</h2>
+
+            <p>
+                So far we have been working with individual tables in isolation. But real databases almost never consist of a single table. A university database has students, courses, enrollments, professors, and departments. An e-commerce database has customers, products, orders, and reviews. The power of relational databases comes from the ability to <em>relate</em> tables to each other, and <strong>foreign keys</strong> are the mechanism that makes these relationships reliable.
+            </p>
+
+            <h3>The Problem: Referential Integrity</h3>
+
+            <p>
+                Consider a university with two tables: <code>Students(cuid, name, gpa)</code> and <code>Enrolled(student_id, cid, grade)</code>. The <code>Enrolled</code> table records which students are taking which courses. But what happens if someone inserts a row into <code>Enrolled</code> with a <code>student_id</code> of 99999, and no student with that ID exists in <code>Students</code>? We would have a phantom enrollment &mdash; a course registration belonging to nobody. This is called a <strong>referential integrity violation</strong>.
+            </p>
+
+            <img src="slides/13-foreign-key-constraints.png" alt="Foreign key constraints between Students and Enrolled tables" class="slide-img">
+
+            <div class="definition-box">
+                <strong>Foreign Key Constraint:</strong> A foreign key is a column (or set of columns) in one table whose values must match the values of a key (typically the primary key) in another table. It enforces the rule that you cannot reference something that does not exist. In our example, <code>student_id</code> in the <code>Enrolled</code> table is a foreign key referencing <code>cuid</code> in the <code>Students</code> table. This means: <em>only bona fide students may enroll in courses.</em>
+            </div>
+
+            <div class="analogy">
+                Think of a foreign key like a hotel key card system. Your key card (student_id) only works if it has been programmed to match a valid room (cuid in Students). You cannot create a key card for room 999 if room 999 does not exist in the hotel's system. The hotel's system rejects it.
+            </div>
+
+            <h3>Declaring Foreign Keys in SQL</h3>
+
+            <p>
+                Foreign keys are declared as part of the <code>CREATE TABLE</code> statement. The syntax explicitly names the column in the current table and the column it references in the other table:
+            </p>
+
+            <img src="slides/14-declaring-foreign-keys.png" alt="SQL syntax for declaring foreign keys" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>The Declaration</h4>
+                <p>
+                    When creating the <code>Enrolled</code> table, we add a <code>FOREIGN KEY</code> clause:
+                </p>
+                <p>
+                    <code>CREATE TABLE Enrolled (student_id INT, cid VARCHAR(20), grade CHAR(2), FOREIGN KEY (student_id) REFERENCES Students(cuid))</code>
+                </p>
+                <p>
+                    This tells the database: "Before inserting any row into <code>Enrolled</code>, check that the value of <code>student_id</code> actually exists as a <code>cuid</code> in the <code>Students</code> table. If it does not, reject the insertion." The referenced column (<code>cuid</code>) must be a key &mdash; typically the primary key &mdash; of the referenced table.
+                </p>
+            </div>
+
+            <h3>What Happens When Data Changes?</h3>
+
+            <p>
+                Declaring a foreign key is straightforward for inserts: the database simply checks that the referenced value exists. But what about deletions and updates? If we delete a student from <code>Students</code>, what should happen to their rows in <code>Enrolled</code>? This is where things get interesting, because there are multiple reasonable policies.
+            </p>
+
+            <img src="slides/15-foreign-keys-update-ops.png" alt="Foreign key update and delete operations" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>Insert Operations</h4>
+                <p>
+                    If you try to insert a row into <code>Enrolled</code> with a <code>student_id</code> that does not exist in <code>Students</code>, the insert is simply <strong>rejected</strong>. The database returns an error. There is no ambiguity here.
+                </p>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Delete Operations: Three Strategies</h4>
+                <p>
+                    When a student is deleted from <code>Students</code>, the database administrator (DBA) must choose one of three strategies for handling the orphaned rows in <code>Enrolled</code>:
+                </p>
+                <ol>
+                    <li><strong>Disallow (RESTRICT):</strong> The delete is rejected entirely. You cannot remove a student who has enrollments. The DBA must first delete the enrollment records, then delete the student. This is the safest but most restrictive option.</li>
+                    <li><strong>Cascade (CASCADE):</strong> The delete propagates automatically. When a student is deleted, all of their enrollment records are also deleted. This is convenient but potentially dangerous &mdash; you might accidentally wipe out important enrollment history.</li>
+                    <li><strong>Set NULL (SET NULL):</strong> The <code>student_id</code> in the orphaned <code>Enrolled</code> rows is set to <code>NULL</code>. The enrollment records survive but now belong to nobody. This preserves the data while acknowledging the student no longer exists.</li>
+                </ol>
+                <p>
+                    The DBA chooses the appropriate policy based on the application's requirements. Each option has trade-offs between data safety, convenience, and information preservation.
+                </p>
+            </div>
+
+            <h3>Another Example: Companies and Products</h3>
+
+            <p>
+                Let us look at another pair of tables that will be used throughout the rest of this lecture. Consider <code>Company(CName, country, noOfEmployees)</code> and <code>Product(PName, Price, Category, Manufacturer)</code>. Here, <code>CName</code> is the primary key of <code>Company</code>, and <code>Manufacturer</code> in <code>Product</code> is a foreign key referencing <code>Company(CName)</code>. Every product must be manufactured by an existing company.
+            </p>
+
+            <img src="slides/16-keys-and-foreign-keys.png" alt="Company and Product tables with key and foreign key relationships" class="slide-img">
+
+            <p>
+                This relationship ensures data consistency: you cannot list a product as manufactured by "Phantom Corp" if no such company exists in the <code>Company</code> table. The database enforces this automatically, relieving the application code from having to do these checks manually.
+            </p>
+
+            <h3>The Real World: When Theory Meets Practice</h3>
+
+            <p>
+                Foreign keys are a cornerstone of relational database theory, and they are heavily used in traditional enterprise applications. However, not every system uses them. One prominent example is <strong>GitHub</strong>.
+            </p>
+
+            <img src="slides/17-github-no-foreign-keys.png" alt="GitHub's approach to not using foreign keys" class="slide-img">
+
+            <div class="problem-box">
+                <h4>Why GitHub Does Not Use Foreign Keys</h4>
+                <p>
+                    GitHub's engineering team made a deliberate decision to avoid foreign key constraints in their database. There are three main reasons:
+                </p>
+                <ul>
+                    <li><strong>Sharding:</strong> At GitHub's scale, data is distributed across many database servers (shards). Foreign keys that reference rows on different shards are extremely expensive to enforce because every insert requires a cross-network check.</li>
+                    <li><strong>Performance Impact:</strong> Every insert and update requires the database to verify the foreign key constraint. At high throughput (millions of operations per second), this overhead becomes significant.</li>
+                    <li><strong>Schema Migrations:</strong> When you need to change the structure of a table (add columns, rename fields), foreign keys create dependencies between tables. This makes migrations slower and more complex, since you must account for all referencing tables.</li>
+                </ul>
+                <p>
+                    Instead, GitHub enforces referential integrity in application code and through background validation jobs. This is a pragmatic engineering trade-off: they sacrifice some database-level safety guarantees for operational flexibility and performance.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                Foreign keys are a powerful tool for data integrity, but they are not free. In systems that operate at massive scale or require frequent schema changes, the cost of enforcement may outweigh the benefit. Understanding this trade-off is essential for real-world database design.
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 2: JOINs ==================== -->
+        <div class="section">
+            <h2>JOINs: Combining Data Across Tables</h2>
+
+            <p>
+                Now that we understand how tables relate to each other through foreign keys, we face a practical question: how do we actually <em>query</em> data that spans multiple tables? If product information is in one table and company information is in another, how do we answer a question like "What products under $200 are made by Japanese companies?" This is the domain of <strong>joins</strong>.
+            </p>
+
+            <h3>The Design Trade-Off: Table Complexity vs. Query Complexity</h3>
+
+            <p>
+                Before we dive into join syntax, it is worth understanding <em>why</em> we need joins in the first place. Could we not just put everything in one giant table?
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>The "Franken-Table" Approach</h4>
+                    <p>
+                        Put all data in one table: <code>Product(PName, Price, Category, Manufacturer, Country, NoOfEmployees)</code>. Queries are simple (no joins needed!), but you pay a heavy price: data is duplicated everywhere. If GizmoWorks has 2000 employees and makes 50 products, the number "2000" is stored 50 times. Updating the employee count means updating 50 rows. This leads to <strong>update anomalies</strong> and wasted storage.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>The Normalized Approach</h4>
+                    <p>
+                        Separate data into logical tables: <code>Product</code> and <code>Company</code>. Each fact is stored once. Updating the employee count means changing one row. But now queries that need data from both tables require a <strong>join</strong>. You trade query simplicity for data integrity and storage efficiency.
+                    </p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                The fundamental trade-off in database design is between table complexity and query complexity. Normalizing data (splitting into multiple tables) reduces redundancy and update anomalies but requires joins to reassemble related data. This trade-off is at the heart of relational database design.
+            </div>
+
+            <h3>What Is a Join?</h3>
+
+            <div class="definition-box">
+                <strong>Join:</strong> A join returns all unique combinations of tuples (rows) from two or more tables that satisfy a given join condition. It is the fundamental operation for combining data across tables.
+            </div>
+
+            <img src="slides/18-joins-example.png" alt="Example of a join between Product and Company" class="slide-img">
+
+            <p>
+                Let us work through a concrete example. Suppose we want to find all products under $200 that are made by companies based in Japan. The data we need is split across two tables:
+            </p>
+
+            <ul>
+                <li><code>Product(PName, Price, Category, Manufacturer)</code> &mdash; has product names and prices</li>
+                <li><code>Company(CName, Country, NoOfEmployees)</code> &mdash; has company countries</li>
+            </ul>
+
+            <img src="slides/19-joins-tables.png" alt="Product and Company tables with sample data" class="slide-img">
+
+            <p>
+                The SQL query to answer this question is:
+            </p>
+
+            <div class="explanation-box">
+                <h4>The Multi-Table Query</h4>
+                <p>
+                    <code>SELECT PName, Price FROM Product, Company WHERE Manufacturer = CName AND Country = 'Japan' AND Price &lt;= 200</code>
+                </p>
+                <p>
+                    Notice what is happening here. We list <em>both</em> tables in the <code>FROM</code> clause. The condition <code>Manufacturer = CName</code> is the <strong>join condition</strong> &mdash; it tells the database how rows in <code>Product</code> relate to rows in <code>Company</code>. The other conditions (<code>Country = 'Japan'</code> and <code>Price &lt;= 200</code>) are selection filters that narrow down the results.
+                </p>
+            </div>
+
+            <h3>Cross Product Semantics: How Joins Work Logically</h3>
+
+            <p>
+                To understand what a multi-table query produces, think of it as a three-step process. This is the <strong>logical semantics</strong> &mdash; how to reason about the result, not how the database actually executes the query internally.
+            </p>
+
+            <img src="slides/20-sql-semantics.png" alt="SQL semantics: cross product, selection, projection" class="slide-img">
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Cross Product (FROM clause)</strong>
+                </div>
+                <p>
+                    Conceptually, the database forms the <strong>cross product</strong> of all tables in the <code>FROM</code> clause. If <code>Product</code> has 4 rows and <code>Company</code> has 3 rows, the cross product has 4 &times; 3 = 12 rows. Each row is a combination of one Product tuple and one Company tuple. Most of these combinations are meaningless &mdash; for instance, pairing "Gizmo" with a company that does not manufacture it.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Selection (WHERE clause)</strong>
+                </div>
+                <p>
+                    The <code>WHERE</code> clause filters the cross product, keeping only rows where all conditions are true. The join condition <code>Manufacturer = CName</code> eliminates the nonsensical pairings, keeping only rows where a product is paired with its actual manufacturer. The additional conditions further narrow the results to Japanese companies and prices under $200.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Projection (SELECT clause)</strong>
+                </div>
+                <p>
+                    Finally, the <code>SELECT</code> clause determines which columns appear in the output. We asked for <code>PName</code> and <code>Price</code>, so only those two columns are returned, even though the intermediate result contained all columns from both tables.
+                </p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Logical vs. Physical Execution</h4>
+                <p>
+                    It is critical to understand that this three-step process describes the <strong>logical semantics</strong> of the query &mdash; what the result should be. It does <em>not</em> describe how the database actually executes it. No real database engine forms the entire cross product and then filters. Instead, the query optimizer finds efficient strategies (using indexes, hash joins, merge joins, etc.) that produce the same result without materializing the full cross product. We reason about correctness using the logical model but trust the optimizer for performance.
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 3: AGGREGATIONS ==================== -->
+        <div class="section">
+            <h2>Aggregations: Summarizing Data</h2>
+
+            <p>
+                So far, every query we have written returns individual rows from the database. But many real-world questions ask for summaries: "What is the average price?", "How many students are enrolled?", "What is the total revenue?" These are <strong>aggregation</strong> queries, and SQL provides a set of built-in functions to answer them.
+            </p>
+
+            <img src="slides/21-aggregations.png" alt="SQL aggregation functions overview" class="slide-img">
+
+            <h3>The Five Aggregation Functions</h3>
+
+            <div class="definition-box">
+                <strong>SQL Aggregation Functions:</strong>
+                <ul>
+                    <li><code>SUM(column)</code> &mdash; adds up all values in the column</li>
+                    <li><code>COUNT(column)</code> &mdash; counts the number of non-NULL values; <code>COUNT(*)</code> counts all rows including NULLs</li>
+                    <li><code>MIN(column)</code> &mdash; returns the smallest value</li>
+                    <li><code>MAX(column)</code> &mdash; returns the largest value</li>
+                    <li><code>AVG(column)</code> &mdash; computes the arithmetic mean</li>
+                </ul>
+                <p>
+                    <strong>Important:</strong> All aggregation functions <span class="highlight-text">ignore NULL values</span>, with one exception: <code>COUNT(*)</code> counts all rows regardless of NULLs.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Think of aggregation functions like a teacher grading a class. SUM adds up all the scores. COUNT tells you how many students submitted work (ignoring those who did not). AVG gives the class average. MIN and MAX identify the lowest and highest performers. A student who did not submit (NULL) is excluded from the average calculation, which is usually what you want.
+            </div>
+
+            <h3>Simple Aggregation Examples</h3>
+
+            <p>
+                Consider the <code>Product</code> table with products from GizmoWorks. If we want the average price of GizmoWorks products:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Average Price Query</h4>
+                <p>
+                    <code>SELECT AVG(Price) FROM Product WHERE Manufacturer = 'GizmoWorks'</code>
+                </p>
+                <p>
+                    If GizmoWorks makes products priced at $10 and $20, the result is $15. The <code>WHERE</code> clause first filters to only GizmoWorks products, and then <code>AVG</code> computes the mean of the remaining prices.
+                </p>
+            </div>
+
+            <img src="slides/22-simple-aggregations.png" alt="Simple aggregation examples with Purchase table" class="slide-img">
+
+            <p>
+                Now consider a <code>Purchase</code> table that records transactions. Suppose we want the total spending on bagels:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Total Spending on Bagels</h4>
+                <p>
+                    <code>SELECT SUM(price * quantity) FROM Purchase WHERE product = 'bagel'</code>
+                </p>
+                <p>
+                    Here the aggregation operates on an <em>expression</em> (<code>price * quantity</code>), not just a column name. SQL evaluates <code>price * quantity</code> for each qualifying row, then sums the results. If there are two bagel purchases &mdash; one for $1.50 &times; 20 = $30 and another for $2.00 &times; 10 = $20 &mdash; the total is $50.
+                </p>
+            </div>
+
+            <h3>GROUP BY: Aggregation by Category</h3>
+
+            <p>
+                Simple aggregations return a single number for the entire result set. But what if we want the average price for <em>each</em> manufacturer? Or the total sales for <em>each</em> product? This is where <code>GROUP BY</code> comes in. It partitions the result into groups and computes a separate aggregate for each group.
+            </p>
+
+            <img src="slides/23-grouping-aggregation.png" alt="GROUP BY aggregation concept" class="slide-img">
+
+            <p>
+                The semantics of a <code>GROUP BY</code> query follow a precise three-step process. Let us walk through it carefully.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Compute FROM and WHERE</strong>
+                </div>
+                <p>
+                    First, evaluate the <code>FROM</code> clause (possibly with joins) and apply the <code>WHERE</code> clause to filter rows. This produces an intermediate result table. At this stage, nothing has been grouped yet &mdash; we simply have a flat table of qualifying rows.
+                </p>
+            </div>
+
+            <img src="slides/24-group-by-step1.png" alt="GROUP BY Step 1: compute FROM and WHERE" class="slide-img">
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Group by the GROUP BY Attributes</strong>
+                </div>
+                <p>
+                    Next, the intermediate rows are partitioned into groups. All rows with the same value(s) for the <code>GROUP BY</code> column(s) are placed together. If you write <code>GROUP BY Manufacturer</code>, all GizmoWorks products go in one group, all Canon products in another, and so on. Each group will produce exactly one row in the final output.
+                </p>
+            </div>
+
+            <img src="slides/25-group-by-step2.png" alt="GROUP BY Step 2: partition into groups" class="slide-img">
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Compute SELECT: Grouped Attributes and Aggregates</strong>
+                </div>
+                <p>
+                    Finally, for each group, evaluate the <code>SELECT</code> clause. You may include the <code>GROUP BY</code> columns (which are the same for every row in the group) and aggregate functions (which summarize the group). Any column in the <code>SELECT</code> that is <em>not</em> inside an aggregate function <strong>must</strong> appear in the <code>GROUP BY</code> clause. This rule exists because each group collapses into a single output row, and non-aggregated columns must have a single well-defined value.
+                </p>
+            </div>
+
+            <img src="slides/26-group-by-step3.png" alt="GROUP BY Step 3: compute aggregates per group" class="slide-img">
+
+            <div class="key-insight">
+                The GROUP BY rule is strict: every column in the SELECT clause must either be (a) listed in the GROUP BY clause, or (b) inside an aggregate function. Violating this rule produces an error in most databases, because the database would not know which value to return for a non-grouped, non-aggregated column.
+            </div>
+
+            <h3>HAVING: Filtering Groups</h3>
+
+            <p>
+                What if we want to find only manufacturers whose average product price exceeds $20? We cannot put this condition in the <code>WHERE</code> clause, because <code>WHERE</code> filters individual rows <em>before</em> grouping. We need a way to filter <em>after</em> grouping, based on aggregate values. That is what <code>HAVING</code> does.
+            </p>
+
+            <img src="slides/27-having-clause.png" alt="HAVING clause for filtering groups" class="slide-img">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>WHERE</h4>
+                    <p>
+                        Filters <strong>individual tuples</strong> before grouping. Conditions reference column values of single rows. Example: <code>WHERE Price &gt; 10</code> removes rows with Price &le; 10 before any grouping occurs.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>HAVING</h4>
+                    <p>
+                        Filters <strong>entire groups</strong> after grouping. Conditions reference aggregate values. Example: <code>HAVING AVG(Price) &gt; 20</code> removes groups whose average price is $20 or less.
+                    </p>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Execution Order</h4>
+                <p>
+                    The full execution order for a query with all clauses is:
+                </p>
+                <ol>
+                    <li><code>FROM</code> &mdash; identify the source tables</li>
+                    <li><code>WHERE</code> &mdash; filter individual rows</li>
+                    <li><code>GROUP BY</code> &mdash; partition remaining rows into groups</li>
+                    <li><code>HAVING</code> &mdash; filter groups based on aggregate conditions</li>
+                    <li><code>SELECT</code> &mdash; compute the output columns</li>
+                    <li><code>ORDER BY</code> &mdash; sort the final result</li>
+                </ol>
+                <p>
+                    Even though SQL is <em>written</em> in the order SELECT-FROM-WHERE-GROUP BY-HAVING-ORDER BY, it is <em>executed</em> in a different order. This is a common source of confusion for beginners.
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== SECTION 4: INNER JOIN RECAP AND OUTER JOINS ==================== -->
+        <div class="section">
+            <h2>Inner Joins and Outer Joins</h2>
+
+            <p>
+                Now let us revisit joins with more precise terminology and introduce a critical new concept: <strong>outer joins</strong>. The joins we have seen so far are technically called <em>inner joins</em>, and they have a significant limitation that outer joins address.
+            </p>
+
+            <h3>Two Equivalent Inner Join Syntaxes</h3>
+
+            <p>
+                SQL provides two ways to write an inner join that produce identical results. Understanding both is important because you will encounter each in practice.
+            </p>
+
+            <img src="slides/28-recap-joins-inner.png" alt="Two equivalent inner join syntaxes" class="slide-img">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Implicit Join (WHERE style)</h4>
+                    <p>
+                        <code>SELECT * FROM Product, Purchase WHERE Product.name = Purchase.prodName</code>
+                    </p>
+                    <p>
+                        The older, comma-separated syntax. Tables are listed in <code>FROM</code>, and the join condition goes in the <code>WHERE</code> clause alongside any filter conditions.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>Explicit Join (JOIN...ON style)</h4>
+                    <p>
+                        <code>SELECT * FROM Product JOIN Purchase ON Product.name = Purchase.prodName</code>
+                    </p>
+                    <p>
+                        The modern, preferred syntax. The join condition is separated into the <code>ON</code> clause, making it visually distinct from filter conditions that go in <code>WHERE</code>.
+                    </p>
+                </div>
+            </div>
+
+            <p>
+                Both produce exactly the same result. The explicit <code>JOIN...ON</code> syntax is generally preferred because it separates the join logic (how tables relate) from the filter logic (which rows to keep), making queries easier to read and debug.
+            </p>
+
+            <h3>The Inner Join Problem: Missing Data</h3>
+
+            <p>
+                Consider two tables: <code>Product(name, category)</code> and <code>Purchase(prodName, store)</code>. Suppose our Product table includes a "Ford Pinto" that nobody has ever purchased. An inner join between Product and Purchase will <em>exclude</em> the Ford Pinto entirely, because there is no matching row in Purchase for it to pair with.
+            </p>
+
+            <img src="slides/30-inner-join-example.png" alt="Inner join example showing missing unmatched rows" class="slide-img">
+
+            <div class="problem-box">
+                <h4>The Missing Rows Problem</h4>
+                <p>
+                    Sometimes we <em>want</em> to see products even if they have no purchases. Perhaps we are generating a report of all products with their sales data, and products with zero sales are important information &mdash; they might need to be discontinued or promoted. Inner joins silently drop these rows, which can lead to misleading results if you are not careful.
+                </p>
+            </div>
+
+            <h3>Outer Joins to the Rescue</h3>
+
+            <p>
+                Outer joins solve the missing rows problem by guaranteeing that every row from one or both tables appears in the result, even if there is no match in the other table. When no match exists, the missing columns are filled with <code>NULL</code>.
+            </p>
+
+            <img src="slides/29-outer-joins.png" alt="Outer joins concept overview" class="slide-img">
+
+            <h4>LEFT OUTER JOIN</h4>
+
+            <p>
+                A <code>LEFT OUTER JOIN</code> keeps all rows from the <strong>left</strong> table (the one listed first). If a left row has no match in the right table, the right-side columns are padded with <code>NULL</code>.
+            </p>
+
+            <img src="slides/31-left-outer-join-example.png" alt="Left outer join example with Ford Pinto" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>LEFT OUTER JOIN Example</h4>
+                <p>
+                    <code>SELECT * FROM Product LEFT OUTER JOIN Purchase ON Product.name = Purchase.prodName</code>
+                </p>
+                <p>
+                    In this result, every product appears at least once. The Ford Pinto, which has no purchases, shows up as <code>(Ford Pinto, car, NULL, NULL)</code>. The <code>NULL</code> values fill in for the missing <code>prodName</code> and <code>store</code> columns from the <code>Purchase</code> table. Products that do have purchases appear normally, possibly multiple times if they have multiple purchases.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Imagine taking class attendance. An inner join is like only recording students who submitted homework &mdash; anyone who did not submit is invisible. A left outer join is like calling every student's name from the roster: those who submitted get their homework grade noted, and those who did not submit get a "N/A" mark. Everyone on the roster is accounted for.
+            </div>
+
+            <h4>RIGHT OUTER JOIN and FULL OUTER JOIN</h4>
+
+            <img src="slides/32-other-outer-joins.png" alt="Right outer join and full outer join" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>The Three Types of Outer Joins</h4>
+                <ul>
+                    <li><strong>LEFT OUTER JOIN:</strong> All rows from the left table are preserved. Unmatched right-side columns become NULL.</li>
+                    <li><strong>RIGHT OUTER JOIN:</strong> All rows from the right table are preserved. Unmatched left-side columns become NULL. This is the mirror image of LEFT OUTER JOIN &mdash; you can always rewrite a RIGHT join as a LEFT join by swapping the table order.</li>
+                    <li><strong>FULL OUTER JOIN:</strong> All rows from <em>both</em> tables are preserved. If a row from either table has no match, the other side is padded with NULL. This gives you the most complete picture but also the largest result set.</li>
+                </ul>
+            </div>
+
+            <h3>Join Output Sizes</h3>
+
+            <p>
+                Understanding the possible size of a join result is important for reasoning about query performance and correctness. Given a left table with <strong>L</strong> rows and a right table with <strong>R</strong> rows, the minimum and maximum output sizes vary by join type.
+            </p>
+
+            <img src="slides/33-join-output-sizes.png" alt="Table of join output size ranges" class="slide-img">
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Join Type</th>
+                        <th>Minimum Output Rows</th>
+                        <th>Maximum Output Rows</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Inner Join</td>
+                        <td>0</td>
+                        <td>L &times; R</td>
+                    </tr>
+                    <tr>
+                        <td>Left Outer Join</td>
+                        <td>L</td>
+                        <td>L &times; R</td>
+                    </tr>
+                    <tr>
+                        <td>Right Outer Join</td>
+                        <td>R</td>
+                        <td>L &times; R</td>
+                    </tr>
+                    <tr>
+                        <td>Full Outer Join</td>
+                        <td>L + R</td>
+                        <td>L &times; R</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="explanation-box">
+                <h4>Understanding the Bounds</h4>
+                <p>
+                    <strong>Inner join minimum is 0:</strong> If no rows match the join condition, the result is empty. Think of joining a table of cat owners with a table of dog breeds &mdash; if the join condition requires matching on pet name and no cat shares a name with a dog breed, you get nothing.
+                </p>
+                <p>
+                    <strong>Left outer join minimum is L:</strong> Every left row appears at least once (with NULL padding if needed), so you are guaranteed at least L output rows. This is exactly why left outer joins are useful &mdash; they guarantee representation.
+                </p>
+                <p>
+                    <strong>Full outer join minimum is L + R:</strong> In the worst case where no rows match at all, every left row appears once (padded with NULLs on the right) and every right row appears once (padded with NULLs on the left). However, if there <em>are</em> matches, the output could be smaller than L + R because matched rows are combined rather than appearing separately. The minimum of L + R occurs when zero rows match.
+                </p>
+                <p>
+                    <strong>Maximum is always L &times; R:</strong> This occurs when every row in the left table matches every row in the right table (for example, if the join condition is always true, or if every value in the join column is the same on both sides). In practice, this is rare and usually indicates a missing or incorrect join condition.
+                </p>
+            </div>
+
+            <div class="key-insight">
+                When you see an unexpectedly large query result, a common culprit is a missing or incorrect join condition, which causes the query to approach the L &times; R maximum. Always verify that your join conditions correctly specify how the tables relate.
+            </div>
+        </div>
+
+        <!-- ==================== SUMMARY ==================== -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways</h3>
+                <ul>
+                    <li><span class="checkmark">&#10003;</span> <strong>Foreign keys</strong> enforce referential integrity: a value in one table must reference an existing value in another table. They are declared with <code>FOREIGN KEY ... REFERENCES</code> and offer three policies for handling deletions: RESTRICT, CASCADE, and SET NULL.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Joins</strong> combine data from multiple tables. The logical model involves a cross product followed by selection and projection, though the database optimizer uses far more efficient strategies internally.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Aggregation functions</strong> (SUM, COUNT, MIN, MAX, AVG) summarize data. <code>GROUP BY</code> partitions rows into groups for per-group aggregation, and <code>HAVING</code> filters groups based on aggregate conditions.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Inner joins</strong> only return rows with matches in both tables. <strong>Outer joins</strong> (LEFT, RIGHT, FULL) preserve unmatched rows by padding with NULLs, which is essential when absence of data is itself meaningful information.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>WHERE vs. HAVING:</strong> WHERE filters individual rows before grouping; HAVING filters groups after aggregation. They operate at different stages of query execution.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Real-world trade-offs:</strong> Foreign keys add safety but cost performance at scale. Normalized tables reduce redundancy but require joins. Understanding these trade-offs is what separates textbook knowledge from practical database design.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

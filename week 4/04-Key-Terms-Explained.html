@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Terms Explained — Concurrency &amp; Serializability</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+
+        .term-card {
+            background-color: #fafafa;
+            border-left: 4px solid #000;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .term-card .term-name {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 0.5rem;
+        }
+        .term-card .formal {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            padding-left: 1rem;
+            border-left: 2px solid #ddd;
+        }
+        .term-card .plain {
+            color: #333;
+            margin-bottom: 0;
+        }
+        .term-card .plain strong { color: #000; }
+
+        .example-box {
+            background-color: #f0f4f8;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0 0 0;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        .example-box .label {
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .example-box code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.88em;
+            background-color: #e2e8f0;
+            padding: 0.15em 0.4em;
+            border-radius: 2px;
+        }
+
+        .analogy {
+            background-color: #fff9e6;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0 0 0;
+            border-radius: 4px;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .analogy::before { content: "Analogy: "; font-weight: 600; color: #000; font-style: normal; }
+
+        .vs-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0 0 0;
+        }
+        .vs-item {
+            background-color: #f0f4f8;
+            padding: 1rem 1.25rem;
+            border-radius: 4px;
+        }
+        .vs-item h4 { margin-bottom: 0.4rem; font-size: 1rem; }
+        .vs-item p { margin-bottom: 0; font-size: 0.95rem; }
+
+        .warning {
+            background-color: #fff0f0;
+            border-left: 4px solid #cc0000;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0 0 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.95rem;
+        }
+        .warning::before { content: "Common Mistake: "; font-weight: 600; color: #cc0000; }
+
+        .toc { background-color: #fafafa; padding: 1.5rem 2rem; border-radius: 4px; margin-bottom: 2rem; }
+        .toc h3 { font-family: Georgia, serif; font-weight: 400; margin-bottom: 1rem; }
+        .toc ol { margin-left: 1.25rem; }
+        .toc li { margin-bottom: 0.35rem; }
+        .toc a { color: #333; text-decoration: none; border-bottom: 1px solid #ccc; }
+        .toc a:hover { color: #000; border-color: #000; }
+
+        .relationship-map {
+            background-color: #f5f5f5;
+            padding: 1.5rem;
+            border-radius: 4px;
+            margin: 2rem 0;
+            text-align: center;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 2.2;
+        }
+
+        .purple-box {
+            background: linear-gradient(135deg, #f3e8ff, #ede4ff);
+            border-left: 4px solid #7c3aed;
+            padding: 1.75rem 2rem;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .purple-box h4 {
+            color: #5b21b6;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.15rem;
+            margin-bottom: 1rem;
+        }
+        .purple-box p { color: #3b0764; margin-bottom: 1rem; }
+        .purple-box strong { color: #5b21b6; }
+        .purple-box .circle-diagram {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+        .purple-box .circle-outer {
+            display: inline-block;
+            background-color: #dbeafe;
+            border: 2px solid #3b82f6;
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+        }
+        .purple-box .circle-mid {
+            background-color: #e9d5ff;
+            border: 2px solid #8b5cf6;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+        }
+        .purple-box .circle-inner {
+            background-color: #fde68a;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .purple-box .circle-label {
+            font-size: 0.8rem;
+            color: #555;
+            margin-top: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+        .purple-box .tier {
+            background-color: rgba(255,255,255,0.5);
+            border-left: 3px solid #7c3aed;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .purple-box .tier h5 {
+            color: #5b21b6;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .purple-box .tier code {
+            background-color: #ede9fe;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.88em;
+            padding: 0.15em 0.4em;
+            border-radius: 2px;
+        }
+        .purple-box .tier p { margin-bottom: 0.5rem; font-size: 0.95rem; }
+        .purple-box .tier p:last-child { margin-bottom: 0; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+
+        @media (max-width: 640px) {
+            h1 { font-size: 2rem; }
+            .vs-box { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Key Terms Explained</h1>
+            <p class="subtitle">Concurrency &amp; Serializability — in plain English</p>
+        </header>
+
+        <div class="toc">
+            <h3>Terms Covered</h3>
+            <ol>
+                <li><a href="#transaction">Transaction</a></li>
+                <li><a href="#schedule">Schedule</a></li>
+                <li><a href="#serial-schedule">Serial Schedule</a></li>
+                <li><a href="#interleaved-schedule">Interleaved Schedule</a></li>
+                <li><a href="#equivalent-schedules">Equivalent Schedules</a></li>
+                <li><a href="#serializable-schedule">Serializable Schedule</a></li>
+                <li><a href="#conflict">Conflict</a></li>
+                <li><a href="#conflict-types">Conflict Types (RW, WR, WW)</a></li>
+                <li><a href="#anomaly">Anomaly</a></li>
+                <li><a href="#conflict-equivalence">Conflict Equivalence</a></li>
+                <li><a href="#conflict-serializability">Conflict Serializability</a></li>
+                <li><a href="#conflict-graph">Conflict Graph (Precedence Graph)</a></li>
+                <li><a href="#dag">DAG (Directed Acyclic Graph)</a></li>
+                <li><a href="#topological-ordering">Topological Ordering</a></li>
+                <li><a href="#victim-selection">Victim Selection</a></li>
+            </ol>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>The Basics</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" id="transaction">
+            <div class="term-name">1. Transaction</div>
+            <div class="formal">A logical unit of work consisting of one or more database operations (reads and writes) that must either all succeed or all fail.</div>
+            <p class="plain">
+                Think of a transaction as <strong>one complete task</strong>. For example, transferring money from account A to account B is one transaction &mdash; it involves reading A, subtracting money, writing A, reading B, adding money, writing B. All six steps are a single "unit." If any step fails, the whole thing gets rolled back as if it never happened.
+            </p>
+            <div class="analogy">Ordering a meal at a restaurant. You order an appetizer, a main, and a dessert. Either the kitchen makes the whole meal, or if they run out of a key ingredient halfway, you cancel the entire order &mdash; you don't get a half-finished meal.</div>
+        </div>
+
+        <div class="term-card" id="schedule">
+            <div class="term-name">2. Schedule</div>
+            <div class="formal">A sequence of operations (reads and writes) from one or more transactions, where each transaction's internal operation order is preserved.</div>
+            <p class="plain">
+                A schedule is just the <strong>timeline of what actually happens</strong> in the database. It lists every read and write from every transaction, in the order they execute. The only rule: within a single transaction, the operations must stay in the original order. But operations from <em>different</em> transactions can appear in any relative order.
+            </p>
+            <div class="example-box">
+                <div class="label">Example</div>
+                <p style="margin-bottom: 0;">If T1 does <code>r1(A), w1(A)</code> and T2 does <code>r2(A), w2(A)</code>, then one possible schedule is:<br><code>r1(A), r2(A), w1(A), w2(A)</code><br>T1's operations are still in order (r1 before w1). T2's are still in order (r2 before w2). They are just interleaved.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>Types of Schedules</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" id="serial-schedule">
+            <div class="term-name">3. Serial Schedule</div>
+            <div class="formal">A schedule in which transactions run one at a time, with no interleaving. All operations of one transaction complete before the next transaction begins.</div>
+            <p class="plain">
+                A serial schedule means <strong>no multitasking</strong>. Transaction T1 runs completely, then T2 runs completely, then T3, and so on. There is zero overlap. This is always correct &mdash; since nothing interferes with anything else &mdash; but it is <strong>very slow</strong> in practice because the CPU sits idle while waiting for disk reads.
+            </p>
+            <div class="example-box">
+                <div class="label">Example</div>
+                <p style="margin-bottom: 0;"><code>r1(A), w1(A), r1(B), w1(B), r2(A), w2(A), r2(B), w2(B)</code><br>All of T1 first, then all of T2. No mixing.</p>
+            </div>
+            <div class="analogy">A single checkout lane at a grocery store. One customer finishes completely before the next one starts. Safe, but the line gets very long.</div>
+        </div>
+
+        <div class="term-card" id="interleaved-schedule">
+            <div class="term-name">4. Interleaved Schedule</div>
+            <div class="formal">A schedule where operations from different transactions are mixed together, while still preserving each transaction's internal order.</div>
+            <p class="plain">
+                This is the normal case in real databases. T1 does some work, then T2 does some work, then T1 picks up where it left off, etc. This is <strong>fast</strong> (because the CPU can do useful work while one transaction waits for disk) but <strong>risky</strong> &mdash; some interleavings produce wrong results.
+            </p>
+            <div class="example-box">
+                <div class="label">Example</div>
+                <p style="margin-bottom: 0;"><code>r1(A), r2(A), w1(A), w2(A), r1(B), r2(B), w1(B), w2(B)</code><br>T1 and T2 operations are woven together.</p>
+            </div>
+        </div>
+
+        <div class="term-card" id="equivalent-schedules">
+            <div class="term-name">5. Equivalent Schedules</div>
+            <div class="formal">Two schedules are equivalent if they produce the same final database state for every possible initial database state.</div>
+            <p class="plain">
+                Two schedules are equivalent if, <strong>no matter what data the database starts with</strong>, both schedules leave the database in the exact same state at the end. It is not enough to check just one starting point &mdash; they must match on <em>all</em> possible starting data.
+            </p>
+            <div class="warning">Don't confuse "same result on one test case" with true equivalence. Two schedules might give the same answer when A=50 and B=200, but different answers when A=100 and B=300. True equivalence requires matching on ALL initial states.</div>
+        </div>
+
+        <div class="term-card" id="serializable-schedule">
+            <div class="term-name">6. Serializable Schedule</div>
+            <div class="formal">An interleaved schedule that is equivalent to some serial schedule. The final result is the same as if the transactions had run one at a time in some order.</div>
+            <p class="plain">
+                This is the <strong>gold standard for correctness</strong>. An interleaved schedule is serializable if its final result matches what you would get from running the transactions one at a time. It doesn't matter <em>which</em> serial order it matches &mdash; T1-then-T2 or T2-then-T1 &mdash; as long as it matches <strong>at least one</strong>.
+            </p>
+            <div class="vs-box">
+                <div class="vs-item">
+                    <h4>Serializable</h4>
+                    <p>Interleaved, but result = some serial order. <strong>Safe.</strong></p>
+                </div>
+                <div class="vs-item">
+                    <h4>Not Serializable</h4>
+                    <p>Interleaved, and result matches NO serial order. <strong>Dangerous.</strong></p>
+                </div>
+            </div>
+            <div class="analogy">You and a friend cook dinner together, splitting up tasks. If the meal turns out exactly like it would have if either of you had cooked alone start-to-finish, then your collaboration was "serializable" &mdash; no harm done by working in parallel.</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>Conflicts</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" id="conflict">
+            <div class="term-name">7. Conflict</div>
+            <div class="formal">Two operations conflict if and only if: (1) they belong to different transactions, (2) they access the same data item, and (3) at least one of them is a write.</div>
+            <p class="plain">
+                A conflict is a <strong>pair of operations where order matters</strong>. If you swapped the order of these two operations, the database could end up in a different state. Two reads on the same item are fine (reading doesn't change anything), but the moment a write is involved, swapping the order can change the outcome.
+            </p>
+            <div class="analogy">Two people looking at the same whiteboard is fine. But if one person is <em>erasing and rewriting</em> while the other is reading, the order matters a lot &mdash; the reader gets completely different information depending on whether they look before or after the rewrite.</div>
+        </div>
+
+        <div class="term-card" id="conflict-types">
+            <div class="term-name">8. Conflict Types (RW, WR, WW)</div>
+            <div class="formal">The three possible conflict patterns between operations from two different transactions on the same data item.</div>
+
+            <div class="vs-box" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 1rem;">
+                <div class="vs-item">
+                    <h4>Read-Write (RW)</h4>
+                    <p>T<sub>i</sub> reads X, then T<sub>j</sub> writes X.<br><br><strong>Plain:</strong> "I read it, then you changed it." If swapped, I would have read your new value instead.</p>
+                </div>
+                <div class="vs-item">
+                    <h4>Write-Read (WR)</h4>
+                    <p>T<sub>i</sub> writes X, then T<sub>j</sub> reads X.<br><br><strong>Plain:</strong> "I changed it, then you read it." If swapped, you would have read the old value.</p>
+                </div>
+                <div class="vs-item">
+                    <h4>Write-Write (WW)</h4>
+                    <p>T<sub>i</sub> writes X, then T<sub>j</sub> writes X.<br><br><strong>Plain:</strong> "I wrote, then you overwrote." If swapped, my value would be the final one instead of yours.</p>
+                </div>
+            </div>
+
+            <div class="example-box" style="margin-top: 1rem;">
+                <div class="label">What about Read-Read?</div>
+                <p style="margin-bottom: 0;"><strong>NOT a conflict.</strong> Two reads don't change anything. Swap them all you want &mdash; the database state is identical either way. This is why the definition says "at least one must be a write."</p>
+            </div>
+        </div>
+
+        <div class="term-card" id="anomaly">
+            <div class="term-name">9. Anomaly</div>
+            <div class="formal">An anomaly occurs when a conflict, given the specific ordering in a schedule, leads to an incorrect (non-serializable) result.</div>
+            <p class="plain">
+                A conflict is a <strong>potential</strong> problem. An anomaly is when that potential problem <strong>actually causes damage</strong>. Every anomaly comes from a conflict, but not every conflict turns into an anomaly. A schedule can have many conflicts and still be perfectly safe &mdash; as long as those conflicts don't form a contradictory cycle.
+            </p>
+            <div class="vs-box">
+                <div class="vs-item">
+                    <h4>Conflict</h4>
+                    <p>"These two operations <em>could</em> cause a problem if ordered badly."<br><strong>Potential danger.</strong></p>
+                </div>
+                <div class="vs-item">
+                    <h4>Anomaly</h4>
+                    <p>"These two operations <em>did</em> cause a problem in this specific schedule."<br><strong>Actual damage.</strong></p>
+                </div>
+            </div>
+            <div class="analogy">A conflict is like two cars approaching an intersection at the same time &mdash; they <em>could</em> crash. An anomaly is when they actually crash. A traffic light (concurrency control) can ensure the conflict never becomes an anomaly.</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>Conflict Equivalence &amp; Serializability</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" id="conflict-equivalence">
+            <div class="term-name">10. Conflict Equivalence</div>
+            <div class="formal">Two schedules are conflict equivalent if they involve the same set of transactions and every pair of conflicting operations appears in the same relative order in both schedules.</div>
+            <p class="plain">
+                Two schedules are conflict equivalent if you can transform one into the other by <strong>only swapping adjacent non-conflicting operations</strong>. In other words, every conflict "points the same direction" in both schedules. The operations that <em>don't</em> matter (non-conflicting ones) might be in different positions, but the ones that <em>do</em> matter (conflicting ones) are ordered identically.
+            </p>
+            <div class="example-box">
+                <div class="label">How to think about it</div>
+                <p style="margin-bottom: 0;">Imagine all the operations on a timeline. You can freely slide non-conflicting operations past each other (like sliding cards in a deck). If, after sliding, you end up with a serial schedule, then the original schedule is <strong>conflict equivalent</strong> to that serial schedule.</p>
+            </div>
+            <div class="warning">Conflict equivalence is stricter than general equivalence. Two schedules can produce the same result (be "equivalent") without being conflict equivalent. Conflict equivalence means the ordering of every conflicting pair is preserved, which is a structural property &mdash; not just a "same final answer" check.</div>
+        </div>
+
+        <div class="term-card" id="conflict-serializability">
+            <div class="term-name">11. Conflict Serializability</div>
+            <div class="formal">A schedule is conflict serializable if it is conflict equivalent to some serial schedule &mdash; that is, it can be transformed into a serial schedule by swapping only adjacent non-conflicting operations.</div>
+            <p class="plain">
+                This is the <strong>practical test</strong> databases actually use. Instead of checking "does this schedule produce the same result as a serial one?" (which is impossible to check for all inputs), we ask: "can we rearrange this schedule into a serial one by only moving operations whose order doesn't matter?" If yes, it is <strong>conflict serializable</strong>.
+            </p>
+            <div class="example-box">
+                <div class="label">The shortcut</div>
+                <p style="margin-bottom: 0;">You don't actually have to do all the swapping. The key theorem says:<br><br><strong>A schedule is conflict serializable &harr; its conflict graph has no cycles.</strong><br><br>Build the graph, check for cycles. That's it.</p>
+            </div>
+            <div class="warning">Conflict serializability is a <strong>sufficient</strong> condition for serializability, but it is slightly conservative. There exist schedules that are serializable (produce correct results) but are NOT conflict serializable. The database might reject these "technically safe" schedules. This is a deliberate trade-off: it's better to be safe and occasionally reject a valid schedule than to accidentally accept a bad one.</div>
+        </div>
+
+        <div class="relationship-map">
+            All Serial Schedules &sub; Conflict Serializable Schedules &sub; Serializable Schedules<br>
+            <span style="font-size: 0.8rem; color: #666;">(Every serial schedule is conflict serializable, and every conflict serializable schedule is serializable, but not vice versa.)</span>
+        </div>
+
+        <div class="purple-box">
+            <h4>Wait &mdash; why are these nested circles? An intuitive walkthrough.</h4>
+
+            <div class="circle-diagram">
+                <div class="circle-outer">
+                    <div class="circle-label">Serializable (biggest &mdash; "correct result" schedules)</div>
+                    <div class="circle-mid">
+                        <div class="circle-label">Conflict Serializable (medium &mdash; "passes the graph test")</div>
+                        <div class="circle-inner">Serial (smallest &mdash; "no interleaving at all")</div>
+                    </div>
+                </div>
+            </div>
+
+            <p>Think of it like three groups of students who passed an exam, from strictest to most lenient:</p>
+
+            <!-- Tier 1: Serial -->
+            <div class="tier">
+                <h5>Inner circle: Serial Schedules</h5>
+                <p>These are the "straight-A students who never took any risks." Zero interleaving. Always correct. Always conflict serializable too, because if there is no interleaving, there is nothing to untangle.</p>
+                <p><strong>Example:</strong> <code>r1(A), w1(A), r2(A), w2(A)</code></p>
+                <p>T1 runs fully, then T2. No mixing at all. Obviously safe. You can trivially "swap non-conflicting adjacent ops" to get a serial schedule &mdash; it already IS one.</p>
+            </div>
+
+            <!-- Tier 2: Conflict Serializable -->
+            <div class="tier">
+                <h5>Middle circle: Conflict Serializable (but not serial)</h5>
+                <p>These are interleaved, but you can <strong>prove they are safe using the conflict graph test</strong> (no cycles). They are a superset of serial &mdash; every serial schedule is in here, PLUS some interleaved schedules that pass the graph test.</p>
+                <p><strong>Example:</strong> T1: <code>r1(A), w1(A)</code> &nbsp;&nbsp; T2: <code>r2(B), w2(B)</code></p>
+                <p>Schedule: <code>r1(A), r2(B), w1(A), w2(B)</code></p>
+                <p>This is interleaved (T1 and T2 ops are mixed). But T1 touches only A, T2 touches only B &mdash; they access <strong>completely different data</strong>, so there are <strong>zero conflicts</strong>, and the conflict graph has no edges at all (definitely no cycles). Conflict serializable!</p>
+            </div>
+
+            <!-- Tier 3: Serializable but NOT conflict serializable -->
+            <div class="tier">
+                <h5>Outer circle: Serializable but NOT conflict serializable</h5>
+                <p>This is the tricky one. These schedules <strong>produce the correct result</strong>, but the conflict graph test says "no" (it finds a cycle). The graph test is conservative &mdash; it sometimes rejects safe schedules.</p>
+                <p><strong>Example (the classic "blind write"):</strong></p>
+                <p>T1: <code>r1(A), w1(B)</code> &nbsp;&nbsp; T2: <code>r2(B), w2(A)</code> &nbsp;&nbsp; T3: <code>w3(A), w3(B)</code></p>
+                <p>Schedule: <code>r1(A), r2(B), w3(A), w3(B), w1(B), w2(A)</code></p>
+                <p>The conflict graph has a cycle (T1 &rarr; T3 and T3 &rarr; T1 via different data items), so the conflict graph test says <strong>"NOT conflict serializable."</strong></p>
+                <p>But look at what actually happens: T3 writes A and B, and then T1 and T2 <strong>overwrite</strong> both A and B anyway. T3's writes are completely obliterated &mdash; they have no lasting effect. The final state ends up identical to the serial order T3, T1, T2. The schedule IS serializable (correct result), but the conflict graph is too paranoid to see it.</p>
+            </div>
+
+            <p style="margin-top: 1.25rem; margin-bottom: 0.5rem;"><strong>The key intuition:</strong></p>
+            <p style="margin-bottom: 0;">
+                <strong>Serial</strong> = "I ran them one at a time." Always safe, always passes the graph test, but slow.<br><br>
+                <strong>Conflict Serializable</strong> = "I interleaved them, but the conflict graph has no cycles, so I can <em>prove</em> it is safe by rearranging non-conflicting operations." Fast and provably safe.<br><br>
+                <strong>Serializable (but not conflict serializable)</strong> = "I interleaved them, the conflict graph has a cycle, but by sheer luck the final answer is still correct." The result happens to be right, but we <em>cannot prove it</em> using the conflict graph method. Real databases reject these because checking true serializability for all possible inputs is too expensive. Better to be safe than sorry.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>The Testing Tools</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" id="conflict-graph">
+            <div class="term-name">12. Conflict Graph (Precedence Graph / Serialization Graph)</div>
+            <div class="formal">A directed graph where each node represents a transaction, and a directed edge from T<sub>i</sub> to T<sub>j</sub> means T<sub>i</sub> has an operation that conflicts with (and comes before) an operation in T<sub>j</sub>.</div>
+            <p class="plain">
+                The conflict graph is your <strong>one-stop tool</strong> for testing conflict serializability. Each edge says "this transaction must come before that one" (because of a conflict). If you can satisfy all these "must come before" constraints simultaneously, the schedule is safe. If the constraints contradict each other (a cycle), the schedule is unsafe.
+            </p>
+            <div class="example-box">
+                <div class="label">How to build it</div>
+                <p style="margin-bottom: 0;">
+                    <strong>Step 1:</strong> Draw a node for each transaction (T1, T2, T3, &hellip;)<br>
+                    <strong>Step 2:</strong> For every pair of conflicting operations, draw an arrow from the transaction that goes first to the transaction that goes second.<br>
+                    <strong>Step 3:</strong> Check for cycles. No cycles = conflict serializable. Any cycle = NOT conflict serializable.
+                </p>
+            </div>
+            <div class="analogy">Think of it as a "who must go before whom" chart. Each arrow says "this person promised to go before that person." If person A promised to go before B, and B promised to go before A, you have a contradiction &mdash; a cycle &mdash; and no arrangement works.</div>
+        </div>
+
+        <div class="term-card" id="dag">
+            <div class="term-name">13. DAG (Directed Acyclic Graph)</div>
+            <div class="formal">A directed graph that contains no cycles. If the conflict graph is a DAG, the schedule is conflict serializable.</div>
+            <p class="plain">
+                DAG just means a graph with arrows where <strong>you can never follow the arrows and get back to where you started</strong>. When your conflict graph is a DAG, that is the "all clear" signal &mdash; no contradictions exist, and you can find a valid serial ordering.
+            </p>
+            <div class="vs-box">
+                <div class="vs-item">
+                    <h4>DAG (No cycles)</h4>
+                    <p>T1 &rarr; T2 &rarr; T3<br><br>All arrows go "forward." You can line up the transactions in order. <strong>Safe!</strong></p>
+                </div>
+                <div class="vs-item">
+                    <h4>Not a DAG (Has a cycle)</h4>
+                    <p>T1 &rarr; T2 &rarr; T1<br><br>Arrows go in a circle. Impossible to order. <strong>Unsafe!</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="term-card" id="topological-ordering">
+            <div class="term-name">14. Topological Ordering (Topological Sort)</div>
+            <div class="formal">A linear ordering of all nodes in a DAG such that for every directed edge u &rarr; v, node u appears before v in the ordering.</div>
+            <p class="plain">
+                Once you know the conflict graph is a DAG, topological sort tells you the <strong>equivalent serial schedule</strong>. It lines up all the transactions so that every "must come before" constraint is satisfied. The algorithm is simple: repeatedly pick a node with no incoming arrows, add it to your list, and remove it from the graph.
+            </p>
+            <div class="example-box">
+                <div class="label">Example</div>
+                <p style="margin-bottom: 0;">
+                    Graph: T1 &rarr; T2, T1 &rarr; T4, T3 &rarr; T2, T2 &rarr; T5, T4 &rarr; T5<br><br>
+                    <strong>Round 1:</strong> T1 and T3 have no incoming edges. Pick T1.<br>
+                    <strong>Round 2:</strong> T3 has no incoming edges. Pick T3.<br>
+                    <strong>Round 3:</strong> T2 and T4 have no incoming edges. Pick T4.<br>
+                    <strong>Round 4:</strong> T2 has no incoming edges. Pick T2.<br>
+                    <strong>Round 5:</strong> T5 is left. Pick T5.<br><br>
+                    Result: <strong>T1, T3, T4, T2, T5</strong>
+                </p>
+            </div>
+            <div class="warning">The topological ordering is <strong>not always unique</strong>. When multiple nodes have no incoming edges at the same time, you can pick any of them. Different choices give different (but equally valid) serial orderings. All of them are correct.</div>
+        </div>
+
+        <div class="term-card" id="victim-selection">
+            <div class="term-name">15. Victim Selection</div>
+            <div class="formal">The process of choosing which transaction to abort when a cycle is detected in the conflict graph, making the schedule non-conflict-serializable.</div>
+            <p class="plain">
+                When the conflict graph has a cycle, the database <strong>must kill one transaction</strong> to break the cycle. But which one? That choice is called victim selection. Common strategies include aborting the youngest transaction, the one that has done the least work, or the one that will be cheapest to restart. The "victim" gets rolled back and retried later.
+            </p>
+            <div class="analogy">It's like a traffic jam at a circular roundabout where no one can move. Someone has to back up (abort) so the rest can proceed. The traffic officer (DBMS) picks the car that is easiest to reroute.</div>
+        </div>
+
+        <!-- ============================================================ -->
+        <h2>How It All Fits Together</h2>
+        <!-- ============================================================ -->
+
+        <div class="term-card" style="border-left-color: #333; background-color: #f5f5f5;">
+            <div class="term-name">The Complete Pipeline</div>
+            <p class="plain">
+                <strong>1.</strong> Multiple <strong>transactions</strong> run concurrently, creating an interleaved <strong>schedule</strong>.<br><br>
+                <strong>2.</strong> We identify all <strong>conflicts</strong> (RW, WR, WW pairs on the same data item from different transactions).<br><br>
+                <strong>3.</strong> We build the <strong>conflict graph</strong> (nodes = transactions, edges = conflict orderings).<br><br>
+                <strong>4.</strong> We check: is the graph a <strong>DAG</strong> (no cycles)?<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&#10003; <strong>Yes (DAG):</strong> The schedule is <strong>conflict serializable</strong>. Do a <strong>topological sort</strong> to find the equivalent serial schedule.<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&#10007; <strong>No (cycle):</strong> The schedule is <strong>not conflict serializable</strong>. Use <strong>victim selection</strong> to abort one transaction and break the cycle.
+            </p>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Key Terms Reference — Concurrency &amp; Serializability</p>
+        </footer>
+
+    </div>
+</body>
+</html>

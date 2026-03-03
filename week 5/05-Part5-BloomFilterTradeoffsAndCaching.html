@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filter Trade-offs and Caching — Part 5</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Bloom Filter Trade-offs and Caching</h1>
+            <p class="subtitle">Optimizing false positive rates, memory trade-offs, and introduction to cache eviction policies</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: False Positive Probability -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. False Positive Probability and Optimal k</h2>
+
+            <p>Continuing from Part 4, the size of k (the number of hash functions) presents a fundamental trade-off:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Higher k Helps</h4>
+                    <p style="margin-bottom: 0;">More hash functions means more bit positions must <em>all</em> be 1 for a false positive to occur. Each additional hash function that maps to a 0 catches the impostor. This reduces false positives.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Higher k Hurts</h4>
+                    <p style="margin-bottom: 0;">Each inserted element sets k bits to 1. More hash functions "deplete" the available 0 slots faster. Eventually the array fills up with 1s, and everything looks like a member.</p>
+                </div>
+            </div>
+
+            <div class="definition-box">
+                <strong>Optimal k:</strong> The value of k that minimizes the false positive rate is k = (m/n) &times; ln(2), where m is the number of bits and n is the number of elements. For example, with m/n = 8 bits per member, the optimal k = 8 &times; ln(2) &asymp; 5.45.
+            </div>
+
+            <p>The false positive rate as a function of k forms a U-shaped curve: too few hash functions means insufficient filtering, too many means the array fills up too fast. The minimum sits right at k = (m/n) &times; ln(2).</p>
+
+            <div class="explanation-box">
+                <h4>Bloom Filter Calculator</h4>
+                <p style="margin-bottom: 0.5rem;">The lecture references an online tool at <code>hur.st/bloomfilter/</code> that lets you explore how the parameters interact. For example, with n = 4,000 items and a target false positive rate of p = 0.0000001 (1 in ~10 million), the calculator computes:</p>
+                <ul style="margin-bottom: 0;">
+                    <li>m = 134,191 bits (about 16.4 KiB)</li>
+                    <li>k = 23 hash functions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Space vs. Speed Trade-off -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Memory Space vs. Speed Trade-off</h2>
+
+            <p>A larger Bloom filter reduces false positives, which means fewer unnecessary disk reads, lower latency, and higher throughput. But a larger Bloom filter also <strong>takes up more memory</strong> — and memory that goes to the Bloom filter cannot be used for caching index entries. Less index caching means more disk accesses for keys that <em>do</em> exist, which increases latency.</p>
+
+            <div class="key-insight">
+                There is a tension: the Bloom filter and the index cache compete for the same finite memory. Making the Bloom filter bigger helps negative lookups but hurts positive lookups. The optimal split depends on the workload.
+            </div>
+
+            <h3>Worked Example: Space vs. Speed</h3>
+
+            <p>Consider a database with 2GB of memory for caching, 100GB of flash storage, supporting 1 billion entries (~100B each). Flash access costs 100&mu;s, memory access costs 100ns. Suppose 60% of requests are for objects that <strong>do not exist</strong>.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Scenario 1: 600MB Bloom Filter</h4>
+                    <p style="margin-bottom: 0.5rem;">False positive rate: 9%</p>
+                    <p style="margin-bottom: 0.5rem;">Remaining DRAM for index cache: 1.4GB</p>
+                    <p style="margin-bottom: 0;">Index cache hit rate: 90%</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Scenario 2: 1.1GB Bloom Filter</h4>
+                    <p style="margin-bottom: 0.5rem;">False positive rate: 1%</p>
+                    <p style="margin-bottom: 0.5rem;">Remaining DRAM for index cache: 0.9GB</p>
+                    <p style="margin-bottom: 0;">Index cache hit rate: 70%</p>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Average Latency Formula</h4>
+                <p style="margin-bottom: 0.5rem;">avg latency = P(exists) &times; [P(cached) &times; 100ns + P(not cached) &times; 100&mu;s] + P(doesn't exist) &times; [P(true negative) &times; 100ns + P(false positive) &times; 100&mu;s]</p>
+                <p style="margin-bottom: 0.5rem;"><strong>Scenario 1:</strong> 0.4 &times; (0.9 &times; 100ns + 0.1 &times; 100&mu;s) + 0.6 &times; (0.91 &times; 100ns + 0.09 &times; 100&mu;s) = <strong>9.49&mu;s</strong></p>
+                <p style="margin-bottom: 0;"><strong>Scenario 2:</strong> 0.4 &times; (0.7 &times; 100ns + 0.3 &times; 100&mu;s) + 0.6 &times; (0.99 &times; 100ns + 0.01 &times; 100&mu;s) = <strong>12.64&mu;s</strong></p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Surprise: The Smaller Bloom Filter Wins!</h4>
+                <p style="margin-bottom: 0;">Despite having a 9% false positive rate (vs. 1%), Scenario 1 achieves lower average latency (9.49&mu;s vs. 12.64&mu;s). The extra 800MB of index cache improves hit rates from 70% to 90%, which more than compensates for the higher false positive rate. This illustrates why the trade-off must be evaluated holistically — the Bloom filter does not exist in isolation.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Other Issues with Bloom Filters -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Other Issues with Bloom Filters</h2>
+
+            <p>Bloom filters have several practical limitations:</p>
+
+            <ul>
+                <li><strong>Depletion over time:</strong> As more elements are added, more bits become 1, and the false positive rate increases. Eventually the filter becomes useless if too many elements are inserted.</li>
+                <li><strong>Must estimate n in advance:</strong> You need to know (or estimate) the total number of unique entries that will ever be inserted, since m and k are chosen based on n. Underestimating n leads to a depleted filter with high false positive rates.</li>
+                <li><strong>No deletes:</strong> Standard Bloom filters do not support removing elements. Why? Because setting a bit back to 0 might affect other elements that also hash to that position. Clearing one element's bit could create false negatives for other elements.</li>
+            </ul>
+
+            <div class="explanation-box">
+                <h4>Variants and Improvements</h4>
+                <p style="margin-bottom: 0;">Research has produced many improved variants: <strong>counting Bloom filters</strong> (replace bits with counters to support deletes), <strong>cuckoo filters</strong> (support deletes and can be more space-efficient), <strong>learned Bloom filters</strong> (use machine learning to reduce false positives), and <strong>elastic Bloom filters</strong> (grow dynamically). This remains a hot research area in systems and databases.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Introduction to Caching -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Introduction to Caching</h2>
+
+            <p>The lecture transitions from Bloom filters to a closely related topic: <strong>caching</strong>. Caches appear at every level of computer systems to reduce work and transport duplication:</p>
+
+            <ul>
+                <li>Databases cache frequently accessed keys in memory</li>
+                <li>CPUs use memory (DRAM) as a cache for disk</li>
+                <li>Content delivery networks (CDNs) are caches for origin servers</li>
+                <li>The file system has a page cache</li>
+                <li>Browsers cache web pages and assets</li>
+            </ul>
+
+            <p>In big data systems, dedicated <strong>key-value cache servers</strong> sit between the application and the database. All data is stored purely in memory (no disk), and the application checks the cache before querying the database. Examples include <strong>Memcached</strong>, <strong>Redis</strong>, and <strong>Amazon ElastiCache</strong>.</p>
+
+            <div class="analogy">
+                The lecture references a paper by Maggs and Sitaraman on "Algorithmic Nuggets in Content Delivery," which describes how Akamai (one of the world's largest CDNs) uses sophisticated caching algorithms at global scale — a real-world application of the principles covered here.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Important Questions for Caching -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Important Questions for Caching</h2>
+
+            <p>Designing a caching system requires answering three fundamental questions:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Assignment: Where do you put the data?</strong>
+                </div>
+                <p style="margin-bottom: 0;">In memory? How is it organized? The goal is to optimize read speed — finding a cached item should be fast (typically O(1) via hash tables).</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Consistency: What happens when data is updated or deleted?</strong>
+                </div>
+                <p style="margin-bottom: 0.5rem;">Two approaches:</p>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Passive:</strong> cache entries have a TTL (time-to-live) and simply expire after a set duration</li>
+                    <li><strong>Active:</strong> cache entries are explicitly invalidated when the underlying data changes</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Eviction: Who do you kick out?</strong>
+                </div>
+                <p style="margin-bottom: 0;">Cache space is expensive (that's why we have a cache in the first place — if memory were infinite, we'd store everything). When the cache is full and a new item arrives, which existing item gets removed? This is the <strong>eviction policy</strong>.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Eviction Policy Model -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Standard Eviction Policy Model</h2>
+
+            <div class="definition-box">
+                <strong>Model Assumptions:</strong>
+                <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                    <li>Cache has a fixed size <strong>C</strong> (number of slots)</li>
+                    <li>Each item has the same size (1 slot) and a unique key</li>
+                    <li>The cache starts full</li>
+                    <li>On a <strong>hit</strong> (requested item is in cache): read directly from cache</li>
+                    <li>On a <strong>miss</strong> (requested item is not in cache): fetch from the backing store (e.g., database), insert into cache, and <strong>evict</strong> one existing item to make room</li>
+                </ul>
+            </div>
+
+            <h3>Metric for Success: Cache Hit Rate</h3>
+
+            <p>The overall goal is usually to minimize average latency, which in practice is equivalent to maximizing the <strong>cache hit rate</strong> — the percentage of read requests that find their object already in the cache.</p>
+
+            <div class="explanation-box">
+                <h4>Why Small Hit Rate Differences Matter Enormously</h4>
+                <p style="margin-bottom: 0.5rem;">Consider: average latency to flash database = 5ms, average latency to in-memory cache = 100&mu;s.</p>
+                <p style="margin-bottom: 0.5rem;">At 98% hit rate: 0.98 &times; 100&mu;s + 0.02 &times; 5000&mu;s = <strong>198&mu;s</strong></p>
+                <p style="margin-bottom: 0.5rem;">At 99% hit rate: 0.99 &times; 100&mu;s + 0.01 &times; 5000&mu;s = <strong>149&mu;s</strong></p>
+                <p style="margin-bottom: 0;">A mere <span class="highlight-text">1% improvement in cache hit rate reduces average latency by 25%</span>. This is because the backing store is so much slower that even a tiny reduction in misses has an outsized impact on the average.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Common Eviction Policies -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>7. Common Eviction Policies</h2>
+
+            <p>The lecture introduces five eviction strategies, which will be explored in detail in subsequent parts:</p>
+
+            <table>
+                <tr>
+                    <th>Policy</th>
+                    <th>Strategy</th>
+                    <th>Key Idea</th>
+                </tr>
+                <tr>
+                    <td><strong>FIFO</strong></td>
+                    <td>First In, First Out</td>
+                    <td>Evict the item that has been in the cache the longest. Simple queue — no need to track access patterns.</td>
+                </tr>
+                <tr>
+                    <td><strong>LRU</strong></td>
+                    <td>Least Recently Used</td>
+                    <td>Evict the item that was accessed least recently. Assumes recently used items are likely to be used again soon.</td>
+                </tr>
+                <tr>
+                    <td><strong>CLOCK</strong></td>
+                    <td>Approximates LRU</td>
+                    <td>A practical approximation of LRU using a circular buffer and reference bits. Cheaper to implement than true LRU.</td>
+                </tr>
+                <tr>
+                    <td><strong>LFU</strong></td>
+                    <td>Least Frequently Used</td>
+                    <td>Evict the item with the fewest total accesses. Favors items that are accessed often, regardless of recency.</td>
+                </tr>
+                <tr>
+                    <td><strong>OPT</strong></td>
+                    <td>Belady's Algorithm</td>
+                    <td>Evict the item that will not be needed for the longest time in the future. Optimal but requires knowing future requests — used as a theoretical benchmark.</td>
+                </tr>
+            </table>
+
+            <div class="key-insight">
+                Each policy makes different assumptions about access patterns. FIFO ignores usage entirely. LRU bets on temporal locality (recently used = likely used again). LFU bets on frequency (popular items stay popular). OPT is the theoretical best but impossible to implement in practice — it serves as the upper bound against which real policies are measured.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 8: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 5</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> Optimal k for a Bloom filter is <strong>k = (m/n) &times; ln(2)</strong> — a U-shaped trade-off between too few and too many hash functions</li>
+                    <li><span class="checkmark">&#10003;</span> Bloom filters compete with index caches for <strong>finite memory</strong> — a bigger Bloom filter helps negative lookups but hurts positive lookups</li>
+                    <li><span class="checkmark">&#10003;</span> The smaller Bloom filter can win when the workload benefits more from <strong>index caching</strong> than from reduced false positives</li>
+                    <li><span class="checkmark">&#10003;</span> Bloom filters <strong>cannot delete</strong> elements, can get depleted, and require estimating n in advance</li>
+                    <li><span class="checkmark">&#10003;</span> Caches appear at every layer of systems: CPU, file system, database, CDN, application</li>
+                    <li><span class="checkmark">&#10003;</span> Three key caching questions: <strong>assignment</strong> (where), <strong>consistency</strong> (staleness), <strong>eviction</strong> (who to remove)</li>
+                    <li><span class="checkmark">&#10003;</span> A <strong>1% cache hit rate improvement</strong> can yield a 25% latency reduction due to the enormous speed gap between cache and backing store</li>
+                    <li><span class="checkmark">&#10003;</span> Five eviction policies: FIFO, LRU, CLOCK, LFU, and OPT (Belady's optimal, theoretical benchmark)</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

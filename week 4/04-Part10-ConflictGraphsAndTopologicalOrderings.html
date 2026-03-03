@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Graphs, Topological Orderings, and Putting It All Together — Part 10</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Conflict Graphs, Topological Orderings, and Putting It All Together</h1>
+            <p class="subtitle">From acyclic graphs to serial orderings — completing the conflict serializability framework</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Good vs. Bad Conflict Graphs Recap -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Good vs. Bad Conflict Graphs</h2>
+
+            <p>Part 9 introduced conflict graphs, where each transaction is a node and each conflict between transactions becomes a directed edge. Part 10 opens by crystallizing the key result: how do we distinguish "good" (safe) graphs from "bad" (unsafe) ones?</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Serial Schedule</h4>
+                    <p style="margin-bottom: 0.5rem;">In a serial schedule (say T1&rarr;T2), all edges go in the <strong>same direction</strong> — from T1 to T2. The graph is trivially acyclic: you can only move forward.</p>
+                    <p style="margin-bottom: 0;">This is the simplest case. No interleaving means no possibility of cycles.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Interleaved Schedules</h4>
+                    <p style="margin-bottom: 0.5rem;">When we interleave operations, edges might go in <strong>both directions</strong>. A good interleaving still keeps all edges going one way (acyclic). A bad interleaving creates edges in both directions between the same pair of nodes — forming a <strong>cycle</strong>.</p>
+                    <p style="margin-bottom: 0;">Acyclic &rarr; safe. Cyclic &rarr; unsafe.</p>
+                </div>
+            </div>
+
+            <div class="definition-box">
+                <strong>Theorem (Conflict Serializability):</strong> A schedule is <span class="highlight-text">conflict serializable</span> if and only if its conflict graph is <strong>acyclic</strong>. This is the central theorem of the entire concurrency unit.
+            </div>
+
+            <p>But why does acyclicity guarantee serializability? The connection comes from a concept in graph theory: <strong>topological orderings</strong>.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: DAGs & Topological Orderings -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. DAGs and Topological Orderings</h2>
+
+            <p>To understand why acyclic conflict graphs imply serializability, we need to understand a fundamental graph theory concept: the <strong>topological ordering</strong>.</p>
+
+            <div class="definition-box">
+                <strong>Topological Ordering:</strong> A linear ordering of all vertices in a directed graph such that for every directed edge from vertex <em>i</em> to vertex <em>j</em>, vertex <em>i</em> appears before vertex <em>j</em> in the ordering. In other words, it "flattens" the graph into a sequence that respects every edge.
+            </div>
+
+            <p>Think of it this way: if there is an edge from T1 to T2, then T1 <em>must</em> come before T2 in any topological ordering. The topological ordering gives you a valid sequential execution that respects all the dependencies.</p>
+
+            <h3>Key Property of DAGs</h3>
+
+            <p>A directed <strong>acyclic</strong> graph (DAG) always has one or more topological orderings. Conversely, a topological ordering exists <em>if and only if</em> the graph has no directed cycles. This is a foundational result in graph theory.</p>
+
+            <div class="analogy">
+                Think of project planning: tasks have dependencies (you must buy decorations before you can decorate). A project plan is a DAG — and finding a valid schedule means finding a topological ordering. If you have circular dependencies (A depends on B, B depends on C, C depends on A), no valid schedule exists.
+            </div>
+
+            <h3>Example: Acyclic Graph</h3>
+
+            <div class="explanation-box">
+                <h4>Graph with 4 nodes: 0, 1, 2, 3</h4>
+                <p style="margin-bottom: 0.5rem;">Edges: 0&rarr;1, 1&rarr;2, 1&rarr;3</p>
+                <p style="margin-bottom: 0.5rem;">Possible topological orderings:</p>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>0, 1, 2, 3</strong> — valid because every edge goes left-to-right</li>
+                    <li><strong>0, 1, 3, 2</strong> — also valid because 2 and 3 have no edge between them, so either order works</li>
+                </ul>
+            </div>
+
+            <p>Notice that multiple topological orderings can exist. Each one represents a valid serial schedule. The database can pick whichever ordering it prefers.</p>
+
+            <h3>Example: Cyclic Graph</h3>
+
+            <div class="problem-box">
+                <h4>Same 4 nodes, but add edge: 2&rarr;3 and 3&rarr;1</h4>
+                <p style="margin-bottom: 0.5rem;">Now we have a cycle: 1&rarr;2&rarr;3&rarr;1</p>
+                <p style="margin-bottom: 0;">There is <strong>no</strong> topological ordering! Node 1 must come before 2 (because of edge 1&rarr;2), 2 must come before 3 (because of edge 2&rarr;3), but 3 must come before 1 (because of edge 3&rarr;1). This is impossible to satisfy — a contradiction.</p>
+            </div>
+
+            <div class="key-insight">
+                No topological ordering means no valid serial schedule that preserves all the conflict orderings. This is precisely why a cycle in the conflict graph means the schedule is not conflict serializable.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Connection to Conflict Serializability -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Connection to Conflict Serializability</h2>
+
+            <p>Now we can complete the logical chain that connects conflict graphs to serializability:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Build the conflict graph</strong>
+                </div>
+                <p style="margin-bottom: 0;">For a given schedule, identify all conflicts (RW, WR, WW on the same data item between different transactions). Each conflict becomes a directed edge from the transaction that acts first to the one that acts second.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Check for cycles</strong>
+                </div>
+                <p style="margin-bottom: 0;">If the conflict graph is acyclic (a DAG), then a topological ordering exists.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Topological ordering = serial order</strong>
+                </div>
+                <p style="margin-bottom: 0;">In the conflict graph, a topological ordering of the nodes corresponds to <strong>a serial ordering of the transactions</strong>. This serial order has the same conflict structure as the original interleaved schedule — making them conflict equivalent.</p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>The Complete Argument</h4>
+                <p style="margin-bottom: 0.5rem;">Acyclic conflict graph &rarr; topological ordering exists &rarr; that ordering is a serial schedule &rarr; the original schedule is conflict equivalent to that serial schedule &rarr; <strong>the schedule is conflict serializable</strong>.</p>
+                <p style="margin-bottom: 0;">Conversely, a cycle means no topological ordering exists, so there is no serial schedule that is conflict equivalent — the schedule is <strong>not</strong> conflict serializable.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Example with 5 Transactions -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Example with 5 Transactions</h2>
+
+            <p>The lecture works through a larger example to show the full three-step process in action. This is a schedule S1 with five transactions (T1 through T5) operating on five data items (A through E).</p>
+
+            <h3>The Schedule</h3>
+
+            <div class="explanation-box">
+                <h4>Schedule S1 (interleaved)</h4>
+                <table>
+                    <tr>
+                        <th>Order</th>
+                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Op</strong></td>
+                        <td>w1(A)</td><td>r2(A)</td><td>w1(B)</td><td>w3(C)</td><td>r2(C)</td><td>r4(B)</td><td>w2(D)</td><td>w4(E)</td><td>r5(D)</td><td>w5(E)</td>
+                    </tr>
+                </table>
+                <p style="margin-bottom: 0;">Each operation is labeled as r<sub>i</sub>(X) or w<sub>i</sub>(X), meaning transaction i reads or writes data item X.</p>
+            </div>
+
+            <h3>Step 1: Find All Conflicts</h3>
+
+            <p>We scan through the schedule looking for pairs of operations from different transactions on the <strong>same data item</strong> where at least one is a write (RW, WR, or WW):</p>
+
+            <table>
+                <tr>
+                    <th>Conflict</th>
+                    <th>Data Item</th>
+                    <th>Operations</th>
+                    <th>Edge</th>
+                </tr>
+                <tr>
+                    <td>'A'</td>
+                    <td>A</td>
+                    <td>w1(A) before r2(A)</td>
+                    <td>T1 &rarr; T2</td>
+                </tr>
+                <tr>
+                    <td>'B'</td>
+                    <td>B</td>
+                    <td>w1(B) before r4(B)</td>
+                    <td>T1 &rarr; T4</td>
+                </tr>
+                <tr>
+                    <td>'C'</td>
+                    <td>C</td>
+                    <td>w3(C) before r2(C)</td>
+                    <td>T3 &rarr; T2</td>
+                </tr>
+                <tr>
+                    <td>'D'</td>
+                    <td>D</td>
+                    <td>w2(D) before r5(D)</td>
+                    <td>T2 &rarr; T5</td>
+                </tr>
+                <tr>
+                    <td>'E'</td>
+                    <td>E</td>
+                    <td>w4(E) before w5(E)</td>
+                    <td>T4 &rarr; T5</td>
+                </tr>
+            </table>
+
+            <h3>Step 2: Build the Conflict Graph and Check for Cycles</h3>
+
+            <div class="explanation-box">
+                <h4>Conflict Graph for S1</h4>
+                <p style="margin-bottom: 0.5rem;">Nodes: T1, T2, T3, T4, T5</p>
+                <p style="margin-bottom: 0.5rem;">Edges: T1&rarr;T2 (A), T1&rarr;T4 (B), T3&rarr;T2 (C), T2&rarr;T5 (D), T4&rarr;T5 (E)</p>
+                <p style="margin-bottom: 0;"><strong>Is it acyclic?</strong> Yes! There are no cycles. Every path leads forward — you can never follow edges and return to where you started.</p>
+            </div>
+
+            <div class="definition-box">
+                <strong>Verdict:</strong> The conflict graph is acyclic, therefore Schedule S1 is <span class="highlight-text">conflict serializable</span>, and therefore it is serializable. The database can safely execute this interleaving.
+            </div>
+
+            <h3>Step 3: Find an Equivalent Serial Schedule</h3>
+
+            <p>Since the graph is acyclic, we can find a topological ordering to produce a conflict-equivalent serial schedule. We need to respect every edge:</p>
+
+            <ul>
+                <li>T3 must come before T2 (because of edge T3&rarr;T2)</li>
+                <li>T1 must come before T2 and T4 (because of edges T1&rarr;T2, T1&rarr;T4)</li>
+                <li>T2 must come before T5 (because of edge T2&rarr;T5)</li>
+                <li>T4 must come before T5 (because of edge T4&rarr;T5)</li>
+            </ul>
+
+            <div class="explanation-box">
+                <h4>Serial Schedule S2 (conflict equivalent to S1)</h4>
+                <p style="margin-bottom: 0.5rem;"><strong>T3 &rarr; T1 &rarr; T4 &rarr; T2 &rarr; T5</strong></p>
+                <p style="margin-bottom: 0.5rem;">Expanded: w3(C), w1(A), w1(B), r4(B), w4(E), r2(A), r2(C), w2(D), r5(D), w5(E)</p>
+                <p style="margin-bottom: 0;">This serial schedule has exactly the same conflict ordering as S1 — every conflict pair appears in the same relative order. The two schedules are conflict equivalent.</p>
+            </div>
+
+            <div class="key-insight">
+                This example demonstrates the power of the approach: with 5 transactions, there are 5! = 120 possible serial orderings. Instead of checking all 120, we build one conflict graph and do one cycle check to determine serializability. Then a single topological sort gives us an equivalent serial order.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Summary and Parting Observations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Summary and Parting Observations</h2>
+
+            <div class="explanation-box">
+                <h4>The Complete Concurrency Framework</h4>
+                <p style="margin-bottom: 0.5rem;">Across Parts 5 through 10, we have built a complete framework for understanding database concurrency:</p>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Concurrency</strong> is achieved by interleaving transaction operations</li>
+                    <li><strong>Isolation and consistency</strong> require that interleaving produces correct results</li>
+                    <li><strong>Serializability</strong> formalizes "correct" — an interleaved schedule is good if it is equivalent to some serial schedule</li>
+                    <li><strong>Conflict serializability</strong> gives us a practical test — build the conflict graph and check for cycles</li>
+                </ul>
+            </div>
+
+            <h3>Practical Observations</h3>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Flexibility</h4>
+                    <p style="margin-bottom: 0.5rem;">Often, many conflict-serializable schedules exist for a given set of transactions. This is good — increased flexibility and degrees of freedom mean we can choose the best-performing schedule among the valid ones.</p>
+                    <p style="margin-bottom: 0;">The database scheduler has room to optimize for throughput, latency, or other objectives while still guaranteeing correctness.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Batch Size Trade-offs</h4>
+                    <p style="margin-bottom: 0.5rem;">How many transactions should we schedule at once? More transactions in a batch means higher concurrency and throughput, plus more possible valid schedules.</p>
+                    <p style="margin-bottom: 0;">But there are costs: higher latency for individual transactions, and the scheduler itself takes longer and becomes more complex as the batch grows.</p>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 10</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> A schedule is <strong>conflict serializable</strong> if and only if its conflict graph is <strong>acyclic</strong> — the central theorem</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Topological ordering</strong> of a DAG gives a linear ordering respecting all directed edges</li>
+                    <li><span class="checkmark">&#10003;</span> A topological ordering exists if and only if there are <strong>no directed cycles</strong></li>
+                    <li><span class="checkmark">&#10003;</span> In a conflict graph, topological ordering = an <strong>equivalent serial schedule</strong></li>
+                    <li><span class="checkmark">&#10003;</span> The 5-transaction example demonstrates the full workflow: find conflicts &rarr; build graph &rarr; check acyclicity &rarr; extract serial order</li>
+                    <li><span class="checkmark">&#10003;</span> More transactions in a batch means more concurrency but also more complexity — a fundamental trade-off in database scheduling</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

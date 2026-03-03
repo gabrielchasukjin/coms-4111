@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 3, Part 2: Single-Table SQL Queries</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Single-Table SQL Queries</h1>
+            <p class="subtitle">Lecture 3, Part 2 — The SFW Query and Its Building Blocks</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: THE SFW QUERY                                      -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>The SFW Query: SQL's Fundamental Sentence</h2>
+
+            <p>
+                Every language has a basic sentence structure. In English, it is subject-verb-object:
+                "The dog chased the ball." SQL has its own fundamental sentence structure, and it is
+                called the <strong>SFW query</strong> &mdash; short for <strong>SELECT-FROM-WHERE</strong>.
+                Nearly every question you will ever ask of a database can be expressed in this three-clause form,
+                and mastering it is the single most important step in learning SQL.
+            </p>
+
+            <img src="slides/05-sql-query-sfw.png" alt="SFW Query structure: SELECT attributes FROM relations WHERE conditions" class="slide-img">
+
+            <div class="definition-box">
+                <strong>SFW Query.</strong> The basic form of an SQL query consists of three clauses:
+                <br><br>
+                <code>SELECT</code> &mdash; which columns (attributes) to include in the output<br>
+                <code>FROM</code> &mdash; which table(s) to draw data from<br>
+                <code>WHERE</code> &mdash; which rows (tuples) to keep, based on a Boolean condition
+            </div>
+
+            <p>
+                Think of it this way. The <code>FROM</code> clause tells the database where to look &mdash;
+                it identifies the filing cabinet. The <code>WHERE</code> clause tells the database what to
+                keep &mdash; it filters the files inside that cabinet. And the <code>SELECT</code> clause
+                tells the database what information to copy from the files you kept &mdash; maybe you only
+                need the name and phone number, not the entire dossier.
+            </p>
+
+            <div class="analogy">
+                Imagine you walk into a library and say: "FROM the Science Fiction shelf, give me books
+                WHERE the author is Ursula K. Le Guin, and SELECT just the title and year published."
+                That is exactly how an SFW query reads.
+            </div>
+
+            <p>
+                Throughout this section, we will work with a single example table called <strong>Product</strong>.
+                This table has four attributes and four rows:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>PName</th>
+                        <th>Price</th>
+                        <th>Category</th>
+                        <th>Manufacturer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Gizmo</td><td>$19.99</td><td>Gadgets</td><td>GWorks</td></tr>
+                    <tr><td>Powergizmo</td><td>$29.99</td><td>Gadgets</td><td>GWorks</td></tr>
+                    <tr><td>SingleTouch</td><td>$149.99</td><td>Photography</td><td>Canon</td></tr>
+                    <tr><td>MultiTouch</td><td>$203.99</td><td>Household</td><td>Hitachi</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                This small table is enough to illustrate every concept in this lecture. As we work through
+                selection, projection, pattern matching, duplicate elimination, sorting, and limiting results,
+                keep this table in mind &mdash; trace each query by hand before reading the answer.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: SELECTION                                          -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Selection: Filtering Rows</h2>
+
+            <p>
+                The first fundamental operation is <strong>selection</strong>, which filters the rows of a
+                table according to some condition. In SQL, selection is expressed through the
+                <code>WHERE</code> clause. Despite its name, selection has nothing to do with the
+                <code>SELECT</code> keyword &mdash; a notoriously confusing naming choice inherited from
+                relational algebra. Selection answers the question: <em>which rows do I care about?</em>
+            </p>
+
+            <img src="slides/06-selection.png" alt="Selection: filtering rows with WHERE clause" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>How Selection Works</h4>
+                <p>
+                    When you write <code>SELECT * FROM Product WHERE Category = 'Gadgets'</code>, the
+                    database engine conceptually examines every row in the Product table, one at a time.
+                    For each row, it evaluates the condition <code>Category = 'Gadgets'</code>. If the
+                    condition is true, the row is included in the result. If false, the row is discarded.
+                </p>
+                <p style="margin-bottom: 0;">
+                    The asterisk (<code>*</code>) means "all columns" &mdash; give me every attribute for
+                    the rows that pass the filter. The result of this query is:
+                </p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>PName</th>
+                        <th>Price</th>
+                        <th>Category</th>
+                        <th>Manufacturer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Gizmo</td><td>$19.99</td><td>Gadgets</td><td>GWorks</td></tr>
+                    <tr><td>Powergizmo</td><td>$29.99</td><td>Gadgets</td><td>GWorks</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                Two rows survive the filter because they have <code>Category = 'Gadgets'</code>.
+                The Photography and Household rows are silently dropped. Notice that the output is itself
+                a table &mdash; a relation in, a relation out. This property is called <strong>closure</strong>,
+                and it is what allows us to compose queries on top of each other.
+            </p>
+
+            <div class="key-insight">
+                Selection reduces the number of rows, but it never changes which columns appear in the output.
+                When you use <code>SELECT *</code>, every column from the original table shows up, just with
+                fewer rows.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: PROJECTION                                         -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Projection: Choosing Columns</h2>
+
+            <p>
+                If selection filters rows, <strong>projection</strong> filters columns. Projection is what
+                happens when you replace the <code>*</code> in the <code>SELECT</code> clause with a
+                specific list of attribute names. You are "projecting" the data onto a smaller set of
+                dimensions &mdash; like casting a shadow of a 3D object onto a 2D wall. Some information
+                is deliberately thrown away because you do not need it.
+            </p>
+
+            <img src="slides/07-projection.png" alt="Projection: choosing specific columns with SELECT" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>Combining Selection and Projection</h4>
+                <p>
+                    Most real queries use both selection and projection together. Consider this query:
+                </p>
+                <p>
+                    <code>SELECT PName, Price, Manufacturer FROM Product WHERE Category = 'Gadgets'</code>
+                </p>
+                <p style="margin-bottom: 0;">
+                    Here, the <code>WHERE</code> clause performs <em>selection</em> (keeping only Gadgets rows),
+                    and the <code>SELECT</code> clause performs <em>projection</em> (dropping the Category column
+                    from the output). The result is a narrower, shorter table:
+                </p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>PName</th>
+                        <th>Price</th>
+                        <th>Manufacturer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Gizmo</td><td>$19.99</td><td>GWorks</td></tr>
+                    <tr><td>Powergizmo</td><td>$29.99</td><td>GWorks</td></tr>
+                </tbody>
+            </table>
+
+            <p>
+                Notice that the Category column is gone from the result. We filtered on it, but we did not
+                ask for it in the output. This is perfectly legal and extremely common &mdash; you can
+                reference any column of the <code>FROM</code> table in the <code>WHERE</code> clause,
+                regardless of whether it appears in the <code>SELECT</code> clause.
+            </p>
+
+            <div class="analogy">
+                Think of a spreadsheet with twenty columns. Selection is like hiding rows that do not meet
+                your criteria. Projection is like hiding columns you do not need. Together, they let you
+                zoom in on exactly the rectangle of data that answers your question.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: INPUT/OUTPUT SCHEMA NOTATION                       -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Notation: Input Schema, Query, Output Schema</h2>
+
+            <p>
+                When documenting or reasoning about SQL queries, it is helpful to use a concise notation
+                that captures three things: what goes in, what the query does, and what comes out. The
+                standard notation is:
+            </p>
+
+            <img src="slides/08-notation.png" alt="Input Schema → SQL → Output Schema notation" class="slide-img">
+
+            <div class="definition-box">
+                <strong>Schema Notation.</strong>
+                <em>Input Schema</em> &rarr; <em>SQL Query</em> &rarr; <em>Output Schema</em>
+                <br><br>
+                For our projection example:<br>
+                <code>Product(PName, Price, Category, Manufacturer)</code> &rarr; query &rarr;
+                <code>Answer(PName, Price, Manufacturer)</code>
+            </div>
+
+            <p>
+                This notation makes something important visible: the output of a query is itself a relation
+                with a well-defined schema. The input relation Product has four attributes; the output
+                relation Answer has three. The Category attribute was consumed by the <code>WHERE</code>
+                clause but excluded from the output by the <code>SELECT</code> clause. Writing down input
+                and output schemas before you write a query is an excellent habit &mdash; it forces you
+                to think clearly about what your query should produce.
+            </p>
+
+            <div class="key-insight">
+                Every SQL query takes one or more relations as input and produces exactly one relation as
+                output. The output schema is determined entirely by the SELECT clause. This is why SQL is
+                said to be "closed" over relations &mdash; you can always feed the output of one query
+                into another.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: SQL DETAILS — CASE AND QUOTES                      -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>SQL Syntax Details: Case Sensitivity and Quoting</h2>
+
+            <p>
+                Before we go further, there are a few syntactic details that trip up nearly every beginner.
+                These are small things, but getting them wrong will produce cryptic errors or, worse,
+                silently wrong results.
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Case INSENSITIVE: Commands and Names</h4>
+                    <p>
+                        SQL keywords and table/column names are case insensitive.
+                        <code>SELECT</code>, <code>Select</code>, and <code>select</code> are all
+                        identical. <code>Product</code> and <code>product</code> refer to the same table.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>Case SENSITIVE: Values</h4>
+                    <p>
+                        String constants inside quotes are case sensitive.
+                        <code>'Seattle'</code> and <code>'seattle'</code> are
+                        <strong>different values</strong>. A <code>WHERE</code> clause looking for one
+                        will not match the other.
+                    </p>
+                </div>
+            </div>
+
+            <div class="problem-box">
+                <h4>Common Pitfall: Double Quotes vs. Single Quotes</h4>
+                <p>
+                    In SQL, string constants must be enclosed in <strong>single quotes</strong>:
+                    <code>'abc'</code>. Double quotes <code>"abc"</code> have a different meaning in SQL
+                    &mdash; they are used for identifiers (table or column names with special characters
+                    or reserved words). Writing <code>WHERE Category = "Gadgets"</code> may produce an
+                    error or be interpreted as a column reference rather than a string value. Always use
+                    single quotes for data values.
+                </p>
+            </div>
+
+            <p>
+                These rules may seem arbitrary, but they follow a logical pattern: the <em>structure</em>
+                of a query (keywords, table names, column names) is case insensitive because the database
+                designer controls those names and consistency is preferred. The <em>data</em> inside the
+                database is case sensitive because it represents real-world information where "Smith" and
+                "smith" might genuinely be different.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: LIKE PATTERN MATCHING                              -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>LIKE: Pattern Matching on Strings</h2>
+
+            <p>
+                Sometimes you do not know the exact value you are looking for. Perhaps you want all products
+                whose name contains the word "gizmo" somewhere, or all cities that start with "San". The
+                <code>LIKE</code> operator lets you match string patterns using two special wildcard characters.
+            </p>
+
+            <img src="slides/09-like-pattern.png" alt="LIKE pattern matching with % and _ wildcards" class="slide-img">
+
+            <div class="definition-box">
+                <strong>LIKE Wildcards.</strong>
+                <br><br>
+                <code>%</code> &mdash; matches <strong>any sequence of zero or more characters</strong>.
+                It is the SQL equivalent of the <code>*</code> wildcard you may know from file systems.<br><br>
+                <code>_</code> &mdash; matches <strong>exactly one character</strong>. It is the SQL
+                equivalent of the <code>?</code> wildcard in file systems.
+            </div>
+
+            <div class="explanation-box">
+                <h4>Pattern Matching Examples</h4>
+                <p>
+                    Consider the query: <code>SELECT * FROM Product WHERE PName LIKE '%gizmo%'</code>
+                </p>
+                <p>
+                    The pattern <code>'%gizmo%'</code> means: any characters, followed by "gizmo", followed
+                    by any characters. This would match "Gizmo" and "Powergizmo" &mdash; but <strong>only if</strong>
+                    the database performs case-insensitive matching. Remember, string values are case sensitive
+                    in SQL by default. Whether <code>LIKE</code> is case sensitive depends on the database system
+                    and its collation settings. In many systems, you would need <code>LOWER(PName) LIKE '%gizmo%'</code>
+                    or use <code>ILIKE</code> (in PostgreSQL) to guarantee case-insensitive matching.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Other useful patterns: <code>'S%'</code> matches strings starting with S.
+                    <code>'%touch'</code> matches strings ending with "touch".
+                    <code>'_izmo'</code> matches any five-character string ending in "izmo" (like "Gizmo").
+                </p>
+            </div>
+
+            <div class="analogy">
+                Think of <code>%</code> as saying "I don't care what goes here, any amount of text is fine"
+                and <code>_</code> as saying "there must be exactly one character here, but I don't care
+                which one." Together, they let you express fuzzy searches that would otherwise require
+                examining every row by hand.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: DISTINCT                                           -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>DISTINCT: Eliminating Duplicate Rows</h2>
+
+            <p>
+                SQL, unlike relational algebra, allows duplicate rows in query results by default. This is
+                a deliberate design decision &mdash; removing duplicates requires sorting or hashing the
+                entire result set, which can be expensive. But sometimes duplicates are misleading or
+                unwanted, and that is where <code>DISTINCT</code> comes in.
+            </p>
+
+            <img src="slides/10-distinct.png" alt="DISTINCT eliminates duplicate rows from results" class="slide-img">
+
+            <div class="explanation-box">
+                <h4>With and Without DISTINCT</h4>
+                <p>
+                    Consider the query: <code>SELECT Category FROM Product</code>
+                </p>
+                <p>
+                    This returns <em>all four</em> Category values, one for each row in Product:
+                    Gadgets, Gadgets, Photography, Household. The value "Gadgets" appears twice because
+                    two products belong to that category. If you want to know how many <em>unique</em>
+                    categories exist, this result is misleading.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Now consider: <code>SELECT DISTINCT Category FROM Product</code>
+                </p>
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Without DISTINCT</h4>
+                    <p>
+                        Result has 4 rows:<br>
+                        Gadgets<br>
+                        Gadgets<br>
+                        Photography<br>
+                        Household
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        Duplicates are preserved &mdash; one row per input tuple, regardless of whether
+                        the output values repeat.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>With DISTINCT</h4>
+                    <p>
+                        Result has 3 rows:<br>
+                        Gadgets<br>
+                        Photography<br>
+                        Household
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        Duplicates are removed &mdash; each unique combination of output values appears
+                        exactly once.
+                    </p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                Use DISTINCT when you need a list of unique values, such as "what categories exist?" or
+                "which cities have customers?" Avoid using it reflexively on every query &mdash; it adds
+                computational cost, and if your result naturally has no duplicates (for example, when you
+                include a primary key in the SELECT clause), it does nothing but waste processing time.
+            </div>
+
+            <p>
+                A subtle but important point: <code>DISTINCT</code> operates on <em>entire rows</em> of
+                the output, not on individual columns. If you write
+                <code>SELECT DISTINCT Category, Manufacturer FROM Product</code>, a row is considered a
+                duplicate only if <em>both</em> Category and Manufacturer match another row. Two rows
+                with the same Category but different Manufacturers are considered distinct.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 8: ORDER BY                                           -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>ORDER BY: Sorting the Results</h2>
+
+            <p>
+                Relations in the mathematical sense have no inherent order &mdash; a set of tuples is a
+                set, and sets are unordered. In practice, however, humans reading query results almost
+                always want them sorted in some meaningful way: alphabetically by name, chronologically
+                by date, or from cheapest to most expensive. The <code>ORDER BY</code> clause provides
+                this control.
+            </p>
+
+            <img src="slides/11-order-by.png" alt="ORDER BY sorts results by specified columns" class="slide-img">
+
+            <div class="definition-box">
+                <strong>ORDER BY Clause.</strong> Placed after the <code>WHERE</code> clause (or after
+                <code>FROM</code> if there is no <code>WHERE</code>), <code>ORDER BY</code> specifies
+                one or more columns to sort by. Results are sorted in <strong>ascending</strong> order
+                by default. Use the <code>DESC</code> keyword after a column name to sort in descending
+                order.
+            </div>
+
+            <div class="explanation-box">
+                <h4>Sorting with Multiple Columns</h4>
+                <p>
+                    Consider: <code>SELECT * FROM Product ORDER BY Price, PName</code>
+                </p>
+                <p>
+                    This sorts primarily by Price (ascending &mdash; cheapest first). When two products
+                    have the same price (a tie), the tie is broken by sorting on PName alphabetically.
+                    The second sort column only matters when the first column has duplicate values.
+                </p>
+                <p style="margin-bottom: 0;">
+                    You can mix directions: <code>ORDER BY Price DESC, PName ASC</code> sorts by price
+                    from most expensive to cheapest, and breaks ties alphabetically by product name. The
+                    <code>ASC</code> keyword is optional since ascending is the default, but including it
+                    makes your intent explicit and your code easier to read.
+                </p>
+            </div>
+
+            <div class="analogy">
+                Think of ORDER BY as organizing a deck of cards. You might sort them first by suit (hearts,
+                diamonds, clubs, spades), and within each suit, by rank (Ace through King). The first sort
+                key creates the major grouping; the second sort key determines the arrangement within each
+                group.
+            </div>
+
+            <div class="problem-box">
+                <h4>A Common Misconception</h4>
+                <p>
+                    Without an <code>ORDER BY</code> clause, SQL makes <strong>no guarantee</strong>
+                    about the order of results. Even if the results happen to come back in insertion order
+                    today, they might come back in a completely different order tomorrow after the database
+                    reorganizes its storage or uses a different query plan. If you need a specific order,
+                    you <em>must</em> include <code>ORDER BY</code>. Never rely on the "natural" order
+                    of a table.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 9: LIMIT                                              -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>LIMIT: Restricting the Number of Rows</h2>
+
+            <p>
+                Sometimes you do not need the entire result set. Maybe you want the five cheapest products,
+                the ten most recent orders, or just a quick peek at what a table looks like. The
+                <code>LIMIT</code> clause truncates the output to a fixed number of rows.
+            </p>
+
+            <img src="slides/12-limit.png" alt="LIMIT restricts the number of output rows" class="slide-img">
+
+            <div class="definition-box">
+                <strong>LIMIT Clause.</strong> <code>LIMIT n</code> returns at most <em>n</em> rows from
+                the result. It is placed at the very end of the query, after <code>ORDER BY</code> if
+                present. If the result has fewer than <em>n</em> rows, all rows are returned.
+            </div>
+
+            <div class="explanation-box">
+                <h4>LIMIT + ORDER BY: A Powerful Combination</h4>
+                <p>
+                    <code>LIMIT</code> is most useful when combined with <code>ORDER BY</code>. Without
+                    an ordering, <code>LIMIT 5</code> returns an arbitrary five rows &mdash; which five
+                    you get is unpredictable. But with an ordering, you get precise, meaningful results:
+                </p>
+                <p>
+                    <code>SELECT * FROM Product ORDER BY Price ASC LIMIT 2</code>
+                    &mdash; gives you the two cheapest products.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <code>SELECT * FROM Product ORDER BY Price DESC LIMIT 1</code>
+                    &mdash; gives you the single most expensive product.
+                </p>
+            </div>
+
+            <p>
+                The <code>LIMIT</code> clause is also invaluable during development and debugging. When
+                you are exploring a table with millions of rows, running <code>SELECT * FROM BigTable</code>
+                would flood your screen and take a long time. Adding <code>LIMIT 10</code> lets you quickly
+                see the table's structure and a sample of its data without waiting for millions of rows to
+                stream across the network.
+            </p>
+
+            <div class="key-insight">
+                The logical order of execution in an SFW query is: FROM (identify the table) &rarr; WHERE
+                (filter rows) &rarr; SELECT (choose columns) &rarr; DISTINCT (remove duplicates) &rarr;
+                ORDER BY (sort) &rarr; LIMIT (truncate). This order explains why you can reference columns
+                in WHERE that do not appear in SELECT &mdash; the filtering happens before the projection.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 10: PUTTING IT ALL TOGETHER                           -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Putting It All Together</h2>
+
+            <p>
+                Let us now see how all these clauses combine in a single query. Consider this question:
+                "What are the names of the two cheapest products in the Gadgets category?"
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Identify the table (FROM)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    We need data from the <code>Product</code> table.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Filter the rows (WHERE)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    We only want products where <code>Category = 'Gadgets'</code>. This is selection.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Choose the columns (SELECT)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    The question asks only for names, so we project onto <code>PName</code>.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Sort the results (ORDER BY)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    "Cheapest" means sorted by <code>Price ASC</code>.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    <strong>Truncate (LIMIT)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    We want only the top two, so <code>LIMIT 2</code>.
+                </p>
+            </div>
+
+            <p>
+                The complete query:
+            </p>
+
+            <div class="definition-box">
+                <code>SELECT PName FROM Product WHERE Category = 'Gadgets' ORDER BY Price ASC LIMIT 2</code>
+            </div>
+
+            <p>
+                The result is a single-column table with two rows: Gizmo ($19.99) and Powergizmo ($29.99).
+                Notice how each clause played a specific role, and the clauses were written in the standard
+                SQL order: SELECT, FROM, WHERE, ORDER BY, LIMIT.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SUMMARY                                                       -->
+        <!-- ============================================================ -->
+        <div class="summary-box">
+            <h3>Summary: The Building Blocks of Single-Table Queries</h3>
+            <ul>
+                <li><span class="checkmark">&#10003;</span> <strong>SFW queries</strong> (SELECT-FROM-WHERE) are the fundamental sentence structure of SQL.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Selection</strong> (WHERE) filters rows based on conditions. It controls <em>which</em> rows appear.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>Projection</strong> (SELECT columns) filters columns. It controls <em>what information</em> appears for each row.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>SQL keywords</strong> are case insensitive; <strong>string values</strong> are case sensitive. Always use single quotes for string constants.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>LIKE</strong> enables pattern matching with <code>%</code> (any sequence) and <code>_</code> (one character).</li>
+                <li><span class="checkmark">&#10003;</span> <strong>DISTINCT</strong> eliminates duplicate rows from results. Use it intentionally, not reflexively.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>ORDER BY</strong> sorts results. Ascending is the default; use <code>DESC</code> for descending. Multiple columns break ties.</li>
+                <li><span class="checkmark">&#10003;</span> <strong>LIMIT</strong> restricts the number of output rows. Most useful when combined with ORDER BY.</li>
+                <li><span class="checkmark">&#10003;</span> The logical execution order is: FROM &rarr; WHERE &rarr; SELECT &rarr; DISTINCT &rarr; ORDER BY &rarr; LIMIT.</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+        </footer>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Petflix Streams a Cat Video — Part 1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>How Petflix Streams a Cat Video — Part 1</h1>
+            <p class="subtitle">A tour through the distributed systems stack, from DNS to caching</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Introduction -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Introduction: The Petflix Architecture</h2>
+
+            <p>
+                Imagine you open your laptop, navigate to <strong>petflix.com</strong>, and click play on a video of a cat
+                knocking a glass off a table. It starts instantly. The whole thing feels effortless. But behind the scenes,
+                a staggering amount of infrastructure just sprang into action — DNS servers, API gateways, dozens of
+                microservices, caching layers, databases, content delivery networks, container orchestrators, and
+                thread schedulers all coordinated to deliver those frames to your screen.
+            </p>
+
+            <p>
+                <strong>Petflix</strong> is our fictional Netflix-like service for cat videos. We will use it as a running
+                case study to walk through the entire distributed systems stack, layer by layer. The goal is not to memorize
+                every detail, but to build a mental model of <em>what happens</em> at each level and <em>why</em> each layer
+                exists.
+            </p>
+
+            <img src="slides/petflix-title.png" alt="Petflix introduction slide showing the fictional cat video streaming service">
+
+            <h3>The 8-Layer Stack</h3>
+
+            <p>
+                We organize the infrastructure into an <strong>8-layer stack</strong>. Each layer solves a different
+                distributed systems challenge. As a request travels down the stack, it moves from the wide, global
+                scale (which data center should handle this?) down to the narrow, local scale (which CPU core runs
+                this thread?).
+            </p>
+
+            <div class="definition-box">
+                <strong>The 8 Layers of the Petflix Stack</strong>
+                <ol>
+                    <li><strong>DNS Routing</strong> — directs users to the nearest data center</li>
+                    <li><strong>API Gateway &amp; Circuit Breaker</strong> — authenticates requests, prevents cascading failures</li>
+                    <li><strong>Microservices Fan-Out</strong> — splits one request into many parallel service calls</li>
+                    <li><strong>Data &amp; Caching</strong> — fast reads through caches, durable writes to databases</li>
+                    <li><strong>CDN (Content Delivery Network)</strong> — serves static content from edge locations</li>
+                    <li><strong>Pods, Leader Election &amp; Replication</strong> — coordinates replicas for fault tolerance</li>
+                    <li><strong>VMs, Containers &amp; Orchestrators</strong> — packages and schedules workloads</li>
+                    <li><strong>Cores &amp; Threads</strong> — the lowest level of parallelism on a single machine</li>
+                </ol>
+            </div>
+
+            <img src="slides/eight-layer-stack.png" alt="Diagram of the 8-layer distributed systems stack from DNS routing at the top to cores and threads at the bottom">
+
+            <div class="key-insight">
+                In Part 1, we cover Layers 1 through 4 — the "request path." These layers handle getting the user's
+                request to the right place and assembling the data needed for a response. Part 2 will cover Layers 5
+                through 8 — the "infrastructure path" that makes it all run reliably at scale.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Layer 1 — DNS Routing -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Layer 1 — DNS Routing</h2>
+
+            <p>
+                Everything starts when you type <code>petflix.com</code> into your browser. Before any application
+                code runs, before any microservice is contacted, the very first thing that happens is a
+                <strong>DNS lookup</strong> — your browser asks the Domain Name System to translate the human-readable
+                name "petflix.com" into a numerical IP address it can connect to.
+            </p>
+
+            <p>
+                But at the scale of Petflix, DNS does not simply return <em>one</em> fixed IP address. It does
+                something much more sophisticated.
+            </p>
+
+            <h3>Geo-Routing</h3>
+
+            <div class="definition-box">
+                <strong>Geo-routing</strong> is a DNS strategy that examines the geographic origin of a request and
+                returns the IP address of the nearest data center. A user in New York is routed to US-East, a user
+                in London to EU-West, a user in Mumbai to AP-South, and so on.
+            </div>
+
+            <p>
+                This matters enormously for latency. The speed of light in fiber optic cable is roughly 200,000 km/s,
+                which means a round trip from New York to a data center in Singapore adds about 150 milliseconds of
+                pure network delay. By routing users to the closest region, Petflix shaves off that latency before
+                any computation even begins.
+            </p>
+
+            <h3>Health-Check Failover</h3>
+
+            <p>
+                What happens if the US-East data center goes down — maybe a power outage, maybe a network partition?
+                The DNS system runs continuous <strong>health checks</strong> against every region. If a region stops
+                responding, DNS automatically reroutes traffic to the next-closest healthy region. Users in New York
+                might briefly get sent to US-West instead. They will notice slightly higher latency, but the service
+                stays available.
+            </p>
+
+            <div class="analogy">
+                Think of DNS geo-routing like an airport's air traffic control system. Normally, flights landing in
+                New York go to JFK. But if JFK's runway is closed, air traffic control diverts planes to Newark or
+                LaGuardia. Passengers still arrive — just at a different terminal. DNS health-check failover works
+                the same way: it reroutes traffic to the next best destination when the primary one is unavailable.
+            </div>
+
+            <h3>Weighted Load Balancing</h3>
+
+            <p>
+                Not all data centers are created equal. US-East might have twice the capacity of AP-South. DNS can
+                use <strong>weighted load balancing</strong> to distribute traffic proportionally — perhaps 40% to
+                US-East, 30% to US-West, 20% to EU-West, and 10% to AP-South. This prevents any single region
+                from being overwhelmed while others sit idle.
+            </p>
+
+            <img src="slides/dns-routing.png" alt="DNS routing diagram showing geo-routing to different data centers with health-check failover">
+
+            <div class="key-insight">
+                DNS routing is the first "invisible" layer. Users never see it, never think about it, and have no
+                idea it is happening. Yet it is the very first decision in the entire request path — determining
+                which data center, on which continent, will handle your cat video request.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Layer 2 — API Gateway and Circuit Breaker -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Layer 2 — API Gateway &amp; Circuit Breaker</h2>
+
+            <p>
+                Your request has arrived at the right data center. Now what? It does not go directly to the
+                application logic. Instead, every single request first passes through <strong>PetGate</strong> —
+                the Petflix API gateway.
+            </p>
+
+            <h3>What the API Gateway Does</h3>
+
+            <div class="definition-box">
+                <strong>API Gateway:</strong> A single entry point that sits in front of all backend services. It
+                acts as a gatekeeper, handling cross-cutting concerns so that individual services do not have to.
+            </div>
+
+            <p>The API gateway handles several critical responsibilities:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Responsibility</th>
+                        <th>What It Does</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Authentication</strong></td>
+                        <td>Verifies that the request comes from a valid, logged-in user (checks tokens, session IDs)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rate Limiting</strong></td>
+                        <td>Prevents any single user or IP from flooding the system with too many requests</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Request Routing</strong></td>
+                        <td>Determines which backend service(s) should handle the request based on the URL path</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Load Balancing</strong></td>
+                        <td>Distributes requests across multiple instances of the same service</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Service Discovery</strong></td>
+                        <td>Keeps a live registry of which microservices are running, where they are, and whether they are healthy</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="analogy">
+                The API gateway is like the front desk of a large hospital. You do not walk in and wander the
+                hallways looking for a cardiologist. The front desk checks your ID, looks up which department
+                you need, confirms the doctor is available, and directs you to the right floor. PetGate does
+                the same thing for every incoming request.
+            </div>
+
+            <h3>The Circuit Breaker Pattern</h3>
+
+            <p>
+                Now imagine one of the backend services — say, the Recommendations service — starts failing.
+                Maybe it is overloaded, maybe it has a bug. Without protection, the API gateway would keep
+                sending requests to it, each one timing out after several seconds. This creates a cascade:
+                the gateway's threads are all blocked waiting on a dead service, so <em>all</em> requests
+                slow down — even requests that have nothing to do with recommendations.
+            </p>
+
+            <div class="definition-box">
+                <strong>Circuit Breaker Pattern:</strong> A protective mechanism that monitors the failure rate
+                of calls to a downstream service. When failures exceed a threshold, the circuit breaker "opens"
+                and immediately returns a fallback response instead of forwarding the request. This prevents a
+                single failing service from bringing down the entire system.
+            </div>
+
+            <p>The circuit breaker has <strong>three states</strong>:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Closed (Normal Operation)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    Requests flow through to the downstream service as usual. The circuit breaker monitors the
+                    failure rate in the background. If the failure rate stays below the threshold, nothing changes.
+                    This is the happy path.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Open (Failing — Return Fallback)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    The failure rate has crossed the threshold (e.g., 50% of requests in the last 30 seconds failed).
+                    The circuit breaker "trips" and stops forwarding requests entirely. Instead, it returns a
+                    <strong>fallback response</strong> immediately — perhaps a cached result, a default value, or a
+                    graceful error message like "Recommendations are temporarily unavailable." This is fast (no
+                    waiting for timeouts) and protects the rest of the system.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Half-Open (Testing Recovery)</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    After a cooldown period, the circuit breaker lets a small number of test requests through to see
+                    if the downstream service has recovered. If those test requests succeed, the circuit returns to
+                    <strong>Closed</strong>. If they fail, it goes back to <strong>Open</strong> and waits again.
+                </p>
+            </div>
+
+            <img src="slides/api-gateway.png" alt="API Gateway and Circuit Breaker diagram showing PetGate with the three circuit breaker states: Closed, Open, and Half-Open">
+
+            <div class="key-insight">
+                The circuit breaker embodies a crucial distributed systems principle: it is better to return a
+                degraded response quickly than to wait for a perfect response that may never come. A Petflix page
+                with no recommendations is vastly better than a Petflix page that hangs for 30 seconds and then
+                shows an error.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Layer 3 — Microservices Fan-Out -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Layer 3 — Microservices Fan-Out</h2>
+
+            <p>
+                The API gateway has authenticated your request and routed it to the right place. Now the real
+                work begins. When you click "play" on a cat video, the system needs to gather information from
+                many different sources: your user profile, the video's metadata (title, duration, resolution),
+                personalized recommendations for "up next," advertising data, and more. Each of these is
+                managed by a separate <strong>microservice</strong>.
+            </p>
+
+            <h3>Parallel Fan-Out via gRPC</h3>
+
+            <div class="definition-box">
+                <strong>Fan-out:</strong> A pattern where a single incoming request triggers multiple outgoing
+                requests to different services simultaneously. Instead of calling services one after another
+                (sequentially), the system fires all requests at once (in parallel) and waits for all of them
+                to return.
+            </div>
+
+            <p>
+                When Petflix receives a "play video" request, it fans out to multiple services in parallel
+                using <strong>gRPC</strong> (a high-performance remote procedure call framework):
+            </p>
+
+            <ul>
+                <li><strong>UserProfile Service</strong> — retrieves your account details, preferences, watch history</li>
+                <li><strong>VideoMetadata Service</strong> — fetches the video title, description, duration, available resolutions</li>
+                <li><strong>Recommendations Service</strong> — computes the "up next" list based on your history</li>
+                <li><strong>Ads Service</strong> — determines which ads (if any) to show before or during the video</li>
+            </ul>
+
+            <div class="explanation-box">
+                <h4>Why Parallel, Not Sequential?</h4>
+                <p style="margin-bottom: 0;">
+                    If each service call takes 50 ms and you have 4 services, calling them sequentially takes
+                    <strong>200 ms</strong>. Calling them in parallel takes only <strong>50 ms</strong> (the time
+                    of the slowest call). At web scale, that 150 ms difference is the difference between a snappy
+                    experience and a noticeable delay. Parallel fan-out is essential for keeping response times low
+                    when many services are involved.
+                </p>
+            </div>
+
+            <img src="slides/microservices-fanout.png" alt="Microservices fan-out diagram showing a single request splitting into parallel calls to UserProfile, VideoMetadata, Recommendations, and Ads services">
+
+            <h3>The Thundering Herd Problem</h3>
+
+            <p>
+                Parallel fan-out works beautifully under normal conditions. But what happens when things go wrong?
+            </p>
+
+            <div class="problem-box">
+                <h4>The Thundering Herd</h4>
+                <p>
+                    Suppose the VideoMetadata service goes down for 60 seconds. During that time, thousands of
+                    requests pile up, waiting or being queued. The moment the service comes back online, <em>all</em>
+                    of those backed-up requests slam into it simultaneously — like a stampede of animals all rushing
+                    through a gate at the same time.
+                </p>
+                <p style="margin-bottom: 0;">
+                    The result? The service, which just recovered, is immediately overwhelmed and crashes again.
+                    This creates a vicious cycle: the service comes up, gets crushed, goes down, comes up, gets
+                    crushed, goes down. The thundering herd can keep a service stuck in a failure loop indefinitely.
+                </p>
+            </div>
+
+            <img src="slides/thundering-herd.png" alt="Thundering herd and load shedding diagram showing how backed-up requests can crush a recovering service">
+
+            <h3>Defenses Against the Thundering Herd</h3>
+
+            <h4>Load Shedding</h4>
+
+            <div class="definition-box">
+                <strong>Load Shedding:</strong> When a service detects it is overwhelmed, it intentionally drops
+                low-priority requests to protect itself and continue serving high-priority ones. Rather than
+                trying to handle everything and failing at all of it, the service makes a deliberate choice
+                about what to sacrifice.
+            </div>
+
+            <div class="analogy">
+                Load shedding is borrowed from the electrical grid. When demand exceeds supply, power companies
+                perform "rolling blackouts" — cutting power to some neighborhoods to prevent the entire grid from
+                collapsing. Similarly, a microservice might reject ad-related requests (low priority) to ensure
+                video playback requests (high priority) still get through.
+            </div>
+
+            <h4>Exponential Backoff with Jitter</h4>
+
+            <p>
+                When a request to a service fails, the natural instinct is to retry immediately. But if every
+                client retries at the same instant, you have recreated the thundering herd problem. The solution
+                is <strong>exponential backoff with jitter</strong>.
+            </p>
+
+            <div class="definition-box">
+                <strong>Exponential Backoff:</strong> Instead of retrying immediately, wait progressively longer
+                between retries: 1 second, then 2 seconds, then 4, then 8, then 16, and so on. Each wait is
+                double the previous one.
+                <br><br>
+                <strong>Jitter:</strong> Add a random component to each wait time. Instead of waiting exactly 4
+                seconds, wait between 0 and 4 seconds (chosen randomly). This ensures that even if 1,000 clients
+                all start backing off at the same time, their retries are spread out randomly rather than all
+                landing at the same moment.
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Without Jitter</h4>
+                    <p style="margin-bottom: 0;">
+                        1,000 clients all retry at <em>exactly</em> t=1s, then t=2s, then t=4s. The service sees
+                        sharp spikes of 1,000 simultaneous requests at each retry interval. The thundering herd
+                        is merely delayed, not eliminated.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>With Jitter</h4>
+                    <p style="margin-bottom: 0;">
+                        1,000 clients retry at random times between t=0 and t=1s, then between t=0 and t=2s, and
+                        so on. The service sees a smooth, spread-out stream of retries instead of sharp spikes.
+                        The recovering service can handle them gradually.
+                    </p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                The combination of load shedding and exponential backoff with jitter is how production systems
+                prevent a temporary failure from becoming a permanent outage. They give a recovering service the
+                breathing room it needs to come back online safely.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Layer 4 — Data and Caching -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Layer 4 — Data and Caching</h2>
+
+            <p>
+                The microservices have received your request. Now they need data — your user profile, the video's
+                metadata, your watch history, recommendation scores. That data lives in a database. But at Petflix
+                scale, you cannot simply read from the database for every request. Databases are powerful, but they
+                are not fast enough to handle millions of reads per second with low latency. This is where
+                <strong>caching</strong> enters the picture.
+            </p>
+
+            <h3>Two-Tier Architecture: PetCache + Cassandra</h3>
+
+            <p>
+                Petflix uses a <strong>two-tier data architecture</strong>:
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Tier 1: PetCache (Memcached)</h4>
+                    <p style="margin-bottom: 0;">
+                        An in-memory cache that stores frequently accessed data as key-value pairs. Reads from
+                        memory are measured in <strong>microseconds</strong>. PetCache is the first place any
+                        microservice checks when it needs data.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>Tier 2: Cassandra (NoSQL DB)</h4>
+                    <p style="margin-bottom: 0;">
+                        A distributed NoSQL database that stores all data durably on disk. Reads from Cassandra
+                        are measured in <strong>milliseconds</strong> — still fast, but 100x to 1,000x slower
+                        than an in-memory cache.
+                    </p>
+                </div>
+            </div>
+
+            <h3>The Read Path</h3>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Check the Cache</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    The microservice sends a read request to PetCache with a key (e.g., <code>user:12345:profile</code>).
+                    If the data is there — a <strong>cache hit</strong> — it is returned immediately. Done.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Cache Miss: Read from Database</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    If the data is not in the cache — a <strong>cache miss</strong> — the microservice reads from
+                    Cassandra. This is slower, but the data is always there (the database is the source of truth).
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Populate the Cache</strong>
+                </div>
+                <p style="margin-bottom: 0;">
+                    After reading from Cassandra, the microservice writes the result into PetCache so the next
+                    request for the same data will be a cache hit. Future reads are fast.
+                </p>
+            </div>
+
+            <img src="slides/data-caching.png" alt="Two-tier caching architecture showing PetCache (Memcached) in front of Cassandra, with the read path: check cache, miss, read DB, populate cache">
+
+            <div class="explanation-box">
+                <h4>Cache Hit Ratio</h4>
+                <p style="margin-bottom: 0;">
+                    The <strong>cache hit ratio</strong> is the percentage of reads that are served from the cache
+                    without needing to go to the database. At Petflix scale, a typical target is <strong>95% or
+                    higher</strong>. This means that out of every 100 data requests, 95 are answered from blazing-fast
+                    in-memory cache and only 5 need to touch the database. If the hit ratio drops significantly,
+                    the database gets overwhelmed and response times spike across the entire system.
+                </p>
+            </div>
+
+            <h3>Consistent Hashing</h3>
+
+            <p>
+                PetCache is not a single machine — it is a cluster of many cache nodes. How does the system
+                decide which node stores a particular key? It uses <strong>consistent hashing</strong>.
+            </p>
+
+            <div class="definition-box">
+                <strong>Consistent Hashing:</strong> A technique for distributing data across a cluster of nodes
+                such that adding or removing a node only causes a small fraction of keys to be reassigned. In
+                contrast, simple modular hashing (<code>key % N</code>) would cause <em>nearly every</em> key to
+                be reassigned when the number of nodes changes — effectively invalidating the entire cache.
+            </div>
+
+            <div class="analogy">
+                Imagine students assigned to seats in a circular auditorium. With naive assignment (seat = student
+                number mod total seats), adding one seat reshuffles everyone. With consistent hashing, imagine
+                each student walks clockwise until they find their designated seat marker — adding a new seat
+                marker only affects the students between the new marker and the next one. Most students stay put.
+            </div>
+
+            <h3>The Consistency Problem</h3>
+
+            <p>
+                Caching introduces a fundamental tension. When data is updated in Cassandra, the cache may still
+                hold the old value. A user changes their profile picture, but for the next few seconds (or minutes),
+                other users — or even the same user on a different device — might still see the old picture because
+                it is being served from cache.
+            </p>
+
+            <p>
+                This is the <strong>consistency problem</strong>, and how you handle it is one of the most important
+                architectural decisions in a distributed system.
+            </p>
+
+            <h3>The Consistency Spectrum</h3>
+
+            <p>
+                Consistency is not binary (consistent vs. inconsistent). It exists on a <strong>spectrum</strong>,
+                and different applications choose different points on that spectrum depending on their needs.
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Eventual Consistency</strong>
+                </div>
+                <p>
+                    After a write, replicas will <em>eventually</em> converge to the same value, but reads in the
+                    meantime may return stale data. There is no guarantee about how quickly convergence happens —
+                    it could be milliseconds or seconds.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>Example:</strong> A "like" count on a video. If one user sees 10,042 likes and another
+                    sees 10,041 for a brief moment, nobody notices or cares. Eventual consistency is perfectly fine here.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Session-Level Consistency</strong>
+                </div>
+                <p>
+                    Within a single user's session, reads always reflect that user's own writes. However, the user
+                    may still see stale data from <em>other</em> users' writes.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>Example:</strong> You update your Petflix display name. Within your session, you
+                    immediately see the new name (read-your-own-writes). But another user browsing your profile
+                    might see the old name for a few seconds until their cache refreshes.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Strong Consistency</strong>
+                </div>
+                <p>
+                    Every read, from any client, always returns the most recent write. There is never stale data.
+                    This sounds ideal, but it is expensive: it requires coordination between all replicas on every
+                    read, which adds latency and reduces availability.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>Example:</strong> Financial transactions. If you transfer $500 out of your bank account,
+                    you absolutely cannot have another read showing the old balance and allowing a second withdrawal.
+                    Strong consistency is mandatory here.
+                </p>
+            </div>
+
+            <img src="slides/consistency-spectrum.png" alt="Consistency spectrum showing eventual consistency on the left (fast, available) through session-level consistency in the middle to strong consistency on the right (slow, coordinated)">
+
+            <div class="magic-connection">
+                <h4>Why Most Large-Scale Systems Choose Eventual Consistency</h4>
+                <p style="margin-bottom: 0;">
+                    Strong consistency requires all replicas to agree before any read can be served. In a globally
+                    distributed system like Petflix, that means coordinating across data centers on different
+                    continents — adding hundreds of milliseconds of latency to every read. For a cat video streaming
+                    service, this tradeoff is not worth it. The small risk of briefly stale data (a like count being
+                    off by one, a recommendation being slightly outdated) is vastly preferable to doubling or tripling
+                    response times. Petflix, like most large-scale web services, opts for eventual consistency where
+                    possible and reserves strong consistency only for the operations that truly need it (like billing).
+                </p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary: Layers 1-4 (The Request Path)</h3>
+                <p>
+                    These first four layers handle the journey of a user's request — from the moment they type
+                    petflix.com to the moment the system has assembled all the data needed for a response.
+                </p>
+                <ul>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 1 — DNS Routing:</strong> Geo-routing directs users to the nearest data center. Health-check failover reroutes traffic if a region is down. Weighted balancing distributes load proportionally.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 2 — API Gateway &amp; Circuit Breaker:</strong> PetGate handles authentication, rate limiting, routing, and load balancing. The circuit breaker pattern (Closed / Open / Half-Open) prevents cascading failures by fast-failing when a downstream service is unhealthy.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 3 — Microservices Fan-Out:</strong> A single request fans out to multiple services in parallel via gRPC. The thundering herd problem is mitigated by load shedding and exponential backoff with jitter.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 4 — Data &amp; Caching:</strong> A two-tier architecture (Memcached + Cassandra) achieves 95%+ cache hit ratios. Consistent hashing distributes data across cache nodes. The consistency spectrum (eventual, session-level, strong) defines the tradeoff between freshness and performance.</li>
+                </ul>
+                <p style="margin-bottom: 0;">
+                    <strong>Coming in Part 2:</strong> Layers 5-8 cover the infrastructure that makes all of this
+                    possible — CDNs for static content, leader election and replication for fault tolerance, containers
+                    and orchestrators for deployment, and cores and threads for low-level parallelism.
+                </p>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Petflix Distributed Systems — Supplementary to Lecture 04</p>
+        </footer>
+    </div>
+</body>
+</html>

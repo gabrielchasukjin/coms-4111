@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Phase Locking and Deadlocks</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; font-size: 0.9rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .graph-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; text-align: center; font-family: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace; font-size: 1.1rem; letter-spacing: 0.05em; }
+        .timeline { background-color: #fafafa; padding: 1.5rem; margin: 1.75rem 0; border-left: 3px solid #000; border-radius: 2px; font-family: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace; font-size: 0.85rem; line-height: 2; overflow-x: auto; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        @media (max-width: 640px) {
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+            .visual-comparison { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Two-Phase Locking and Deadlocks</h1>
+            <p class="subtitle">How databases use locks to enforce serializability &mdash; and what happens when they get stuck</p>
+        </header>
+
+        <main>
+            <!-- Section 1: Introduction to Locking -->
+            <div class="section">
+                <h2>1. The Idea: Use Locks for Concurrency Control</h2>
+
+                <p>
+                    In the previous part, we established that <strong>conflict serializability</strong> is the gold standard for correct concurrent execution. We learned how to <em>test</em> whether a given schedule is conflict serializable by building a conflict graph and checking for cycles. But testing after the fact is not enough &mdash; we need a way to <em>produce</em> correct schedules in real time as transactions arrive and execute.
+                </p>
+
+                <p>
+                    The answer is <strong>locking</strong>. The idea is beautifully simple: before a transaction can read or write a data item, it must first acquire a lock on that item. If the lock is held by another transaction in a conflicting mode, the requesting transaction must <em>wait</em>. This waiting is what prevents conflicting operations from interleaving incorrectly.
+                </p>
+
+                <div class="analogy">
+                    Think of a lock like a bathroom door lock. When someone is inside (holding the lock), you have to wait outside until they finish and unlock the door. The lock itself does not do the work &mdash; it simply coordinates access so two people are never inside at the same time.
+                </div>
+
+                <p>
+                    But not all access is the same. Reading is inherently less dangerous than writing. Two people can both <em>look</em> at a painting in a museum at the same time without conflict. But if one person is <em>repainting</em> it, nobody else should be looking at or painting the same canvas. This distinction gives rise to two types of locks.
+                </p>
+            </div>
+
+            <!-- Section 2: Strict 2PL Protocol -->
+            <div class="section">
+                <h2>2. Strict Two-Phase Locking (Strict 2PL)</h2>
+
+                <div class="definition-box">
+                    <strong>Strict Two-Phase Locking (Strict 2PL)</strong> is a concurrency control protocol that guarantees conflict serializability (if the schedule completes). It is conceptually straightforward and transparent to the user &mdash; the database manages locks automatically behind the scenes.
+                </div>
+
+                <h3>The Two Lock Types</h3>
+
+                <p>Strict 2PL uses two types of locks:</p>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>S Lock (Shared)</h4>
+                        <p style="margin-bottom: 0.5rem;">Acquired before <strong>reading</strong> an object. Multiple transactions can hold an S lock on the same object simultaneously. This makes sense: reads do not conflict with reads.</p>
+                        <p style="margin-bottom: 0;">Prevents other transactions from acquiring an <strong>X lock</strong> on the same object.</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>X Lock (Exclusive)</h4>
+                        <p style="margin-bottom: 0.5rem;">Acquired before <strong>writing</strong> an object. Only one transaction can hold an X lock at a time. No other transaction can hold <em>any</em> lock (S or X) on the same object.</p>
+                        <p style="margin-bottom: 0;">Prevents other transactions from acquiring <strong>either S or X locks</strong>.</p>
+                    </div>
+                </div>
+
+                <h3>Lock Compatibility Matrix</h3>
+
+                <p>
+                    The following table shows whether a new lock request is <strong>compatible</strong> with an existing lock held by another transaction. "Yes" means the request is granted immediately; "No" means the requesting transaction must wait.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request \ Held</th>
+                            <th>No Lock</th>
+                            <th>S Lock (Shared)</th>
+                            <th>X Lock (Exclusive)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>S Lock</strong></td>
+                            <td><span class="checkmark">Yes</span></td>
+                            <td><span class="checkmark">Yes</span></td>
+                            <td>No &mdash; must wait</td>
+                        </tr>
+                        <tr>
+                            <td><strong>X Lock</strong></td>
+                            <td><span class="checkmark">Yes</span></td>
+                            <td>No &mdash; must wait</td>
+                            <td>No &mdash; must wait</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="key-insight">
+                    The key pattern: <strong>shared locks are compatible with other shared locks</strong> (readers can coexist), but <strong>exclusive locks are compatible with nothing</strong> (writers need total isolation on that object). This directly mirrors our understanding of conflicts &mdash; read-read is fine, but read-write and write-write are not.
+                </div>
+
+                <h3>The Strict 2PL Protocol Rules</h3>
+
+                <div class="explanation-box">
+                    <h4>Three Simple Rules</h4>
+                    <ol>
+                        <li><strong>Before reading</strong> object O, a transaction must acquire an <strong>S (shared) lock</strong> on O. The request is blocked if another transaction holds an X lock on O.</li>
+                        <li><strong>Before writing</strong> object O, a transaction must acquire an <strong>X (exclusive) lock</strong> on O. The request is blocked if another transaction holds any lock (S or X) on O.</li>
+                        <li><strong>All locks are released</strong> only when the transaction completes &mdash; that is, at COMMIT or ABORT time. Not before.</li>
+                    </ol>
+                </div>
+
+                <p>
+                    Rule 3 is what makes the protocol <em>strict</em>. The transaction holds onto every lock it acquires until the very end. This is the "two-phase" part: there is a <strong>growing phase</strong> where the transaction accumulates locks, followed by a single moment of release when all locks are dropped simultaneously at commit/abort.
+                </p>
+            </div>
+
+            <!-- Section 3: Picture of 2PL -->
+            <div class="section">
+                <h2>3. The Picture of Two-Phase Locking</h2>
+
+                <p>
+                    To understand the name "two-phase locking," it helps to visualize how the number of locks held by a transaction changes over time. There are actually two variants worth distinguishing.
+                </p>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>Basic 2PL</h4>
+                        <p style="margin-bottom: 0.5rem;"><strong>Growing phase:</strong> The transaction acquires locks as needed. It may acquire locks at different times as it encounters new objects to read or write.</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Shrinking phase:</strong> Once the transaction releases <em>any</em> lock, it can never acquire a new lock again. It can only continue releasing locks.</p>
+                        <p style="margin-bottom: 0;">The critical rule: <span class="highlight-text">you cannot request new locks after releasing any lock.</span></p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>Strict 2PL</h4>
+                        <p style="margin-bottom: 0.5rem;"><strong>Growing phase:</strong> Same as basic 2PL &mdash; locks are acquired as needed throughout execution.</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Shrinking phase:</strong> <em>All</em> locks are released at once, right at COMMIT or ABORT. There is no gradual release.</p>
+                        <p style="margin-bottom: 0;">The shrinking phase is a single instant: <span class="highlight-text">release everything at the end.</span></p>
+                    </div>
+                </div>
+
+                <div class="analogy">
+                    Imagine you are at a buffet and you can only carry food with your hands (no plates). Basic 2PL says: once you put down any food item, you cannot pick up anything new. Strict 2PL says: you carry everything until you sit down at your table, and only then do you put everything down at once. Strict 2PL is the simpler, more conservative version &mdash; and it is the one databases actually use.
+                </div>
+
+                <div class="key-insight">
+                    Strict 2PL is strictly stronger than basic 2PL. Every strict 2PL schedule is also a basic 2PL schedule, but not vice versa. Strict 2PL has the added benefit of avoiding "cascading aborts" (where aborting one transaction forces you to abort others that read its uncommitted data). In practice, when people say "2PL" in a database context, they almost always mean strict 2PL.
+                </div>
+            </div>
+
+            <!-- Section 4: Properties of Strict 2PL -->
+            <div class="section">
+                <h2>4. Why Strict 2PL Works</h2>
+
+                <div class="definition-box">
+                    <strong>Theorem:</strong> If a schedule follows Strict 2PL, it is <strong>conflict serializable</strong> (and therefore serializable, giving us both isolation and consistency).
+                </div>
+
+                <p>
+                    Why does this work? The intuition is that locks force an ordering on conflicting operations. If T1 and T2 both want to access the same object, and at least one of them writes, then one of them will get the lock first and the other must wait. Because strict 2PL holds locks until commit, the waiting transaction cannot proceed until the first one is entirely done with that object (and in fact, entirely done with <em>all</em> objects). This forces the schedule to be "equivalent" to running the transactions one after another.
+                </p>
+
+                <div class="explanation-box">
+                    <h4>What Strict 2PL gives us</h4>
+                    <ul>
+                        <li><span class="checkmark">&#10003;</span> Every Strict 2PL schedule is <strong>conflict serializable</strong></li>
+                        <li><span class="checkmark">&#10003;</span> Conflict serializable implies <strong>serializable</strong></li>
+                        <li><span class="checkmark">&#10003;</span> Serializable implies <strong>isolation</strong> (each transaction appears to run alone)</li>
+                        <li><span class="checkmark">&#10003;</span> Isolation + correct transactions implies <strong>consistency</strong></li>
+                    </ul>
+                </div>
+
+                <p>
+                    However, there is an important caveat. Strict 2PL produces only a <strong>subset</strong> of all conflict serializable schedules. There exist schedules that are perfectly conflict serializable but would never be produced by strict 2PL, because 2PL is more conservative than necessary. This is the price we pay for a simple, practical algorithm &mdash; we give up some concurrency.
+                </p>
+
+                <div class="problem-box">
+                    <h4>The One Subtle Problem</h4>
+                    <p style="margin-bottom: 0;">
+                        The theorem says "if the schedule follows strict 2PL, it is conflict serializable." But there is a critical hidden assumption: <strong>the schedule must complete</strong>. What if two transactions are each waiting for the other to release a lock? Neither can proceed. Neither will ever commit. The schedule never completes. This is a <span class="highlight-text">deadlock</span>, and it is the Achilles' heel of locking-based concurrency control.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 5: Deadlocks -->
+            <div class="section">
+                <h2>5. Deadlocks</h2>
+
+                <div class="definition-box">
+                    <strong>Deadlock:</strong> A situation where a cycle of transactions exists, with each transaction waiting for the next transaction in the cycle to release a lock. No transaction in the cycle can proceed, so all of them wait forever.
+                </div>
+
+                <p>
+                    Deadlocks are a fundamental problem, not a bug. They arise naturally from the combination of (1) transactions holding locks while waiting, and (2) the possibility that two or more transactions need the same set of objects in different orders. Deadlocks cannot be prevented by simply "being more careful" with the locking protocol &mdash; we need explicit strategies to deal with them.
+                </p>
+
+                <div class="analogy">
+                    Two cars meet on a narrow one-lane bridge, approaching from opposite sides. Each car has entered the bridge (acquired a lock on part of it) and needs the other car to back up (release its lock) before it can proceed. Neither will back up. This is a deadlock. The only solutions are to either prevent the situation from arising (don't both enter the bridge) or detect it and force one car to back up.
+                </div>
+
+                <p>
+                    There are two fundamental approaches to dealing with deadlocks:
+                </p>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>Prevention</h4>
+                        <p style="margin-bottom: 0;">Design the protocol so that deadlocks can never occur. This is conservative and may reduce concurrency, but eliminates the problem entirely.</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>Detection</h4>
+                        <p style="margin-bottom: 0;">Allow deadlocks to occur, but periodically check for them and break them by aborting one of the transactions in the cycle.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 6: Deadlock Detection Example -->
+            <div class="section">
+                <h2>6. Deadlock Detection: A Step-by-Step Example</h2>
+
+                <p>
+                    Let us walk through the classic deadlock scenario. Two transactions, T1 and T2, each need to read one object and then write another &mdash; but they access the objects in opposite orders.
+                </p>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        <strong>T1 acquires S(A) and reads A</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T1 wants to read A, so it requests an S lock on A. No one else holds a lock on A, so the lock is granted immediately.</p>
+                    <p style="margin-bottom: 0;"><strong>Lock state:</strong> T1 holds S(A). <strong>Waits-for graph:</strong> empty.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        <strong>T2 acquires S(B) and reads B</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T2 wants to read B, so it requests an S lock on B. No one else holds a lock on B, so the lock is granted immediately.</p>
+                    <p style="margin-bottom: 0;"><strong>Lock state:</strong> T1 holds S(A), T2 holds S(B). <strong>Waits-for graph:</strong> empty.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        <strong>T2 requests X(A) &mdash; must WAIT</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T2 wants to write A, so it requests an X lock on A. But T1 holds S(A), and X locks are incompatible with S locks. T2 must wait for T1 to release S(A).</p>
+                    <p style="margin-bottom: 0;"><strong>Lock state:</strong> T1 holds S(A), T2 holds S(B), T2 waiting for X(A). <strong>Waits-for graph:</strong> T2 &rarr; T1</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        <strong>T1 requests X(B) &mdash; must WAIT &mdash; DEADLOCK!</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T1 wants to write B, so it requests an X lock on B. But T2 holds S(B), and X locks are incompatible with S locks. T1 must wait for T2 to release S(B).</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>Lock state:</strong> T1 holds S(A) and waits for X(B), T2 holds S(B) and waits for X(A).</p>
+                    <div class="graph-box">
+                        T1 &rarr; T2 &rarr; T1 &nbsp; = &nbsp; <strong>CYCLE = DEADLOCK</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">T1 is waiting for T2 (to release S(B)), and T2 is waiting for T1 (to release S(A)). Neither can make progress. Under strict 2PL, locks are only released at commit/abort, and neither transaction can reach commit because it is blocked. This is a deadlock.</p>
+                </div>
+
+                <div class="magic-connection">
+                    <h4>Important Distinction</h4>
+                    <p style="margin-bottom: 0;">
+                        The <strong>waits-for graph</strong> is <em>different</em> from the <strong>conflict graph</strong> (precedence graph) we discussed in Part 1. The conflict graph has an edge T_i &rarr; T_j if an operation of T_i conflicts with and precedes an operation of T_j &mdash; it captures the serialization order. The waits-for graph has an edge T_i &rarr; T_j if T_i is currently blocked waiting for T_j to release a lock &mdash; it captures the current blocking relationships. A cycle in the conflict graph means the schedule is not conflict serializable. A cycle in the waits-for graph means there is a deadlock.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 7: Deadlock Prevention -->
+            <div class="section">
+                <h2>7. Deadlock Prevention Strategies</h2>
+
+                <h3>Strategy 1: Conservative 2PL (C2PL)</h3>
+
+                <div class="definition-box">
+                    <strong>Conservative 2PL (C2PL):</strong> Before a transaction begins executing any operations, it must acquire <em>all</em> the locks it will ever need. If it cannot get all of them at once, it releases any locks it has obtained and tries again later.
+                </div>
+
+                <p>
+                    Why does this prevent deadlocks? Because a transaction never holds some locks while waiting for others. It either has everything it needs (and can run to completion without waiting) or it has nothing (and is not blocking anyone). Deadlock requires a cycle of "holding while waiting," and C2PL eliminates the "holding while waiting" condition entirely.
+                </p>
+
+                <div class="analogy">
+                    Imagine a chef who collects all ingredients before starting to cook. If even one ingredient is unavailable, they put everything back and wait. They never stand at the stove holding half the ingredients while blocking another chef from accessing the fridge. No standoffs are possible.
+                </div>
+
+                <div class="problem-box">
+                    <h4>Downsides of C2PL</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li><strong>Reduced concurrency:</strong> Locks are held for the entire duration of the transaction, starting even before execution begins. Objects are locked longer than necessary.</li>
+                        <li><strong>Requires foreknowledge:</strong> The system must know in advance which objects the transaction will access. This is often impractical for complex queries where the set of accessed objects depends on data values.</li>
+                        <li><strong>Potential livelock:</strong> A transaction might repeatedly fail to acquire all locks and keep retrying indefinitely, though this is usually addressed with backoff strategies.</li>
+                    </ul>
+                </div>
+
+                <h3>Strategy 2: Wait-Die and Wound-Wait</h3>
+
+                <p>
+                    These two schemes use <strong>transaction priorities</strong> to decide what happens when a lock request would cause waiting. The priority is based on the transaction's start timestamp: older transactions (started earlier) have higher priority. If T1 started before T2, then T1 has higher priority than T2.
+                </p>
+
+                <p>
+                    In both schemes, when transaction T<sub>x</sub> requests a lock held by T<sub>y</sub>, the system compares their priorities and takes action. The key difference is <em>who</em> gets aborted.
+                </p>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>Wait-Die (Non-Preemptive)</h4>
+                        <p style="margin-bottom: 0.5rem;">If T<sub>x</sub> has <strong>higher priority</strong> (is older) than T<sub>y</sub>: T<sub>x</sub> <strong>waits</strong> for T<sub>y</sub>.</p>
+                        <p style="margin-bottom: 0.5rem;">If T<sub>x</sub> has <strong>lower priority</strong> (is younger) than T<sub>y</sub>: T<sub>x</sub> <strong>aborts</strong> (dies).</p>
+                        <p style="margin-bottom: 0;">Intuition: Old transactions are patient and wait; young transactions give up easily. The lock holder (T<sub>y</sub>) is never forced to abort &mdash; hence "non-preemptive."</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>Wound-Wait (Preemptive)</h4>
+                        <p style="margin-bottom: 0.5rem;">If T<sub>x</sub> has <strong>higher priority</strong> (is older) than T<sub>y</sub>: T<sub>y</sub> <strong>aborts</strong> (is "wounded" by T<sub>x</sub>).</p>
+                        <p style="margin-bottom: 0.5rem;">If T<sub>x</sub> has <strong>lower priority</strong> (is younger) than T<sub>y</sub>: T<sub>x</sub> <strong>waits</strong> for T<sub>y</sub>.</p>
+                        <p style="margin-bottom: 0;">Intuition: Old transactions are aggressive and kick out young ones; young transactions respectfully wait. The lock holder (T<sub>y</sub>) can be forced to abort &mdash; hence "preemptive."</p>
+                    </div>
+                </div>
+
+                <h3>Wait-Die vs. Wound-Wait Comparison</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Wait-Die</th>
+                            <th>Wound-Wait</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>T<sub>x</sub> (older/higher priority) requests lock held by T<sub>y</sub> (younger)</td>
+                            <td>T<sub>x</sub> <strong>waits</strong></td>
+                            <td>T<sub>y</sub> <strong>aborts</strong> (wounded)</td>
+                        </tr>
+                        <tr>
+                            <td>T<sub>x</sub> (younger/lower priority) requests lock held by T<sub>y</sub> (older)</td>
+                            <td>T<sub>x</sub> <strong>aborts</strong> (dies)</td>
+                            <td>T<sub>x</sub> <strong>waits</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Who can be forced to abort?</td>
+                            <td>Only the <strong>requester</strong></td>
+                            <td>Only the <strong>holder</strong> (if younger)</td>
+                        </tr>
+                        <tr>
+                            <td>Preemptive?</td>
+                            <td>No</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Who waits?</td>
+                            <td>Older waits for younger</td>
+                            <td>Younger waits for older</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="explanation-box">
+                    <h4>Why do both prevent deadlocks?</h4>
+                    <p style="margin-bottom: 0.5rem;">
+                        In <strong>Wait-Die</strong>, a transaction only waits for a younger transaction. So in any chain of waiting, priorities decrease: T_old waits for T_young. You can never form a cycle because that would require T_young to wait for T_old, but Wait-Die says younger transactions abort rather than wait for older ones.
+                    </p>
+                    <p style="margin-bottom: 0.5rem;">
+                        In <strong>Wound-Wait</strong>, a transaction only waits for an older transaction. So in any chain of waiting, priorities increase: T_young waits for T_old. Again, you cannot form a cycle because that would require T_old to wait for T_young, but Wound-Wait says older transactions wound (abort) younger ones rather than wait.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        Both schemes impose a <em>consistent direction</em> on the waits-for edges, making cycles impossible.
+                    </p>
+                </div>
+
+                <div class="key-insight">
+                    When an aborted transaction restarts, it keeps its <strong>original timestamp</strong>. This is critical &mdash; it ensures the restarted transaction has high priority and will not keep getting aborted over and over again. Eventually, it will be the oldest transaction and will succeed.
+                </div>
+            </div>
+
+            <!-- Section 8: Deadlock Detection -->
+            <div class="section">
+                <h2>8. Deadlock Detection</h2>
+
+                <p>
+                    Instead of preventing deadlocks, we can allow them to happen and then detect and resolve them. This is the more common approach in practice because it allows greater concurrency &mdash; transactions are not prematurely aborted or forced to acquire all locks upfront.
+                </p>
+
+                <div class="definition-box">
+                    <strong>Waits-for Graph:</strong> A directed graph where each <strong>node</strong> represents a transaction and a directed <strong>edge T<sub>i</sub> &rarr; T<sub>j</sub></strong> means T<sub>i</sub> is waiting for T<sub>j</sub> to release a lock. A <strong>cycle</strong> in this graph indicates a deadlock.
+                </div>
+
+                <div class="explanation-box">
+                    <h4>The Detection Algorithm</h4>
+                    <ol>
+                        <li>Maintain the waits-for graph as transactions request and release locks.</li>
+                        <li>Periodically check the graph for cycles (or check whenever a new wait edge is added).</li>
+                        <li>If a cycle is found, select a <strong>victim</strong> transaction in the cycle and <strong>abort</strong> it. This breaks the cycle and allows the other transactions to proceed.</li>
+                        <li>The victim is typically chosen to minimize wasted work (e.g., the youngest transaction or the one that has done the least work).</li>
+                    </ol>
+                </div>
+
+                <p>
+                    The frequency of deadlock checking is a tuning parameter. Checking too often adds overhead; checking too rarely means transactions sit idle in deadlocks for longer. In practice, many systems check every few seconds or whenever a transaction has been waiting longer than a threshold.
+                </p>
+            </div>
+
+            <!-- Section 9: Five-Transaction 2PL Example -->
+            <div class="section">
+                <h2>9. Detailed Example: 2PL Execution with Five Transactions</h2>
+
+                <p>
+                    Let us trace through a more complex example to see strict 2PL in action. We have five transactions with the following operations to execute:
+                </p>
+
+                <div class="definition-box">
+                    <strong>Operations:</strong><br>
+                    w<sub>1</sub>(A), &nbsp; r<sub>2</sub>(A), &nbsp; w<sub>1</sub>(B), &nbsp; w<sub>3</sub>(C), &nbsp; r<sub>2</sub>(C), &nbsp; r<sub>4</sub>(B), &nbsp; w<sub>2</sub>(D), &nbsp; w<sub>4</sub>(E), &nbsp; r<sub>5</sub>(D), &nbsp; w<sub>5</sub>(E)
+                </div>
+
+                <p>
+                    We process these operations in the order listed. For each operation, we attempt to acquire the necessary lock. If the lock cannot be granted, the transaction waits. When a transaction finishes all its operations (and no more are listed), it commits and releases all locks.
+                </p>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        <strong>w<sub>1</sub>(A): T1 requests X(A)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on A. T1 is granted <strong>X(A)</strong>. T1 writes A.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T1: X(A). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        <strong>r<sub>2</sub>(A): T2 requests S(A) &mdash; BLOCKED</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T2 wants to read A, so it requests S(A). But T1 holds X(A), and S is incompatible with X. <strong>T2 must wait for T1 to release X(A).</strong></p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T1: X(A). <strong>Waiting:</strong> T2 waits for T1 (on A). <strong>Waits-for graph:</strong> T2 &rarr; T1.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        <strong>w<sub>1</sub>(B): T1 requests X(B)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on B. T1 is granted <strong>X(B)</strong>. T1 writes B. T1 has now completed all its operations (w<sub>1</sub>(A) and w<sub>1</sub>(B)).</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T1: X(A), X(B). <strong>Waiting:</strong> T2 waits for T1.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        <strong>T1 COMMITS &mdash; releases X(A), X(B)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T1 has completed all its operations. It commits and releases all locks. Now T2's request for S(A) can be granted.</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>T2 unblocked:</strong> T2 is granted <strong>S(A)</strong> and reads A.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A). <strong>Waiting:</strong> none. <strong>Waits-for graph:</strong> empty.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">5</span>
+                        <strong>w<sub>3</sub>(C): T3 requests X(C)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on C. T3 is granted <strong>X(C)</strong>. T3 writes C. T3 has completed all its operations.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A); T3: X(C). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">6</span>
+                        <strong>r<sub>2</sub>(C): T2 requests S(C) &mdash; BLOCKED</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T2 wants to read C, so it requests S(C). But T3 holds X(C). <strong>T2 must wait for T3.</strong></p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A); T3: X(C). <strong>Waiting:</strong> T2 waits for T3 (on C). <strong>Waits-for graph:</strong> T2 &rarr; T3.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">7</span>
+                        <strong>T3 COMMITS &mdash; releases X(C)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">T3 has completed all its operations. It commits and releases X(C). T2 is unblocked.</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>T2 unblocked:</strong> T2 is granted <strong>S(C)</strong> and reads C.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A), S(C). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">8</span>
+                        <strong>r<sub>4</sub>(B): T4 requests S(B)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on B (T1 released it). T4 is granted <strong>S(B)</strong>. T4 reads B.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A), S(C); T4: S(B). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">9</span>
+                        <strong>w<sub>2</sub>(D): T2 requests X(D)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on D. T2 is granted <strong>X(D)</strong>. T2 writes D. T2 has now completed all its operations (r<sub>2</sub>(A), r<sub>2</sub>(C), w<sub>2</sub>(D)).</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T2: S(A), S(C), X(D); T4: S(B). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">10</span>
+                        <strong>T2 COMMITS &mdash; releases S(A), S(C), X(D)</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">T2 has completed all its operations. It commits and releases all its locks.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">11</span>
+                        <strong>w<sub>4</sub>(E): T4 requests X(E)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on E. T4 is granted <strong>X(E)</strong>. T4 writes E. T4 has completed all its operations (r<sub>4</sub>(B), w<sub>4</sub>(E)).</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T4: S(B), X(E). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">12</span>
+                        <strong>T4 COMMITS &mdash; releases S(B), X(E)</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">T4 has completed all its operations. It commits and releases all its locks.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">13</span>
+                        <strong>r<sub>5</sub>(D): T5 requests S(D)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on D (T2 released it). T5 is granted <strong>S(D)</strong>. T5 reads D.</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T5: S(D). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">14</span>
+                        <strong>w<sub>5</sub>(E): T5 requests X(E)</strong>
+                    </div>
+                    <p style="margin-bottom: 0.5rem;">No lock exists on E (T4 released it). T5 is granted <strong>X(E)</strong>. T5 writes E. T5 has completed all its operations (r<sub>5</sub>(D), w<sub>5</sub>(E)).</p>
+                    <p style="margin-bottom: 0;"><strong>Locks held:</strong> T5: S(D), X(E). <strong>Waiting:</strong> none.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">15</span>
+                        <strong>T5 COMMITS &mdash; releases S(D), X(E)</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">T5 has completed all its operations. It commits and releases all locks. All transactions have completed successfully.</p>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>Observations from this execution</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>The <strong>waits-for graph</strong> at its most complex had just one edge: T2 &rarr; T1 (step 2) and later T2 &rarr; T3 (step 6). No cycle ever formed, so no deadlock occurred.</li>
+                        <li>T2 was blocked twice &mdash; first waiting for T1 on object A, then waiting for T3 on object C. Each time, the blocking transaction finished and released its locks, unblocking T2.</li>
+                        <li>The final commit order was T1, T3, T2, T4, T5. This schedule is equivalent to the serial schedule T1 &rarr; T3 &rarr; T2 &rarr; T4 &rarr; T5.</li>
+                        <li>This example completed without deadlock, but that was not guaranteed &mdash; a different ordering of operations or different transactions could have produced a cycle in the waits-for graph.</li>
+                    </ul>
+                </div>
+
+                <div class="graph-box">
+                    Waits-for graph at Step 2: &nbsp; T2 &rarr; T1<br>
+                    Waits-for graph at Step 6: &nbsp; T2 &rarr; T3<br>
+                    No cycle at any point &mdash; no deadlock.
+                </div>
+            </div>
+
+            <!-- Section 10: Summary -->
+            <div class="section">
+                <h2>10. Summary</h2>
+
+                <div class="summary-box">
+                    <h3>Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Strict 2PL</strong> is the workhorse concurrency control protocol: acquire S locks before reads, X locks before writes, release everything at commit/abort.</li>
+                        <li>If a strict 2PL schedule <strong>completes</strong>, it is guaranteed to be <strong>conflict serializable</strong> &mdash; giving us isolation and consistency.</li>
+                        <li>Strict 2PL produces a <strong>subset</strong> of all conflict serializable schedules. It is conservative, trading some concurrency for simplicity and correctness.</li>
+                        <li><strong>Deadlocks</strong> are the critical weakness: cycles in the waits-for graph where transactions are stuck waiting for each other forever.</li>
+                        <li><strong>Prevention</strong> strategies (C2PL, Wait-Die, Wound-Wait) make deadlocks impossible but may reduce concurrency or cause unnecessary aborts.</li>
+                        <li><strong>Detection</strong> strategies maintain a waits-for graph, periodically check for cycles, and abort a victim to break the cycle. This is the most common approach in practice.</li>
+                        <li>The fundamental limitation of locking: <span class="highlight-text">there is no guarantee the schedule will finish.</span> Correctness is conditional on completion.</li>
+                    </ul>
+                </div>
+
+                <div class="key-insight">
+                    Locking-based concurrency control gives us a powerful guarantee: every schedule it produces is conflict serializable. But it comes with a price &mdash; the possibility of deadlock means we need additional machinery (prevention or detection) to ensure that transactions actually complete. The database does not simply "run transactions correctly" &mdash; it runs them correctly <em>if</em> it can get them to finish, and it uses deadlock handling to make sure they eventually do.
+                </div>
+            </div>
+
+        </main>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Locking &amp; Deadlocks Deep Dive &mdash; Supplementary to Lecture 05</p>
+        </footer>
+    </div>
+</body>
+</html>

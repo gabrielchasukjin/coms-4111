@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIFO and LRU Cache Eviction — Part 6</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>FIFO and LRU Cache Eviction</h1>
+            <p class="subtitle">Two fundamental eviction policies — simplicity vs. recency awareness</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: FIFO -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. FIFO (First In, First Out)</h2>
+
+            <div class="definition-box">
+                <strong>FIFO Policy:</strong> Evict the item that was <strong>inserted into the cache earliest</strong> (i.e., has been in the cache the longest). The idea is simple: the oldest item is the least relevant.
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Advantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>Simple and easy to implement</li>
+                        <li>Can be implemented as a basic queue — new items enter at the tail, evictions happen at the head</li>
+                        <li>No need to track access patterns at all</li>
+                    </ul>
+                </div>
+                <div class="visual-item">
+                    <h4>Disadvantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>An old item might actually be a <strong>popular</strong> item that is accessed frequently</li>
+                        <li>FIFO ignores usage entirely — it doesn't care how often or how recently an item was accessed</li>
+                        <li>In general, suffers from a <strong>low hit rate</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>FIFO Worked Example</h3>
+
+            <p>Access sequence: <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with a cache of size 4. The leftmost item in the cache is the oldest (next to be evicted).</p>
+
+            <table>
+                <tr>
+                    <th>Request</th>
+                    <th>Result</th>
+                    <th>Action</th>
+                    <th>Cache State (oldest &rarr; newest)</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 1</td>
+                    <td>[1]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 2</td>
+                    <td>[1, 2]</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 3</td>
+                    <td>[1, 2, 3]</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 4 (cache full)</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>1 is in cache</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>2 is in cache</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 1 (oldest), insert 5</td>
+                    <td>[2, 3, 4, 5]</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 2, insert 1</td>
+                    <td>[3, 4, 5, 1]</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 3, insert 2</td>
+                    <td>[4, 5, 1, 2]</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 4, insert 3</td>
+                    <td>[5, 1, 2, 3]</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 5, insert 4</td>
+                    <td>[1, 2, 3, 4]</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 1, insert 5</td>
+                    <td>[2, 3, 4, 5]</td>
+                </tr>
+            </table>
+
+            <div class="problem-box">
+                <h4>Result: 10 misses out of 12 requests</h4>
+                <p style="margin-bottom: 0.5rem;">Hit rate: 2/12 = <strong>16.7%</strong>. This is terrible! After the initial cold misses (filling the cache with 1-4), items 1 and 2 get hits on requests 5-6. But then requesting 5 evicts 1 (the oldest), and from that point on, every single request is a miss.</p>
+                <p style="margin-bottom: 0;">The problem is clear: FIFO evicted items 1 and 2 even though they were recently accessed (and about to be accessed again). It only cares about <em>insertion time</em>, not <em>usage</em>.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: LRU -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. LRU (Least Recently Used)</h2>
+
+            <div class="definition-box">
+                <strong>LRU Policy:</strong> Evict the item that was <strong>least recently accessed</strong> (i.e., whose last access was furthest in the past). The idea: if an item was accessed recently, it is likely to be accessed again soon.
+            </div>
+
+            <p>The key difference from FIFO: LRU tracks <em>when each item was last used</em>, not just when it was first inserted. Every time an item is accessed (hit), its "last used" timestamp is refreshed, moving it to the back of the eviction queue.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Advantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>The <strong>default eviction policy</strong> in most systems — works well for many real workloads</li>
+                        <li>Captures <strong>temporal locality</strong>: recently used items stay in cache</li>
+                        <li>Popular items that are accessed repeatedly will never be evicted (they keep refreshing their position)</li>
+                    </ul>
+                </div>
+                <div class="visual-item">
+                    <h4>Disadvantages</h4>
+                    <ul style="margin-bottom: 0;">
+                        <li>Sounds simple but can be <strong>expensive to implement</strong></li>
+                        <li>Need to track the last access time of each item</li>
+                        <li>Need to efficiently find the item with the oldest access time (often done with a doubly-linked list + hash map)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>LRU Worked Example (Beginning)</h3>
+
+            <p>Same access sequence: <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. The cache is ordered by recency — leftmost is the <em>least</em> recently used (next to be evicted).</p>
+
+            <div class="explanation-box">
+                <h4>First 4 Requests: Cold Misses</h4>
+                <p style="margin-bottom: 0.5rem;">Request 1: miss &rarr; cache = [1]</p>
+                <p style="margin-bottom: 0.5rem;">Request 2: miss &rarr; cache = [1, 2]</p>
+                <p style="margin-bottom: 0.5rem;">Request 3: miss &rarr; cache = [1, 2, 3]</p>
+                <p style="margin-bottom: 0;">Request 4: miss &rarr; cache = [1, 2, 3, 4] (full)</p>
+            </div>
+
+            <p>So far, LRU behaves identically to FIFO — the cache fills up with 4 misses. The difference begins on the next request, because LRU will update the position of items when they are accessed. The full trace continues in Part 7.</p>
+
+            <div class="key-insight">
+                The critical difference is what happens next: when request 1 arrives (a hit), FIFO does nothing to 1's position in the queue. But LRU moves 1 to the "most recently used" end, protecting it from eviction. This means when item 5 later needs space, LRU will evict 3 (the least recently used) instead of 1 (which FIFO would evict).
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: FIFO vs. LRU Comparison -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. FIFO vs. LRU: The Core Distinction</h2>
+
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>FIFO</th>
+                    <th>LRU</th>
+                </tr>
+                <tr>
+                    <td>Evicts based on</td>
+                    <td>Insertion time</td>
+                    <td>Last access time</td>
+                </tr>
+                <tr>
+                    <td>On cache hit</td>
+                    <td>Nothing changes</td>
+                    <td>Item moves to "most recent" position</td>
+                </tr>
+                <tr>
+                    <td>Tracks</td>
+                    <td>Only insertion order</td>
+                    <td>Last access time for every item</td>
+                </tr>
+                <tr>
+                    <td>Implementation</td>
+                    <td>Simple queue</td>
+                    <td>Doubly-linked list + hash map</td>
+                </tr>
+                <tr>
+                    <td>Handles popular items</td>
+                    <td>Poorly — evicts them if old</td>
+                    <td>Well — recent access protects them</td>
+                </tr>
+                <tr>
+                    <td>Typical hit rate</td>
+                    <td>Low</td>
+                    <td>Good for most workloads</td>
+                </tr>
+            </table>
+
+            <div class="analogy">
+                Think of a library shelf with limited space. FIFO is like removing the book that was placed on the shelf earliest, regardless of whether students keep borrowing it. LRU removes the book that nobody has checked out for the longest time — a much better heuristic for keeping useful books available.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 6</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>FIFO</strong> evicts the oldest-inserted item — simple (queue) but ignores usage, leading to low hit rates</li>
+                    <li><span class="checkmark">&#10003;</span> FIFO example: 10 misses out of 12 requests (<strong>16.7% hit rate</strong>) on the reference sequence</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>LRU</strong> evicts the least-recently-accessed item — captures temporal locality and is the default policy in most systems</li>
+                    <li><span class="checkmark">&#10003;</span> The key difference: on a <strong>cache hit</strong>, FIFO does nothing while LRU refreshes the item's position, protecting frequently accessed items from eviction</li>
+                    <li><span class="checkmark">&#10003;</span> LRU is more expensive to implement — requires tracking last access time and efficiently finding the minimum</li>
+                    <li><span class="checkmark">&#10003;</span> The LRU example on the same sequence (continued in Part 7) will demonstrate the hit rate improvement</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

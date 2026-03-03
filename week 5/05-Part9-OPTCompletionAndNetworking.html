@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPT Completion, Real-World Caching, and TCP/IP Introduction — Part 9</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>OPT Completion, Real-World Caching, and TCP/IP Introduction</h1>
+            <p class="subtitle">Finishing the optimal benchmark, practical complications, and the start of networking</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: OPT Worked Example (Complete) -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. OPT Worked Example (Complete)</h2>
+
+            <p>Continuing from Part 8, here is the full OPT trace for <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. OPT looks ahead at the <em>entire remaining sequence</em> to decide which item to evict.</p>
+
+            <table>
+                <tr>
+                    <th>Req</th>
+                    <th>Result</th>
+                    <th>Action</th>
+                    <th>Cache</th>
+                    <th>Reasoning (future lookahead)</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 1</td>
+                    <td>{1}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 2</td>
+                    <td>{1, 2}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 3</td>
+                    <td>{1, 2, 3}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 4 (full)</td>
+                    <td>{1, 2, 3, 4}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 3, 4}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 3, 4}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 4, insert 5</td>
+                    <td>{1, 2, 3, 5}</td>
+                    <td>Future: 1,2,3,4,5. Next use: 1&rarr;1 step, 2&rarr;2 steps, 3&rarr;3 steps, <strong>4&rarr;4 steps</strong> (furthest)</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 3, 5}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 3, 5}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 3, 5}</td>
+                    <td>—</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 3, insert 4</td>
+                    <td>{1, 2, 4, 5}</td>
+                    <td>Future: 5. Next use: 5&rarr;1 step, 1&rarr;never, 2&rarr;never, <strong>3&rarr;never</strong> (tie; evict any)</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Hit</td>
+                    <td>—</td>
+                    <td>{1, 2, 4, 5}</td>
+                    <td>—</td>
+                </tr>
+            </table>
+
+            <div class="magic-connection">
+                <h4>Result: 6 misses, 6 hits out of 12 requests — this is optimal!</h4>
+                <p style="margin-bottom: 0.5rem;">Hit rate: 6/12 = <strong>50%</strong>. No other eviction policy can achieve fewer than 6 misses on this sequence with a cache of size 4.</p>
+                <p style="margin-bottom: 0;">The critical decision was at request 7 (item 5): OPT knew that item 4's next access was furthest away (4 steps), so it evicted 4. This kept items 1, 2, and 3 in cache, allowing hits on requests 8, 9, and 10. LRU also evicted 3 at this point (wrong choice), while LFU evicted 3 (also suboptimal here).</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Final Comparison -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Final Eviction Policy Comparison</h2>
+
+            <table>
+                <tr>
+                    <th>Policy</th>
+                    <th>Misses</th>
+                    <th>Hits</th>
+                    <th>Hit Rate</th>
+                </tr>
+                <tr>
+                    <td>FIFO</td>
+                    <td>10</td>
+                    <td>2</td>
+                    <td>16.7%</td>
+                </tr>
+                <tr>
+                    <td>LRU</td>
+                    <td>8</td>
+                    <td>4</td>
+                    <td>33.3%</td>
+                </tr>
+                <tr>
+                    <td>LFU</td>
+                    <td>7</td>
+                    <td>5</td>
+                    <td>41.7%</td>
+                </tr>
+                <tr>
+                    <td><strong>OPT</strong></td>
+                    <td><strong>6</strong></td>
+                    <td><strong>6</strong></td>
+                    <td><strong>50% (optimal)</strong></td>
+                </tr>
+            </table>
+
+            <div class="key-insight">
+                4 of the 6 misses are unavoidable cold misses (the first access to each of 1, 2, 3, 4). OPT shows that only 2 additional misses are necessary beyond the cold misses. FIFO incurs 6 extra misses, LRU incurs 4 extra, and LFU incurs 3 extra.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Eviction Policies in the Real World -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Eviction Policies in the Real World</h2>
+
+            <p>All of the eviction policies surveyed (except OPT) are used in real systems. <strong>LRU and its approximations</strong> are the most common in practice.</p>
+
+            <div class="problem-box">
+                <h4>Complication: Variable-Sized Items</h4>
+                <p style="margin-bottom: 0;">Our model assumed all items have the same size. In reality, items can have very different sizes. A large item might cause the eviction of many small items when inserted. This makes eviction decisions much more complex — do you evict one large item or several small ones? Size-aware policies must balance the "value" of an item against the space it occupies.</p>
+            </div>
+
+            <p>The lecture references the Facebook/Meta paper "Scaling Memcache at Facebook" (NSDI 2013), which describes how Facebook uses Memcached as the foundation for a distributed key-value cache handling billions of requests per second and trillions of items for over a billion users.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: TCP/IP 5-Layer Model -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. TCP/IP 5-Layer Model — Introduction</h2>
+
+            <p>The lecture shifts to a new major topic: <strong>networking</strong>. Understanding how data travels across the internet is essential for data systems, since databases, caches, and applications communicate over the network.</p>
+
+            <div class="definition-box">
+                <strong>TCP/IP 5-Layer Model:</strong> The standard framework for understanding how data moves across the internet. Each layer has a specific responsibility and communicates with the layers directly above and below it.
+            </div>
+
+            <table>
+                <tr>
+                    <th>Layer</th>
+                    <th>Name</th>
+                    <th>Responsibility</th>
+                    <th>Key Protocols/Concepts</th>
+                </tr>
+                <tr>
+                    <td><strong>5</strong></td>
+                    <td>Application</td>
+                    <td>User-facing protocols and data</td>
+                    <td>HTTP, HTTPS, SMTP, FTP, SSH, DNS</td>
+                </tr>
+                <tr>
+                    <td><strong>4</strong></td>
+                    <td>Transport</td>
+                    <td>End-to-end communication, reliability</td>
+                    <td>TCP, UDP, QUIC, port numbers</td>
+                </tr>
+                <tr>
+                    <td><strong>3</strong></td>
+                    <td>Network</td>
+                    <td>Routing packets across networks</td>
+                    <td>IPv4, IPv6, BGP, routers</td>
+                </tr>
+                <tr>
+                    <td><strong>2</strong></td>
+                    <td>Data Link</td>
+                    <td>Local network delivery, framing</td>
+                    <td>Ethernet frames, MAC, ARP, DHCP</td>
+                </tr>
+                <tr>
+                    <td><strong>1</strong></td>
+                    <td>Physical</td>
+                    <td>Bits as physical signals on a medium</td>
+                    <td>Fiber, copper, WiFi, 5G, satellite</td>
+                </tr>
+            </table>
+
+            <p>Data flows <strong>down</strong> the stack on the sender side (encapsulation) and <strong>up</strong> the stack on the receiver side (decapsulation). Each layer wraps the data from the layer above with its own header information.</p>
+
+            <h3>Layer 1: Physical</h3>
+
+            <p>The physical layer converts bits to physical signals. The choice of medium determines speed, range, and latency:</p>
+
+            <ul>
+                <li><strong>Twisted pair</strong> (Ethernet Cat5e/6): 4 pairs, 8 conductors — spans L1 signaling + L2 framing</li>
+                <li><strong>Coaxial cable</strong> (DOCSIS broadband): single copper core + shielding</li>
+                <li><strong>Fiber optic</strong> (internet backbone): light pulses over km-scale range</li>
+                <li><strong>Wireless spectrum</strong>: 2.4 GHz WiFi (longer range) to 5G mmWave (faster but shorter range). Higher frequency = faster but shorter range</li>
+                <li><strong>Satellite</strong>: GEO has ~600ms latency (physics); LEO (e.g., Starlink) achieves 20-40ms — viable for apps</li>
+            </ul>
+
+            <div class="analogy">
+                Microwave travels faster than fiber (air vs. glass). High-frequency trading firms exploit this by using microwave links between exchanges to shave microseconds off latency. Layer 1 is protocol-agnostic — a broken cable kills everything above it regardless of how good your software is.
+            </div>
+
+            <h3>Layer 2: Data Link</h3>
+
+            <p>The data link layer organizes bits into <strong>frames</strong> and handles local network delivery. Key concepts:</p>
+
+            <ul>
+                <li><strong>Ethernet frame structure:</strong> Preamble (8B) | Dst MAC (6B) | Src MAC (6B) | Type (2B) | Payload (46-1500B) | FCS (4B)</li>
+                <li><strong>MAC address:</strong> 48-bit hardware identifier burned in at manufacture (e.g., <code>3C:22:FB:4A:9E:01</code>). Local only — invisible beyond the router. Switches use MAC tables; routers do not.</li>
+                <li><strong>ARP (Address Resolution Protocol):</strong> bridges L2 (MAC) and L3 (IP). Broadcasts "Who has 192.168.1.1?" and gets a reply with the MAC address. ARP cache stores mappings. (Note: ARP poisoning is a known attack.)</li>
+                <li><strong>DHCP:</strong> bootstraps new devices automatically with a 4-step handshake: DISCOVER &rarr; OFFER &rarr; REQUEST &rarr; ACK. Assigns IP, subnet, gateway, DNS.</li>
+            </ul>
+
+            <h3>Layer 3: Network</h3>
+
+            <p>The network layer routes packets across <strong>multiple networks</strong> using IP addresses, making the global internet possible.</p>
+
+            <ul>
+                <li><strong>IPv4:</strong> 32-bit addresses (~4.3 billion), now exhausted. NAT extends usable addresses.</li>
+                <li><strong>IPv6:</strong> 128-bit addresses (340 undecillion), eliminates NAT. Dominant on mobile.</li>
+                <li><strong>IPv4 address structure:</strong> 4 octets (e.g., 192.168.1.5), split into network portion and host portion</li>
+                <li><strong>BGP (Border Gateway Protocol):</strong> how autonomous systems (ISPs, companies) announce routes to each other. Trust-based — any AS can announce any prefix, which makes it vulnerable. This is exactly what caused the 2021 Facebook outage.</li>
+            </ul>
+
+            <div class="key-insight">
+                IP addresses are logical and hierarchical — they encode location. No single router has a complete map of the internet; each makes a local best-hop decision. BGP's trust model is its greatest vulnerability.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 9</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>OPT achieves 6 misses</strong> (50% hit rate) — provably optimal. Only 2 misses beyond the 4 unavoidable cold misses.</li>
+                    <li><span class="checkmark">&#10003;</span> OPT's key decision: evict <strong>item 4</strong> when 5 arrives (4 is furthest from next use), keeping 1, 2, 3 for subsequent hits</li>
+                    <li><span class="checkmark">&#10003;</span> Final ranking: FIFO (10 misses) &lt; LRU (8) &lt; LFU (7) &lt; <strong>OPT (6)</strong></li>
+                    <li><span class="checkmark">&#10003;</span> All policies except OPT are used in real systems; <strong>LRU and approximations are most common</strong></li>
+                    <li><span class="checkmark">&#10003;</span> Real-world complication: <strong>variable-sized items</strong> make eviction decisions much harder</li>
+                    <li><span class="checkmark">&#10003;</span> Facebook's Memcached paper shows caching at massive scale (billions of requests/sec)</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>TCP/IP 5-Layer Model:</strong> Physical &rarr; Data Link &rarr; Network &rarr; Transport &rarr; Application</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 1 (Physical):</strong> medium determines speed/range/latency (fiber, copper, wireless, satellite)</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 2 (Data Link):</strong> MAC addresses, Ethernet frames, ARP, DHCP — local delivery</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Layer 3 (Network):</strong> IP addresses (IPv4/IPv6), BGP routing between autonomous systems</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions and OLTP Databases — Part 1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        .schedule-table { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; }
+        .schedule-table td { padding: 0.5rem 1rem; }
+        .conflict-arrow { font-weight: 600; color: #000; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Transactions and OLTP Databases</h1>
+            <p class="subtitle">Understanding how databases keep your data safe and consistent</p>
+        </header>
+
+        <main>
+            <!-- Section 1: Introduction and Context -->
+            <div class="section">
+                <h2>Why Transactions Matter</h2>
+
+                <p>
+                    Imagine you are transferring $500 from your checking account to your savings account. The database needs to do two things: subtract $500 from checking and add $500 to savings. What happens if the system crashes right after the subtraction but before the addition? Your $500 just vanished into thin air. This is the kind of nightmare that transactions are designed to prevent.
+                </p>
+
+                <div class="definition-box">
+                    <strong>Transaction:</strong> A sequence of one or more database operations (reads and writes) that are treated as a single, indivisible unit of work. Either <em>all</em> of the operations succeed and their effects become permanent, or <em>none</em> of them do. There is no in-between.
+                </div>
+
+                <p>
+                    Transactions are the foundational abstraction of <strong>OLTP (Online Transaction Processing)</strong> databases &mdash; the systems that power nearly every application you interact with daily: banking, e-commerce, social media, ride-sharing, and more. These systems handle enormous volumes of short, fast operations from many users simultaneously, and they must do so without corrupting data or producing nonsensical results.
+                </p>
+
+                <div class="analogy">
+                    Think of a transaction like an "all-or-nothing" contract. When you buy a house, the deed transfer, the mortgage signing, and the payment all happen together at closing. If any single piece falls through, the entire deal is off &mdash; you do not end up paying for a house you do not own, and the seller does not transfer a house they have not been paid for. A database transaction provides exactly this guarantee for data operations.
+                </div>
+            </div>
+
+            <!-- Section 2: DBMS Techniques and the ACID Properties -->
+            <div class="section">
+                <h2>The ACID Properties</h2>
+
+                <p>
+                    The guarantees that transactions provide are captured by a famous acronym: <strong>ACID</strong>. Each letter represents a property that the database management system (DBMS) must enforce. Let us look at each one and understand the specific techniques that make them possible.
+                </p>
+
+                <div class="definition-box">
+                    <strong>ACID</strong> stands for <strong>Atomicity</strong>, <strong>Consistency</strong>, <strong>Isolation</strong>, and <strong>Durability</strong>. Together, these properties ensure that database transactions are processed reliably, even in the face of errors, crashes, and concurrent access.
+                </div>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>A &mdash; Atomicity</h4>
+                        <p style="margin-bottom: 0.5rem;">A transaction is "all or nothing." If any part fails, the entire transaction is rolled back and the database is left unchanged.</p>
+                        <p style="margin-bottom: 0;"><strong>Enforced by:</strong> Write-Ahead Logging (WAL)</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>C &mdash; Consistency</h4>
+                        <p style="margin-bottom: 0.5rem;">A transaction brings the database from one valid state to another. All integrity constraints (foreign keys, uniqueness, check constraints) are satisfied before and after.</p>
+                        <p style="margin-bottom: 0;"><strong>Enforced by:</strong> 2-Phase Locking + application logic</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>I &mdash; Isolation</h4>
+                        <p style="margin-bottom: 0.5rem;">Concurrent transactions do not interfere with each other. Each transaction behaves as if it were the only one running on the system.</p>
+                        <p style="margin-bottom: 0;"><strong>Enforced by:</strong> Serializability, 2-Phase Locking</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>D &mdash; Durability</h4>
+                        <p style="margin-bottom: 0.5rem;">Once a transaction commits, its effects are permanent &mdash; even if the system crashes immediately afterward.</p>
+                        <p style="margin-bottom: 0;"><strong>Enforced by:</strong> Write-Ahead Logging (WAL)</p>
+                    </div>
+                </div>
+
+                <h3>The Techniques Behind ACID</h3>
+
+                <p>
+                    A DBMS employs several core techniques and algorithms to deliver these guarantees. Some of these directly enforce ACID properties, while others improve performance so that ACID enforcement does not make the system unacceptably slow.
+                </p>
+
+                <div class="explanation-box">
+                    <h4>Write-Ahead Logging (WAL) &mdash; Atomicity and Durability</h4>
+                    <p style="margin-bottom: 0.75rem;">
+                        Before any change is written to the actual database pages on disk, a record describing the change is first written to a <strong>log file</strong>. This log is append-only and written sequentially, making it extremely fast. If the system crashes mid-transaction, the log tells the recovery process exactly which changes were made and whether the transaction committed. Uncommitted changes are undone (atomicity); committed changes are redone if they had not yet reached disk (durability).
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        The key principle: <em>the log is the source of truth</em>. The actual data pages on disk may be out of date, but the log always tells the full story.
+                    </p>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>Serializability &mdash; Isolation</h4>
+                    <p style="margin-bottom: 0;">
+                        The gold standard for isolation. A schedule of interleaved transactions is <strong>serializable</strong> if its outcome is equivalent to some serial execution (one transaction at a time, no interleaving). We will explore this in great detail later in this document.
+                    </p>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>2-Phase Locking (2PL) &mdash; Consistency and Isolation</h4>
+                    <p style="margin-bottom: 0;">
+                        A protocol where each transaction acquires locks in a "growing phase" (acquiring locks, never releasing) and then releases them in a "shrinking phase" (releasing locks, never acquiring). This guarantees that any interleaved schedule produced under 2PL is conflict-serializable, thus enforcing both consistency and isolation.
+                    </p>
+                </div>
+
+                <h3>Performance Techniques</h3>
+
+                <p>
+                    Enforcing ACID is essential, but it is not free. Locking, logging, and checking serializability all add overhead. The following techniques help databases remain fast despite these costs:
+                </p>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>Indexing</h4>
+                        <p style="margin-bottom: 0;">Provides <strong>faster access</strong> to data. Instead of scanning every row, the DBMS uses data structures like B+ trees or hash indexes to jump directly to the needed rows. This is critical for transactions that touch only a few rows out of millions.</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>Bloom Filters</h4>
+                        <p style="margin-bottom: 0;"><strong>Reduces unnecessary access.</strong> A probabilistic data structure that can quickly tell you "this data is definitely not here" (no false negatives) or "this data might be here" (possible false positives). This avoids expensive disk reads for data that does not exist.</p>
+                    </div>
+                </div>
+
+                <div class="explanation-box">
+                    <h4>Caching</h4>
+                    <p style="margin-bottom: 0;">
+                        <strong>Reduces work duplication.</strong> Frequently accessed data pages are kept in memory (the "buffer pool") so that repeated reads do not require going to disk. The DBMS manages this cache carefully, especially in coordination with write-ahead logging, to ensure that cached dirty pages do not compromise durability.
+                    </p>
+                </div>
+
+                <div class="key-insight">
+                    The ACID properties tell you <em>what</em> guarantees the database provides. The techniques (WAL, 2PL, serializability, indexing, bloom filters, caching) tell you <em>how</em> those guarantees are actually achieved. Understanding both is essential for reasoning about database behavior and performance.
+                </div>
+            </div>
+
+            <!-- Section 3: Concurrency Anomalies -->
+            <div class="section">
+                <h2>Concurrency Anomalies</h2>
+
+                <p>
+                    When multiple transactions run at the same time and access the same data, things can go wrong in subtle and dangerous ways. These problems are called <strong>concurrency anomalies</strong>, and understanding them is crucial because they define exactly what the Isolation property of ACID is designed to prevent.
+                </p>
+
+                <p>
+                    There are four classic anomalies. All of them are <span class="highlight-text">disallowed by serializability</span> &mdash; if a schedule is serializable, none of these anomalies can occur.
+                </p>
+
+                <h3>1. Lost Updates (Write-Write Conflict)</h3>
+
+                <div class="problem-box">
+                    <h4>The Problem</h4>
+                    <p style="margin-bottom: 0.75rem;">
+                        Two transactions both read the same data item and then both write to it. The second write overwrites the first, and the first transaction's update is silently lost.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> A bank account has balance = $1000. Transaction Tx adds $200 (reads $1000, writes $1200). Transaction Ty subtracts $100 (reads $1000, writes $900). If Ty's write happens after Tx's write, the final balance is $900 &mdash; the $200 deposit is completely lost. The correct answer should be $1100.
+                    </p>
+                </div>
+
+                <div class="analogy">
+                    Imagine two people editing the same Google Doc at the same time, but without real-time sync. Person A changes paragraph 3, saves. Person B (who opened the doc before A saved) changes paragraph 5, saves. Person B's save overwrites the entire document, erasing Person A's changes to paragraph 3. Person A's edit is "lost."
+                </div>
+
+                <h3>2. Dirty Reads (Write-Read Conflict)</h3>
+
+                <div class="problem-box">
+                    <h4>The Problem</h4>
+                    <p style="margin-bottom: 0.75rem;">
+                        A transaction reads data that has been modified by another transaction that has <em>not yet committed</em>. If that other transaction later aborts (rolls back), the reading transaction has based its work on data that never officially existed.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> Transaction Tx updates account A from $1000 to $500. Transaction Ty reads account A and sees $500. Then Tx aborts, restoring A to $1000. But Ty has already acted on the $500 value &mdash; a phantom number that was never committed. Ty has been "dirtied" by reading uncommitted data.
+                    </p>
+                </div>
+
+                <div class="analogy">
+                    You overhear someone on the phone saying "I'm going to quit my job tomorrow." You immediately tell all your friends. But the person was just venting and never actually quits. You spread information based on an intention that was never finalized &mdash; a "dirty read" of someone's uncommitted plans.
+                </div>
+
+                <h3>3. Unrepeatable Reads (Read-Write Conflict)</h3>
+
+                <div class="problem-box">
+                    <h4>The Problem</h4>
+                    <p style="margin-bottom: 0.75rem;">
+                        A transaction reads the same data item twice and gets different values each time, because another transaction modified and committed the data in between the two reads.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> Transaction Tx reads A = 0. Transaction Ty then updates A = 1 and commits. Transaction Tx reads A again and now sees A = 1. Within the same transaction, Tx has seen two different values for A. This breaks the illusion that Tx is running in isolation.
+                    </p>
+                </div>
+
+                <div class="analogy">
+                    You check the price of a flight: $300. You go grab your credit card (takes 30 seconds). You come back and the price is now $450. The "data" you read changed between your two observations, even though from your perspective you were in the middle of a single task (buying a ticket). Unrepeatable reads break the consistency of your view of the world during a transaction.
+                </div>
+
+                <h3>4. Phantom Reads (Read-Write Conflict)</h3>
+
+                <div class="problem-box">
+                    <h4>The Problem</h4>
+                    <p style="margin-bottom: 0.75rem;">
+                        A transaction executes a query that returns a set of rows. Another transaction inserts or deletes rows that match the query's criteria and commits. The first transaction re-executes the same query and gets a different set of rows &mdash; "phantom" rows have appeared or disappeared.
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong>Example:</strong> Transaction Tx runs <code>SELECT * FROM employees WHERE dept = 'Engineering'</code> and gets 50 rows. Transaction Ty inserts a new engineering employee and commits. Tx runs the same query again and gets 51 rows. A new row &mdash; a phantom &mdash; has appeared.
+                    </p>
+                </div>
+
+                <div class="analogy">
+                    You count the number of people in a room: 20. While you are writing down the number, someone walks in. You count again: 21. The room has the same "query" (how many people?) but the result has changed because the underlying set shifted. The new person is a "phantom."
+                </div>
+
+                <div class="key-insight">
+                    Notice the subtle difference between unrepeatable reads and phantom reads. An unrepeatable read is about a <em>single row</em> changing its value. A phantom read is about the <em>set of rows</em> matching a query changing (rows being added or removed). Both are read-write conflicts, but phantoms involve the boundaries of the result set, not just the content of individual rows.
+                </div>
+
+                <h3>Summary of Anomalies</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Anomaly</th>
+                            <th>Conflict Type</th>
+                            <th>What Goes Wrong</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Lost Update</strong></td>
+                            <td>Write-Write (WW)</td>
+                            <td>Two transactions write the same item; one write is silently overwritten by the other</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dirty Read</strong></td>
+                            <td>Write-Read (WR)</td>
+                            <td>A transaction reads data written by another transaction that has not yet committed (and may abort)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Unrepeatable Read</strong></td>
+                            <td>Read-Write (RW)</td>
+                            <td>A transaction reads the same row twice and gets different values because another transaction modified it in between</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phantom Read</strong></td>
+                            <td>Read-Write (RW)</td>
+                            <td>A transaction executes the same query twice and gets a different set of rows because another transaction inserted or deleted matching rows</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="magic-connection">
+                    <h4>The Unifying Principle</h4>
+                    <p style="margin-bottom: 0;">
+                        All four anomalies share a common root cause: two transactions access the same data, and at least one of them writes. The combination of concurrent access and modification creates a <strong>conflict</strong>. Serializability is the guarantee that these conflicts are resolved in a way that is equivalent to running the transactions one at a time &mdash; eliminating every anomaly in the table above.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 4: Serializability and Conflict Graphs -->
+            <div class="section">
+                <h2>Serializability and Conflict Graphs</h2>
+
+                <p>
+                    We have established that serializability is the gold standard for transaction isolation. But what exactly does it mean, and how do we test whether a given schedule is serializable? This section develops the theory and walks through a complete example.
+                </p>
+
+                <h3>Serial vs. Interleaved Schedules</h3>
+
+                <div class="visual-comparison">
+                    <div class="visual-item">
+                        <h4>Serial Schedule</h4>
+                        <p style="margin-bottom: 0.75rem;">Transactions execute one at a time, with no interleaving. Transaction T1 runs completely, then T2 runs completely, and so on.</p>
+                        <p style="margin-bottom: 0;"><strong>Always correct</strong> by definition &mdash; no concurrency anomalies are possible. But performance is terrible because there is no parallelism.</p>
+                    </div>
+                    <div class="visual-item">
+                        <h4>Interleaved Schedule</h4>
+                        <p style="margin-bottom: 0.75rem;">Operations from different transactions are mixed together in time. T1 does a read, then T2 does a write, then T1 does another read, etc.</p>
+                        <p style="margin-bottom: 0;"><strong>May or may not be correct.</strong> Great for performance (multiple transactions make progress simultaneously), but we need to verify that the result is equivalent to some serial schedule.</p>
+                    </div>
+                </div>
+
+                <div class="definition-box">
+                    <strong>Serializable Schedule:</strong> An interleaved schedule is <em>serializable</em> if its effect on the database is identical to the effect of <em>some</em> serial schedule of the same transactions. It does not have to match every serial order &mdash; just at least one.
+                </div>
+
+                <div class="analogy">
+                    Consider a kitchen with multiple chefs. A "serial schedule" is like having each chef complete their entire dish before the next chef starts. An "interleaved schedule" is like chefs sharing the kitchen simultaneously &mdash; one chops while another saut&eacute;s. The schedule is "serializable" if the final result (all dishes) is exactly the same as if the chefs had worked one at a time in some order. The dishes taste the same; only the timing of the kitchen work differs.
+                </div>
+
+                <h3>Conflict Serializability</h3>
+
+                <p>
+                    Testing whether two schedules produce identical results for every possible database state is impractical. Instead, we use a stronger (more conservative) but easily testable condition called <strong>conflict serializability</strong>.
+                </p>
+
+                <div class="definition-box">
+                    <strong>Conflicting Operations:</strong> Two operations from <em>different</em> transactions conflict if they access the <em>same data item</em> and at least one of them is a <em>write</em>. The three types of conflicts are:
+                    <ul style="margin-top: 0.75rem; margin-bottom: 0;">
+                        <li><strong>Read-Write (RW):</strong> One transaction reads, another writes the same item</li>
+                        <li><strong>Write-Read (WR):</strong> One transaction writes, another reads the same item</li>
+                        <li><strong>Write-Write (WW):</strong> Both transactions write the same item</li>
+                    </ul>
+                </div>
+
+                <p>
+                    Two reads on the same item by different transactions are <strong>not</strong> a conflict &mdash; reads do not change data, so their order does not matter. A conflict exists only when at least one operation is a write, because writes change the state that the other operation depends on.
+                </p>
+
+                <div class="definition-box">
+                    <strong>Conflict Serializable:</strong> A schedule is conflict serializable if it can be transformed into a serial schedule by swapping adjacent <em>non-conflicting</em> operations. Equivalently, a schedule is conflict serializable if and only if its <strong>conflict graph</strong> (also called a precedence graph or serialization graph) is <strong>acyclic</strong>.
+                </div>
+
+                <h3>The Conflict Graph Method</h3>
+
+                <p>
+                    The conflict graph gives us a clean, mechanical procedure for testing conflict serializability. Here is the method:
+                </p>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        <strong>Create a node for each transaction</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">Draw one node per transaction in the schedule. If there are five transactions T1 through T5, you draw five nodes.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        <strong>Identify all conflicts</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">Scan through the schedule. For every pair of operations from different transactions that access the same data item where at least one is a write, record the conflict. The direction matters: the transaction whose operation comes <em>first</em> in the schedule "precedes" the other.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        <strong>Draw directed edges for each conflict</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">For each conflict, draw an edge from the transaction that acts first to the transaction that acts second. If Ti's operation on data item X comes before Tj's conflicting operation on X, draw an edge Ti &rarr; Tj.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        <strong>Check for cycles</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">If the conflict graph has <strong>no cycles</strong>, the schedule is conflict serializable. If it has a cycle, it is <strong>not</strong> conflict serializable.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">5</span>
+                        <strong>Find an equivalent serial schedule</strong>
+                    </div>
+                    <p style="margin-bottom: 0;">If the graph is acyclic, perform a <strong>topological sort</strong> on the graph. Any valid topological ordering gives you an equivalent serial schedule.</p>
+                </div>
+
+                <div class="key-insight">
+                    Why does acyclicity imply serializability? Each edge Ti &rarr; Tj means "Ti must come before Tj in any equivalent serial schedule." A cycle like Ti &rarr; Tj &rarr; Ti would mean Ti must come before Tj AND Tj must come before Ti &mdash; a logical impossibility. No serial schedule can satisfy contradictory ordering requirements, so a cycle means no equivalent serial schedule exists.
+                </div>
+
+                <h3>Worked Example: Five Transactions</h3>
+
+                <p>
+                    Let us walk through a complete example with five transactions and the following schedule S1:
+                </p>
+
+                <div class="definition-box">
+                    <strong>Schedule S1:</strong><br>
+                    <code>w1(A), r2(A), w1(B), w3(C), r2(C), r4(B), w2(D), w4(E), r5(D), w5(E)</code>
+                    <p style="margin-top: 0.75rem; margin-bottom: 0;">
+                        Notation: <code>r<sub>i</sub>(X)</code> means "transaction Ti reads data item X" and <code>w<sub>i</sub>(X)</code> means "transaction Ti writes data item X."
+                    </p>
+                </div>
+
+                <p>
+                    The operations, in order, are:
+                </p>
+                <ol>
+                    <li><code>w1(A)</code> &mdash; T1 writes A</li>
+                    <li><code>r2(A)</code> &mdash; T2 reads A</li>
+                    <li><code>w1(B)</code> &mdash; T1 writes B</li>
+                    <li><code>w3(C)</code> &mdash; T3 writes C</li>
+                    <li><code>r2(C)</code> &mdash; T2 reads C</li>
+                    <li><code>r4(B)</code> &mdash; T4 reads B</li>
+                    <li><code>w2(D)</code> &mdash; T2 writes D</li>
+                    <li><code>w4(E)</code> &mdash; T4 writes E</li>
+                    <li><code>r5(D)</code> &mdash; T5 reads D</li>
+                    <li><code>w5(E)</code> &mdash; T5 writes E</li>
+                </ol>
+
+                <!-- Step 1: Identify Conflicts -->
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        <strong>Identify all conflicts by data item</strong>
+                    </div>
+
+                    <p>We examine each data item and find pairs of operations from different transactions where at least one is a write.</p>
+
+                    <p><strong>Data item A:</strong></p>
+                    <ul>
+                        <li><code>w1(A)</code> then <code>r2(A)</code> &mdash; <strong>WR conflict: T1 &rarr; T2</strong></li>
+                    </ul>
+
+                    <p><strong>Data item B:</strong></p>
+                    <ul>
+                        <li><code>w1(B)</code> then <code>r4(B)</code> &mdash; <strong>WR conflict: T1 &rarr; T4</strong></li>
+                    </ul>
+
+                    <p><strong>Data item C:</strong></p>
+                    <ul>
+                        <li><code>w3(C)</code> then <code>r2(C)</code> &mdash; <strong>WR conflict: T3 &rarr; T2</strong></li>
+                    </ul>
+
+                    <p><strong>Data item D:</strong></p>
+                    <ul>
+                        <li><code>w2(D)</code> then <code>r5(D)</code> &mdash; <strong>WR conflict: T2 &rarr; T5</strong></li>
+                    </ul>
+
+                    <p><strong>Data item E:</strong></p>
+                    <ul>
+                        <li><code>w4(E)</code> then <code>w5(E)</code> &mdash; <strong>WW conflict: T4 &rarr; T5</strong></li>
+                    </ul>
+                </div>
+
+                <!-- Step 2: Build the Graph -->
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        <strong>Build the conflict graph</strong>
+                    </div>
+
+                    <p>We have five nodes (T1, T2, T3, T4, T5) and the following directed edges:</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Edge</th>
+                                <th>Reason</th>
+                                <th>Data Item</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>T1 &rarr; T2</td>
+                                <td>w1(A) before r2(A) &mdash; WR</td>
+                                <td>A</td>
+                            </tr>
+                            <tr>
+                                <td>T1 &rarr; T4</td>
+                                <td>w1(B) before r4(B) &mdash; WR</td>
+                                <td>B</td>
+                            </tr>
+                            <tr>
+                                <td>T3 &rarr; T2</td>
+                                <td>w3(C) before r2(C) &mdash; WR</td>
+                                <td>C</td>
+                            </tr>
+                            <tr>
+                                <td>T2 &rarr; T5</td>
+                                <td>w2(D) before r5(D) &mdash; WR</td>
+                                <td>D</td>
+                            </tr>
+                            <tr>
+                                <td>T4 &rarr; T5</td>
+                                <td>w4(E) before w5(E) &mdash; WW</td>
+                                <td>E</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p>The conflict graph looks like this:</p>
+
+                    <div class="explanation-box" style="font-family: 'SF Mono', monospace; font-size: 0.9rem; line-height: 2; text-align: center;">
+                        <p style="margin-bottom: 0.5rem;">
+                            T3 &rarr; T2<br>
+                            T1 &rarr; T2<br>
+                            T1 &rarr; T4<br>
+                            T2 &rarr; T5<br>
+                            T4 &rarr; T5
+                        </p>
+                        <p style="margin-bottom: 0; margin-top: 1rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: left;">
+                            Visually: T3 points to T2. T1 points to both T2 and T4. T2 and T4 both point to T5. The graph flows from left to right: {T3, T1} &rarr; {T2, T4} &rarr; {T5}.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Check for Cycles -->
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        <strong>Check for cycles</strong>
+                    </div>
+
+                    <p>Let us trace all possible paths through the graph:</p>
+                    <ul>
+                        <li>T3 &rarr; T2 &rarr; T5 (dead end)</li>
+                        <li>T1 &rarr; T2 &rarr; T5 (dead end)</li>
+                        <li>T1 &rarr; T4 &rarr; T5 (dead end)</li>
+                    </ul>
+
+                    <p>
+                        No path leads back to a node it has already visited. <strong>The graph is acyclic.</strong> Therefore, schedule S1 is <span class="highlight-text">conflict serializable</span>.
+                    </p>
+                </div>
+
+                <!-- Step 4: Topological Sort -->
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">4</span>
+                        <strong>Find an equivalent serial schedule via topological sort</strong>
+                    </div>
+
+                    <p>A topological sort orders the nodes so that for every directed edge Ti &rarr; Tj, Ti appears before Tj. We process nodes with no incoming edges first:</p>
+
+                    <ol>
+                        <li><strong>T3</strong> has no incoming edges. Pick T3 first. Remove T3 and its outgoing edges.</li>
+                        <li><strong>T1</strong> has no incoming edges. Pick T1 next. Remove T1 and its outgoing edges.</li>
+                        <li><strong>T4</strong> now has no incoming edges (its only incoming edge was from T1, which is removed). Pick T4. Remove T4 and its edges.</li>
+                        <li><strong>T2</strong> now has no incoming edges (its incoming edges from T1 and T3 are removed). Pick T2. Remove T2 and its edges.</li>
+                        <li><strong>T5</strong> is the only remaining node. Pick T5.</li>
+                    </ol>
+
+                    <div class="magic-connection">
+                        <h4>Equivalent Serial Schedule</h4>
+                        <p style="margin-bottom: 0;">
+                            <strong>T3, T1, T4, T2, T5</strong><br><br>
+                            This means: if we ran T3 first (completing entirely), then T1, then T4, then T2, then T5 &mdash; all one at a time with no interleaving &mdash; the final database state would be <em>identical</em> to what schedule S1 produces. The interleaved schedule S1 is therefore safe: it achieves the same result as this serial order, but with the performance benefit of concurrent execution.
+                        </p>
+                    </div>
+
+                    <p>
+                        Note that the topological sort is not necessarily unique. For instance, T1, T3, T2, T4, T5 is also a valid topological ordering (you can verify that all edges still go left to right). Both are valid equivalent serial schedules.
+                    </p>
+                </div>
+
+                <div class="key-insight">
+                    The conflict graph method is powerful because it is entirely mechanical. You do not need to reason about what the data values are, what the transactions "mean," or simulate the entire execution. You just find conflicts, draw edges, and check for cycles. If acyclic, the schedule is safe. If cyclic, it is not, and the DBMS must prevent or resolve the situation (typically by aborting one of the transactions involved in the cycle).
+                </div>
+            </div>
+
+            <!-- Section 5: Putting It All Together -->
+            <div class="section">
+                <h2>Putting It All Together</h2>
+
+                <p>
+                    Let us step back and see how the concepts we have covered form a coherent picture of how OLTP databases work.
+                </p>
+
+                <div class="summary-box">
+                    <h3>Key Takeaways</h3>
+                    <ul>
+                        <li><span class="checkmark">&#10003;</span> <strong>Transactions</strong> are the fundamental unit of work in OLTP databases, providing all-or-nothing guarantees through the ACID properties.</li>
+                        <li><span class="checkmark">&#10003;</span> <strong>ACID</strong> is enforced by concrete mechanisms: Write-Ahead Logging handles Atomicity and Durability; Serializability and 2-Phase Locking handle Isolation and Consistency.</li>
+                        <li><span class="checkmark">&#10003;</span> <strong>Performance techniques</strong> like indexing, bloom filters, and caching ensure that ACID enforcement does not cripple throughput.</li>
+                        <li><span class="checkmark">&#10003;</span> <strong>Concurrency anomalies</strong> &mdash; lost updates, dirty reads, unrepeatable reads, and phantom reads &mdash; are the specific dangers of running transactions concurrently. All are prevented by serializability.</li>
+                        <li><span class="checkmark">&#10003;</span> <strong>Conflict serializability</strong> is tested using conflict graphs: identify conflicts between transactions, draw directed edges, and check for cycles. An acyclic graph means the schedule is safe; a topological sort of the graph gives an equivalent serial order.</li>
+                        <li><span class="checkmark">&#10003;</span> <strong>Conflicts</strong> arise whenever two different transactions access the same data item and at least one of them writes (RW, WR, or WW). Two reads are never a conflict.</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Transactions &amp; ACID Deep Dive &mdash; Supplementary to Lecture 05</p>
+        </footer>
+    </div>
+</body>
+</html>

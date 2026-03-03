@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions, ACID, and Write-Ahead Logging — Part 3</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Transactions, ACID, and Write-Ahead Logging</h1>
+            <p class="subtitle">How databases guarantee your data survives crashes and stays consistent</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: OLTP vs. OLAP -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. OLTP vs. OLAP &mdash; Two Worlds of Databases</h2>
+
+            <p>
+                Not all database workloads are created equal. The way a bank processes ATM withdrawals is fundamentally different from the way an analyst crunches last quarter's sales numbers. These two patterns of use are so distinct that the industry gave them their own names, and modern systems are often optimized for one or the other.
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>OLTP &mdash; Online Transaction Processing</h4>
+                    <p>
+                        <strong>What it does:</strong> Handles many short, fast transactions from many concurrent users, all happening at the same time.
+                    </p>
+                    <p>
+                        <strong>Pattern:</strong> Read/write a <em>small</em> amount of data per transaction. Low latency is critical &mdash; users are waiting.
+                    </p>
+                    <p><strong>Real-world examples:</strong></p>
+                    <ul>
+                        <li>ATM cash withdrawals</li>
+                        <li>Uber ride requests</li>
+                        <li>Visa card swipes (<span class="highlight-text">65,000 transactions per second!</span>)</li>
+                        <li>Adding items to an online shopping cart</li>
+                    </ul>
+                </div>
+                <div class="visual-item">
+                    <h4>OLAP &mdash; Online Analytical Processing</h4>
+                    <p>
+                        <strong>What it does:</strong> Handles complex analytical queries over large datasets, usually for reporting and decision-making.
+                    </p>
+                    <p>
+                        <strong>Pattern:</strong> Mostly reads. Scans large amounts of data. Batch processing is common &mdash; nobody is staring at a loading spinner.
+                    </p>
+                    <p><strong>Real-world examples:</strong></p>
+                    <ul>
+                        <li>"What were total sales by region last quarter?"</li>
+                        <li>"Which products have declining margins?"</li>
+                        <li>Training a recommendation model on user behavior</li>
+                    </ul>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>OLTP</th>
+                        <th>OLAP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Operations</td>
+                        <td>Read + Write</td>
+                        <td>Mostly Read</td>
+                    </tr>
+                    <tr>
+                        <td>Data per query</td>
+                        <td>Small (a few rows)</td>
+                        <td>Large (millions of rows)</td>
+                    </tr>
+                    <tr>
+                        <td>Latency</td>
+                        <td>Milliseconds (users waiting)</td>
+                        <td>Seconds to minutes (batch jobs)</td>
+                    </tr>
+                    <tr>
+                        <td>Concurrency</td>
+                        <td>Thousands of users at once</td>
+                        <td>Handful of analysts</td>
+                    </tr>
+                    <tr>
+                        <td>Priority</td>
+                        <td>Correctness &amp; speed</td>
+                        <td>Throughput &amp; insight</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <img src="slides/oltp-vs-olap.png" alt="OLTP vs OLAP comparison showing the different characteristics of transactional and analytical workloads">
+
+            <div class="key-insight">
+                This lecture focuses on the OLTP world. When thousands of users are simultaneously reading and writing data &mdash; and any one of those operations could fail mid-flight &mdash; the database needs ironclad guarantees. That is what transactions, ACID, and WAL are all about.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: What Is a Transaction? -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. What Is a Transaction?</h2>
+
+            <div class="definition-box">
+                <strong>Transaction:</strong> A sequence of one or more database operations that is treated as a single, indivisible unit of work. Either <em>all</em> of the operations succeed and their effects become permanent, or <em>none</em> of them do.
+            </div>
+
+            <p>
+                In SQL, a transaction looks like this:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Transaction Syntax in SQL</h4>
+                <p>
+                    <code>START TRANSACTION;</code><br>
+                    <code>&nbsp;&nbsp;UPDATE accounts SET balance = balance * 1.06 WHERE id = 1;</code><br>
+                    <code>&nbsp;&nbsp;UPDATE accounts SET balance = balance * 1.06 WHERE id = 2;</code><br>
+                    <code>&nbsp;&nbsp;...</code><br>
+                    <code>COMMIT;</code> &mdash; make all changes permanent<br>
+                    (or <code>ROLLBACK;</code> &mdash; discard all changes)
+                </p>
+            </div>
+
+            <img src="slides/transaction-sql.png" alt="Transaction in SQL showing START TRANSACTION, operations, and COMMIT or ROLLBACK">
+
+            <h3>A Concrete Example: Monthly Bank Interest</h3>
+
+            <p>
+                Imagine a bank needs to apply 6% annual interest to every savings account at the end of the month. The transaction looks like:
+            </p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Read all 1,000 accounts</strong>
+                </div>
+                <p>Fetch the current balance for each account.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Calculate 6% interest for each</strong>
+                </div>
+                <p>Compute the new balance: <code>new_balance = old_balance * 1.06</code></p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Update each account</strong>
+                </div>
+                <p>Write the new balance back to each of the 1,000 accounts.</p>
+            </div>
+
+            <p>
+                The bank <strong>must</strong> update ALL accounts or NONE. A partial update &mdash; where some customers get interest and others do not &mdash; would be unfair, incorrect, and possibly illegal.
+            </p>
+
+            <div class="problem-box">
+                <h4>The Crash Problem</h4>
+                <p>
+                    What happens if the system crashes in the middle of Step 3, after updating 500 of the 1,000 accounts?
+                </p>
+                <ul>
+                    <li>500 customers got their 6% interest &mdash; their balances are updated.</li>
+                    <li>500 customers did <em>not</em> get interest &mdash; their balances are unchanged.</li>
+                </ul>
+                <p>
+                    This is <strong>unacceptable</strong>. The database is now in an inconsistent state. Some customers are happy, others are shortchanged, and the bank's books don't add up.
+                </p>
+            </div>
+
+            <img src="slides/bank-interest-crash.png" alt="Bank interest calculation scenario showing what happens when a crash occurs mid-transaction">
+
+            <div class="analogy">
+                Think of a transaction like a light switch: it is either ON or OFF. There is no "halfway flipped" state. If you start flipping the switch and something interrupts you, the switch must end up in one of the two valid positions &mdash; not stuck in between.
+            </div>
+
+            <p>
+                This crash scenario is exactly the problem that motivates the need for <strong>ACID guarantees</strong>. We need a mechanism that ensures: if a crash happens mid-transaction, the database can recover to a consistent state automatically.
+            </p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: The ACID Properties -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. The ACID Properties</h2>
+
+            <p>
+                ACID is a set of four properties that database transactions must satisfy to guarantee reliability, even in the face of crashes, errors, and concurrent access. Every serious OLTP database implements these guarantees (though the specifics vary).
+            </p>
+
+            <img src="slides/acid-properties.png" alt="Overview of the four ACID properties: Atomicity, Consistency, Isolation, and Durability">
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>A &mdash; Atomicity</h4>
+                    <p>
+                        <strong>All or nothing.</strong> Either every operation in the transaction completes successfully, or none of them take effect. If any part fails, the entire transaction is rolled back.
+                    </p>
+                    <p><strong>Enforced by:</strong> Write-Ahead Logging (WAL)</p>
+                </div>
+                <div class="visual-item">
+                    <h4>C &mdash; Consistency</h4>
+                    <p>
+                        <strong>Valid state to valid state.</strong> The database starts in a consistent state and ends in a consistent state. All constraints, foreign keys, and invariants are satisfied before and after.
+                    </p>
+                    <p><strong>Enforced by:</strong> Application logic + locking protocols</p>
+                </div>
+                <div class="visual-item">
+                    <h4>I &mdash; Isolation</h4>
+                    <p>
+                        <strong>No interference.</strong> Concurrent transactions don't see each other's intermediate states. Each transaction executes as if it were the only one running.
+                    </p>
+                    <p><strong>Enforced by:</strong> Serializability, 2-Phase Locking</p>
+                </div>
+                <div class="visual-item">
+                    <h4>D &mdash; Durability</h4>
+                    <p>
+                        <strong>Permanent once committed.</strong> Once a transaction commits, its effects survive permanently &mdash; even if the system crashes one millisecond after the commit.
+                    </p>
+                    <p><strong>Enforced by:</strong> Write-Ahead Logging (WAL)</p>
+                </div>
+            </div>
+
+            <div class="analogy">
+                Think of ACID like the rules of a bank vault. <strong>Atomicity</strong> means you either complete the entire deposit or you don't &mdash; you can't leave half the cash on the counter. <strong>Consistency</strong> means the bank's books always balance. <strong>Isolation</strong> means two tellers working at the same time can't accidentally give away the same $100. <strong>Durability</strong> means once the receipt is printed, the money is in your account for good, even if the power goes out a second later.
+            </div>
+
+            <div class="magic-connection">
+                <h4>Notice something?</h4>
+                <p>
+                    Two of the four ACID properties &mdash; <strong>Atomicity</strong> and <strong>Durability</strong> &mdash; are both enforced by the same mechanism: <strong>Write-Ahead Logging</strong>. This is not a coincidence. WAL is the workhorse that makes crash recovery possible, and we will spend the rest of this lecture understanding exactly how it works.
+                </p>
+            </div>
+
+            <h3>A Word of Caution: ACID Is Contentious</h3>
+
+            <p>
+                Not everyone in the database world agrees on the precise definitions of these properties. Different databases offer different levels of each guarantee. For example, many systems offer weaker forms of Isolation for performance reasons (like "Read Committed" instead of full "Serializability"). The textbook definitions are a starting point, but real systems involve tradeoffs.
+            </p>
+
+            <img src="slides/acid-challenges.png" alt="Challenges and nuances of ACID properties in practice">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Physical Logging — The Basic Idea -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Physical Logging &mdash; The Basic Idea</h2>
+
+            <p>
+                Before we can understand WAL, we need to understand the building block it relies on: <strong>physical logging</strong>. The core idea is simple but powerful.
+            </p>
+
+            <div class="definition-box">
+                <strong>Physical Logging:</strong> Before modifying any data page on disk, first write a log record that describes exactly what the change is. The log records are written to a separate, append-only log file.
+            </div>
+
+            <p>
+                Each log record captures enough information to both <em>undo</em> and <em>redo</em> the change. The format looks like this:
+            </p>
+
+            <div class="explanation-box">
+                <h4>Log Record Format</h4>
+                <p>
+                    <code>[TransactionID, PageID, Offset, OldValue, NewValue]</code>
+                </p>
+                <ul>
+                    <li><strong>TransactionID:</strong> Which transaction made this change</li>
+                    <li><strong>PageID:</strong> Which data page was modified</li>
+                    <li><strong>Offset:</strong> Where on that page the change happened</li>
+                    <li><strong>OldValue:</strong> What was there before (needed for UNDO)</li>
+                    <li><strong>NewValue:</strong> What we're changing it to (needed for REDO)</li>
+                </ul>
+            </div>
+
+            <img src="slides/physical-logging.png" alt="Physical logging concept showing log records with TransactionID, PageID, Offset, OldValue, and NewValue">
+
+            <p>
+                The log is <strong>append-only</strong> &mdash; new records are always added at the end, never inserted in the middle or overwritten. This means the log is written <em>sequentially</em>, which (as we will see) is dramatically faster than random writes.
+            </p>
+
+            <h3>Two Key Operations: UNDO and REDO</h3>
+
+            <p>
+                With the log in hand, the database can perform two critical operations during crash recovery:
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>UNDO &mdash; Roll Back</h4>
+                    <p>
+                        Reverse an <em>uncommitted</em> transaction's changes by restoring the <strong>OldValue</strong> for each of its log records.
+                    </p>
+                    <p>
+                        <strong>When used:</strong> The transaction was in progress when the crash happened. It never committed, so its partial changes must be erased.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>REDO &mdash; Replay Forward</h4>
+                    <p>
+                        Reapply a <em>committed</em> transaction's changes by writing the <strong>NewValue</strong> for each of its log records.
+                    </p>
+                    <p>
+                        <strong>When used:</strong> The transaction committed, but some of its changes may not have made it to the actual data pages on disk before the crash.
+                    </p>
+                </div>
+            </div>
+
+            <div class="analogy">
+                Think of the log as a detailed diary. Every time you are about to change something, you first write down: "I'm about to change X from OldValue to NewValue." If something goes wrong, you can read the diary backwards to undo your changes. If you need to verify your work was saved, you can read it forwards to redo them.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Write-Ahead Logging (WAL) — The Protocol -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Write-Ahead Logging (WAL) &mdash; The Protocol</h2>
+
+            <p>
+                We now know what log records look like and what UNDO/REDO do. But the crucial question remains: <strong>when</strong> do we actually flush these log records to disk? The ordering matters enormously. Get it wrong, and the database cannot recover from crashes.
+            </p>
+
+            <div class="definition-box">
+                <strong>Write-Ahead Logging (WAL)</strong> is the specific protocol that dictates the order in which log records and data pages are written to disk. It is the mechanism that provides both <strong>Atomicity</strong> and <strong>Durability</strong>.
+            </div>
+
+            <h3>The Two Rules of the WAL Commit Protocol</h3>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Rule 1 &mdash; Durability Rule</strong>
+                </div>
+                <p>
+                    Before a transaction's <code>COMMIT</code> record is acknowledged to the user, <span class="highlight-text">ALL of that transaction's log records must be flushed to stable storage (disk)</span>.
+                </p>
+                <p>
+                    <strong>Why?</strong> If we tell the user "your transaction committed" but the log records haven't been written to disk yet, a crash would lose those records. We would have no way to REDO the committed changes. The user was told their data was saved, but it's gone. That violates Durability.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Rule 2 &mdash; Atomicity Rule</strong>
+                </div>
+                <p>
+                    Before a dirty data page is written to disk, <span class="highlight-text">ALL log records for changes on that page must be flushed to stable storage first</span>.
+                </p>
+                <p>
+                    <strong>Why?</strong> If a modified data page gets written to disk but the corresponding log records have not, a crash would leave modified data on disk with no log to undo it. We can't roll back the incomplete transaction. That violates Atomicity.
+                </p>
+            </div>
+
+            <img src="slides/wal-commit-protocol.png" alt="WAL commit protocol showing the two rules for flushing log records and data pages">
+
+            <div class="key-insight">
+                The name says it all: "Write-Ahead" Logging. The log is always written <strong>ahead</strong> of (before) the data. Log first, data second. Always.
+            </div>
+
+            <h3>Why This Ordering? Two Incorrect Alternatives</h3>
+
+            <p>
+                To truly understand why WAL works, it helps to see what goes wrong when you do it differently. There are two tempting but <strong>incorrect</strong> protocols:
+            </p>
+
+            <div class="problem-box">
+                <h4>Incorrect Protocol #1: Write data pages first, then log</h4>
+                <p>
+                    Suppose we write the modified data pages to disk first, and plan to write the log records afterward.
+                </p>
+                <p>
+                    <strong>Crash scenario:</strong> The system writes the data pages to disk, then crashes <em>before</em> the log records are written.
+                </p>
+                <p>
+                    <strong>Result:</strong> The data on disk has been modified by an uncommitted transaction, but there is no log record to undo the changes. The database is stuck with partial, incorrect modifications and no way to fix them. <strong>Atomicity is violated.</strong>
+                </p>
+            </div>
+
+            <div class="problem-box">
+                <h4>Incorrect Protocol #2: Write commit record before all log records</h4>
+                <p>
+                    Suppose we write the COMMIT record to disk early, before all of the transaction's log records have been flushed.
+                </p>
+                <p>
+                    <strong>Crash scenario:</strong> The COMMIT record is on disk, but the system crashes before all the corresponding change records are written.
+                </p>
+                <p>
+                    <strong>Result:</strong> During recovery, we see the COMMIT record and know the transaction should be redone. But some log records are missing, so we can't fully redo all the changes. The transaction is partially applied. <strong>Durability is violated.</strong>
+                </p>
+            </div>
+
+            <img src="slides/incorrect-protocols.png" alt="Two incorrect commit protocols showing how violating WAL ordering leads to atomicity or durability failures">
+
+            <div class="magic-connection">
+                <h4>The WAL ordering is the only correct option</h4>
+                <p>
+                    Both incorrect protocols fail because they break the fundamental invariant: <strong>the log must always be ahead of the data, and the log must be complete before the commit is acknowledged.</strong> WAL is not arbitrary &mdash; it is the unique protocol that guarantees both atomicity and durability.
+                </p>
+            </div>
+
+            <h3>Walking Through the Bank Interest Example with WAL</h3>
+
+            <p>
+                Let us return to our bank interest problem and trace through exactly how WAL handles it, both during normal execution and after a crash.
+            </p>
+
+            <h4>Normal Execution (No Crash)</h4>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Begin transaction</strong>
+                </div>
+                <p>Write <code>[T1, BEGIN]</code> to the log (in memory).</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>For each account, log the change</strong>
+                </div>
+                <p>
+                    For account #1: write <code>[T1, Page5, Offset12, $1000, $1060]</code> to the log.<br>
+                    For account #2: write <code>[T1, Page5, Offset48, $2000, $2120]</code> to the log.<br>
+                    ... and so on for all 1,000 accounts. The actual data pages are modified in memory (buffer pool) but <em>not yet written to disk</em>.
+                </p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Flush ALL log records to disk</strong>
+                </div>
+                <p>All 1,000+ log records are written to stable storage. This is a sequential write to the append-only log file &mdash; fast.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    <strong>Write COMMIT record and flush</strong>
+                </div>
+                <p>Write <code>[T1, COMMIT]</code> to the log and flush it to disk. At this point, Rule 1 is satisfied.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    <strong>Acknowledge to the user</strong>
+                </div>
+                <p>Tell the application: "Transaction committed successfully." The user sees confirmation.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">6</span>
+                    <strong>Write dirty data pages to disk (later)</strong>
+                </div>
+                <p>At some point in the future, the buffer pool manager writes the modified data pages to disk. This can happen lazily &mdash; there is no rush, because the log already has everything needed for recovery.</p>
+            </div>
+
+            <img src="slides/wal-bank-example.png" alt="Bank interest example traced through the WAL protocol step by step">
+
+            <h4>Crash Recovery</h4>
+
+            <p>
+                Now suppose the system crashes at some point during execution. When the database restarts, it reads the log and makes a simple decision:
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>COMMIT record found in log?</h4>
+                    <p>
+                        <strong>YES &rarr; REDO</strong><br>
+                        The transaction committed. Replay all its changes using the NewValues from the log. This guarantees <strong>Durability</strong>: the committed work is restored.
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>No COMMIT record in log?</h4>
+                    <p>
+                        <strong>NO &rarr; UNDO</strong><br>
+                        The transaction never committed. Reverse all its changes using the OldValues from the log. This guarantees <strong>Atomicity</strong>: the partial work is erased.
+                    </p>
+                </div>
+            </div>
+
+            <img src="slides/wal-crash-recovery.png" alt="WAL crash recovery process showing how REDO and UNDO are applied based on the presence of a COMMIT record">
+
+            <div class="analogy">
+                Think of the WAL log as a black box flight recorder. No matter what happened during the flight (normal operation or a crash), you can always reconstruct the exact sequence of events by reading the recorder. If the flight completed successfully (COMMIT found), you confirm the results. If it was interrupted (no COMMIT), you reset everything to the pre-flight state.
+            </div>
+
+            <div class="explanation-box">
+                <h4>Returning to Our Bank Crash Scenario</h4>
+                <p>
+                    Remember: 1,000 accounts, crash after updating 500. With WAL:
+                </p>
+                <ul>
+                    <li>If no COMMIT record is in the log &rarr; <strong>UNDO all 500 changes</strong>. All accounts go back to their original balances. Nobody gets interest. The bank re-runs the transaction later. Fair.</li>
+                    <li>If the COMMIT record IS in the log &rarr; <strong>REDO all 1,000 changes</strong>. Even if only 500 were written to data pages, the log has all the NewValues. Every account gets interest. Fair.</li>
+                </ul>
+                <p>
+                    Either way, the database ends up in a consistent state. The "500 got interest, 500 didn't" nightmare <strong>cannot happen</strong> with WAL.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Why Sequential Writes Matter -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Why Sequential Writes Matter</h2>
+
+            <p>
+                You might be thinking: "Writing all these log records sounds expensive. Isn't it a lot of overhead to write to the log before every data modification?" The answer is no, and the reason comes down to the physics of storage devices.
+            </p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Random Writes</h4>
+                    <p>
+                        Writing data pages to various locations scattered across the disk. The disk head must physically seek to each location.
+                    </p>
+                    <p>
+                        <strong>Performance:</strong> Writing 1 million pages randomly takes approximately <span class="highlight-text">~100,000 seconds</span> (over a day).
+                    </p>
+                </div>
+                <div class="visual-item">
+                    <h4>Sequential Writes</h4>
+                    <p>
+                        Writing data to consecutive locations on the disk. The disk head moves smoothly in one direction. No seeking.
+                    </p>
+                    <p>
+                        <strong>Performance:</strong> Writing 1 million pages sequentially takes approximately <span class="highlight-text">~1 second</span>.
+                    </p>
+                </div>
+            </div>
+
+            <p>
+                That is a difference of roughly <strong>five orders of magnitude</strong> &mdash; 100,000x faster. Sequential writes are not just "a bit faster." They are in a completely different performance universe.
+            </p>
+
+            <img src="slides/sequential-writes.png" alt="Performance comparison of sequential vs random writes showing orders of magnitude difference">
+
+            <div class="key-insight">
+                The WAL log is append-only, which means it is always written sequentially. This is why the "overhead" of maintaining the log is tiny compared to the safety it provides. You get crash recovery essentially for free in terms of performance.
+            </div>
+
+            <p>
+                This insight also explains a broader design principle in database systems: whenever possible, convert random writes into sequential writes. The WAL does exactly this &mdash; instead of immediately writing modified data pages to their scattered locations on disk (random writes), the database first records the changes sequentially in the log, and defers the actual data page writes to a more convenient time.
+            </p>
+
+            <div class="analogy">
+                Imagine you're delivering packages in a city. Random writes are like zigzagging across town for each delivery. Sequential writes are like driving down one street and dropping off packages in order. The same number of packages get delivered, but the sequential approach is overwhelmingly faster because you never waste time backtracking.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary &mdash; Key Takeaways</h3>
+                <ul>
+                    <li><span class="checkmark">&#10003;</span> <strong>OLTP handles short, fast transactions</strong> from many concurrent users (ATM withdrawals, card swipes, ride requests), while OLAP handles complex analytical queries over large datasets.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Transactions are all-or-nothing</strong> &mdash; a sequence of operations that either all succeed or all fail. Partial execution is never acceptable.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>ACID guarantees</strong> &mdash; Atomicity (all or nothing), Consistency (valid state to valid state), Isolation (no interference between concurrent transactions), and Durability (committed = permanent).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>WAL provides both Atomicity and Durability</strong> through physical logging. Log records store OldValue (for UNDO) and NewValue (for REDO).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The two WAL rules ensure correct ordering</strong>: (1) all log records flushed before COMMIT is acknowledged, and (2) all log records for a page flushed before that page is written to disk.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Sequential writes make WAL fast</strong> &mdash; the append-only log leverages sequential I/O, which is ~100,000x faster than random I/O. The safety of crash recovery comes at negligible performance cost.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Transactions &amp; WAL &mdash; Supplementary to Lecture 04</p>
+        </footer>
+
+    </div>
+</body>
+</html>

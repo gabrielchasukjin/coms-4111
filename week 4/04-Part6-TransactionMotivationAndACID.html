@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Motivation and ACID Properties — Part 6</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Transaction Motivation and ACID Properties</h1>
+            <p class="subtitle">Why transactions exist and the four guarantees every database should provide</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Motivation for Transactions -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Motivation for Transactions</h2>
+
+            <p>Grouping user actions (reads and writes) into <strong>transactions</strong> helps with two fundamental goals that every reliable database must achieve:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Goal 1: Recovery and Durability</h4>
+                    <p style="margin-bottom: 0;">Keeping the database data consistent and durable in the face of <strong>crashes</strong>, <strong>aborts</strong>, and <strong>system shutdowns</strong>. The database may experience power outages at any moment. Individual transactions may be aborted by the user. We need a way to ensure that transactions are either durably stored in full, or not at all — and we need a log to be able to "roll back" incomplete transactions.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Goal 2: Concurrency</h4>
+                    <p style="margin-bottom: 0;">Achieving better performance by <strong>parallelizing transactions</strong> without creating anomalies. Disk accesses are frequent and slow, so we optimize for throughput (number of transactions per second) by interleaving work. But users should still be able to execute transactions as if in isolation, so that consistency is maintained.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                These two goals correspond to different ACID properties. Recovery and durability map to the A (Atomicity) and D (Durability). Concurrency maps to I (Isolation). Together with C (Consistency), they form the complete set of guarantees that transactions provide.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Protection Against Crashes -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Protection Against Crashes and Aborts</h2>
+
+            <p>To see why transactions matter, consider a concrete scenario. A client executes two SQL statements that are meant to work together:</p>
+
+            <div class="explanation-box">
+                <h4>The Problem: No Transaction Boundary</h4>
+                <p style="margin-bottom: 0.5rem;"><code>INSERT INTO SmallProduct(name, price) SELECT pname, price FROM Product WHERE price &lt;= 0.99</code></p>
+                <p style="margin-bottom: 0;"><code>DELETE Product WHERE price &lt;= 0.99</code></p>
+            </div>
+
+            <p>The intent is clear: move all cheap products (price &le; $0.99) from the <code>Product</code> table into a <code>SmallProduct</code> table, then remove them from <code>Product</code>. But what happens if the system <strong>crashes after the INSERT but before the DELETE</strong>?</p>
+
+            <div class="problem-box">
+                <h4>The Result: Data Duplication</h4>
+                <p style="margin-bottom: 0;">The cheap products now exist in <em>both</em> tables. The INSERT completed and was written to disk, but the DELETE never executed. We have duplicated data with no easy way to tell which products were already moved. This is exactly the kind of partial-execution bug that transactions prevent.</p>
+            </div>
+
+            <h3>The Fix: Wrap It in a Transaction</h3>
+
+            <div class="explanation-box">
+                <h4>With Transaction Boundaries</h4>
+                <p style="margin-bottom: 0.5rem;"><code>START TRANSACTION</code></p>
+                <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;&nbsp;&nbsp;<code>INSERT INTO SmallProduct(name, price) SELECT pname, price FROM Product WHERE price &lt;= 0.99</code></p>
+                <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;&nbsp;&nbsp;<code>DELETE Product WHERE price &lt;= 0.99</code></p>
+                <p style="margin-bottom: 0;"><code>COMMIT OR ROLLBACK</code></p>
+            </div>
+
+            <p>Now if the system crashes after the INSERT but before the DELETE, the entire transaction is rolled back on recovery. The INSERT is undone, and the database returns to its state before the transaction began. We can then safely re-run the entire transaction from scratch.</p>
+
+            <div class="key-insight">
+                The transaction boundary tells the database: "these operations are a single unit. Either execute all of them, or none of them." This is the fundamental promise that makes it safe to compose multiple SQL statements into complex operations.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Concurrent Execution -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. The Need for Concurrent Execution</h2>
+
+            <p>Even with crash protection solved, there is a second major challenge: <strong>performance</strong>. Running transactions one at a time is far too slow for any real system.</p>
+
+            <div class="definition-box">
+                <strong>Throughput vs. Latency:</strong> Throughput is the number of transactions completed per second. Latency is the time to complete any single transaction. When disk accesses are frequent and slow, we can improve throughput by interleaving transactions — while one transaction waits for a disk read, another can use the CPU. This trades slightly higher latency for dramatically better throughput.
+            </div>
+
+            <h3>The Concurrency Problem: Two Managers, One Product</h3>
+
+            <p>Consider two managers trying to discount the same product at the same time:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Client 1</h4>
+                    <p style="margin-bottom: 0;"><code>UPDATE Product SET Price = Price - 1.99 WHERE pname = 'Gizmo'</code></p>
+                </div>
+                <div class="visual-item">
+                    <h4>Client 2</h4>
+                    <p style="margin-bottom: 0;"><code>UPDATE Product SET Price = Price * 0.5 WHERE pname = 'Gizmo'</code></p>
+                </div>
+            </div>
+
+            <p>What could go wrong? Without proper isolation, both clients might read the <em>same</em> original price, compute their discount independently, and then write back. One discount would be lost entirely — a classic <strong>lost update</strong> anomaly. If Gizmo starts at $10, the correct result (in either serial order) would be either $3.01 or $4.005. But with a lost update, you might get $8.01 or $5.00 — only one discount applied.</p>
+
+            <h3>The Fix: Transaction Isolation</h3>
+
+            <div class="explanation-box">
+                <h4>Each Statement Gets Its Own Transaction</h4>
+                <p>Even single-statement operations are wrapped in transactions by the database. The DBMS ensures that the two UPDATEs execute as if one happened entirely before the other — even though they may be processed concurrently under the hood.</p>
+                <p style="margin-bottom: 0;">With explicit transactions, this becomes even clearer: each client wraps their UPDATE in <code>START TRANSACTION ... COMMIT</code>. The database's concurrency control mechanisms (locks, timestamps, or MVCC) ensure the two transactions do not interfere with each other.</p>
+            </div>
+
+            <div class="analogy">
+                Think of it like two people trying to edit the same cell in a spreadsheet. If they both read the value, change it locally, and write it back, one person's change will be lost. The solution is a lock: one person edits while the other waits, then the second person edits starting from the updated value. That is exactly what database isolation provides, but at massive scale.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: ACID Properties -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. The ACID Properties</h2>
+
+            <p>The guarantees that transactions provide are formalized as the four <strong>ACID</strong> properties. These are the gold standard for transactional correctness, first articulated in the early 1980s and still debated today.</p>
+
+            <img src="slides/acid-properties.png" alt="The four ACID properties — Atomicity, Consistency, Isolation, Durability">
+
+            <div class="problem-box">
+                <h4>An important caveat</h4>
+                <p style="margin-bottom: 0;">ACID continues to be a source of great debate. In fact, by default, <strong>most databases do not provide full ACID guarantees</strong>. Many systems relax isolation for performance (e.g., using "Read Committed" instead of full serializability). Understanding what each property actually means — and what you lose when it is relaxed — is essential for building correct systems.</p>
+            </div>
+
+            <!-- Atomicity -->
+            <h3>A — Atomicity</h3>
+
+            <div class="definition-box">
+                <strong>Atomicity:</strong> A transaction's activities are <strong>all or nothing</strong>. The database state shows either all the effects of the transaction, or none of them. There is no in-between state visible to any observer.
+            </div>
+
+            <p>Intuitively, in the real world, a transaction is something that would either occur <em>completely</em> or <em>not at all</em>. A bank transfer either moves the money or it does not — you never see a state where the money has left one account but not arrived in the other.</p>
+
+            <p>There are exactly two possible outcomes for a transaction:</p>
+            <ul>
+                <li><strong>Commit:</strong> all the changes are made permanent. The transaction succeeded.</li>
+                <li><strong>Abort:</strong> no changes are made. The transaction is rolled back as if it never happened.</li>
+            </ul>
+
+            <div class="analogy">
+                Think of atomicity like an email draft. You can write a long email with multiple paragraphs, but until you hit "Send," nothing is visible to the recipient. If you close the window and discard the draft, it is as if you never wrote it. Hitting "Send" is the commit — everything becomes visible at once.
+            </div>
+
+            <!-- Consistency -->
+            <h3>C — Consistency</h3>
+
+            <div class="definition-box">
+                <strong>Consistency:</strong> The database must always satisfy user-specified <strong>integrity constraints</strong>. A transaction moves the database from one consistent state to another consistent state.
+            </div>
+
+            <p>Examples of integrity constraints:</p>
+            <ul>
+                <li><strong>Primary key uniqueness</strong> — account numbers cannot be duplicated</li>
+                <li><strong>Domain constraints</strong> — stock amounts cannot be negative</li>
+                <li><strong>Balance invariants</strong> — the sum of all debits must equal the sum of all credits</li>
+            </ul>
+
+            <div class="explanation-box">
+                <h4>Who is responsible for consistency?</h4>
+                <p style="margin-bottom: 0;">Consistency is a <strong>shared responsibility</strong>. The <em>programmer</em> writes transactions that go from one consistent state to another (e.g., a transfer that debits one account and credits another by the same amount). The <em>system</em> ensures atomicity — so if a transaction is interrupted, partial changes do not violate constraints. Assuming the system maintains atomicity, consistency is often the user's responsibility to get right.</p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Real-World Consequence: The Bank of Ireland Glitch (2023)</h4>
+                <p style="margin-bottom: 0;">In August 2023, a glitch at Bank of Ireland allowed customers to withdraw money beyond their account balances at ATMs. Long lines formed as people rushed to exploit the bug. This is a real-world example of a <strong>consistency violation</strong> — the system failed to enforce the constraint that withdrawals cannot exceed the available balance. Proper transaction design and constraint enforcement would have prevented this.</p>
+            </div>
+
+            <!-- Isolation -->
+            <h3>I — Isolation</h3>
+
+            <div class="definition-box">
+                <strong>Isolation:</strong> A transaction executes concurrently with other transactions, but the effect is <strong>as if each transaction executes in isolation</strong> of the others. Transaction A should not be able to observe intermediate changes from a concurrent transaction B during its run.
+            </div>
+
+            <p>Isolation is what we explored in depth in Part 4 (Concurrency and Serializability). The core idea is that even though transactions run concurrently for performance, the <em>result</em> must be indistinguishable from some serial (one-at-a-time) execution. This is precisely the serializability guarantee, enforced through conflict graphs, locking protocols, or multi-version concurrency control.</p>
+
+            <div class="key-insight">
+                Isolation is arguably the most complex and performance-sensitive of the four ACID properties. Full isolation (serializability) is expensive, which is why many databases default to weaker isolation levels that allow certain anomalies in exchange for better throughput.
+            </div>
+
+            <!-- Durability -->
+            <h3>D — Durability</h3>
+
+            <div class="definition-box">
+                <strong>Durability:</strong> Once a transaction has committed, its effects must <strong>persist</strong> — even after the program terminates, even after power failures, even after crashes. The data survives.
+            </div>
+
+            <p>In practice, durability means:</p>
+            <ul>
+                <li><strong>Write data to disk</strong> — volatile memory (RAM) is lost on power failure, so committed data must reach non-volatile storage</li>
+                <li><strong>In data center settings:</strong> replicate data across machines, maintain backups, use write-ahead logs to ensure nothing is lost</li>
+            </ul>
+
+            <p>Durability is what WAL (Write-Ahead Logging) provides, as we will see in Part 7. The log is written to disk <em>before</em> the transaction commits, ensuring that even if the system crashes immediately after the commit, the changes can be recovered.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Challenges for ACID -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Challenges for ACID</h2>
+
+            <p>Providing all four ACID properties simultaneously is hard. The database must handle all of the following, and it must do so with <strong>scalability and performance</strong>:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Power failures and crashes</strong>
+                </div>
+                <p style="margin-bottom: 0;">The system can lose the contents of memory at any moment. Everything in RAM — including partially executed transactions — vanishes. The database must be able to recover to a consistent state using only what is on disk.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>User aborts</strong>
+                </div>
+                <p style="margin-bottom: 0;">Users may cancel transactions at any point. The database must be able to <strong>roll back</strong> all changes made by an aborted transaction. This requires logging what happened so the undo is possible.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    <strong>Many users executing concurrently</strong>
+                </div>
+                <p style="margin-bottom: 0;">Thousands of transactions may be in flight simultaneously. The database must interleave their operations for performance while ensuring that the result is equivalent to some serial execution. This is the isolation challenge.</p>
+            </div>
+
+            <img src="slides/acid-challenges.png" alt="Challenges for ACID properties — power failures, user aborts, concurrent execution, all with performance">
+
+            <div class="key-insight">
+                The real engineering challenge is not just providing ACID guarantees — it is providing them at scale, with high throughput and low latency. This is why database internals are among the most sophisticated pieces of systems software ever built. The next parts of this lecture will show the specific mechanisms (WAL, locking, conflict serializability) that make it possible.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>Transactions serve two goals:</strong> (1) recovery and durability in the face of crashes, and (2) correct concurrent execution for performance.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Without transactions, partial execution is dangerous</strong> — a crash between two related SQL statements can leave the database in an inconsistent state with duplicated or missing data.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Concurrent execution is essential for throughput</strong> — disk I/O is slow, and interleaving transactions keeps the system productive. But concurrency without isolation leads to anomalies like lost updates.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Atomicity</strong> — all or nothing. A transaction either commits (all changes visible) or aborts (no changes visible).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Consistency</strong> — transactions move the database from one valid state to another, preserving integrity constraints. This is a shared responsibility between the programmer and the system.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Isolation</strong> — concurrent transactions produce results as if they ran serially. This is the most complex property and the one most commonly relaxed for performance.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Durability</strong> — committed data survives crashes, power failures, and system restarts. Achieved by writing to disk and using replication.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The real challenge</strong> is providing all four ACID properties simultaneously, at scale, with high performance. This motivates the mechanisms (WAL, locking, serializability) covered in subsequent parts.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Transaction Motivation &amp; ACID — Supplementary to Lecture 04, Part 6</p>
+        </footer>
+
+    </div>
+</body>
+</html>

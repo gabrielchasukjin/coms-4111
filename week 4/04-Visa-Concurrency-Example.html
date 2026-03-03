@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-World Concurrency — 60,000 Visa Transactions Per Second</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+
+        .scenario-banner {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .scenario-banner h3 { color: #ffd700; margin-top: 0; font-size: 1.4rem; }
+        .scenario-banner p { color: #ccc; margin-bottom: 0.75rem; }
+        .scenario-banner .big-number { font-size: 2.5rem; font-weight: 700; color: #ffd700; font-family: Georgia, serif; }
+        .scenario-banner .big-label { font-size: 0.9rem; color: #aaa; margin-bottom: 1rem; }
+
+        .math-box {
+            background-color: #fafafa;
+            border-left: 4px solid #000;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .math-box strong { color: #000; }
+
+        .danger-box {
+            background: linear-gradient(135deg, #fff5f5, #ffe8e8);
+            border-left: 4px solid #dc2626;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .danger-box h3 { color: #dc2626; margin-top: 0; }
+        .danger-box strong { color: #991b1b; }
+
+        .success-box {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left: 4px solid #16a34a;
+            padding: 1.5rem 1.75rem;
+            margin: 1.75rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .success-box h3 { color: #16a34a; margin-top: 0; }
+        .success-box strong { color: #15803d; }
+
+        .concept-link {
+            background-color: #f0f4ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.95rem;
+        }
+        .concept-link strong { color: #1d4ed8; }
+
+        .timeline-table td { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; padding: 0.6rem 0.85rem; }
+        .timeline-table .blocked { color: #999; font-style: italic; font-family: -apple-system, sans-serif; }
+        .timeline-table .result { font-weight: 600; }
+
+        .step-section {
+            background-color: #fafafa;
+            padding: 1.75rem 2rem;
+            margin: 1.75rem 0;
+            border-radius: 6px;
+            border: 1px solid #e5e5e5;
+        }
+        .step-section h3 { margin-top: 0; }
+        .step-number {
+            background-color: #000;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-right: 0.6rem;
+            vertical-align: middle;
+        }
+
+        .code-block {
+            background-color: #1a1a2e;
+            color: #e2e8f0;
+            padding: 1.25rem 1.5rem;
+            border-radius: 6px;
+            margin: 1.25rem 0;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.88rem;
+            line-height: 1.9;
+            overflow-x: auto;
+        }
+        .code-block .keyword { color: #c084fc; }
+        .code-block .comment { color: #64748b; }
+        .code-block .fn { color: #67e8f9; }
+        .code-block .val { color: #fbbf24; }
+
+        .key-insight {
+            background-color: #fafafa;
+            border-left: 3px solid #000;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-style: italic;
+            color: #333;
+        }
+
+        .impact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin: 1.5rem 0;
+        }
+        .impact-item {
+            padding: 1.25rem;
+            border-radius: 6px;
+        }
+        .impact-item h4 { margin-bottom: 0.5rem; font-size: 1rem; }
+        .impact-item p { margin-bottom: 0; font-size: 0.95rem; }
+        .impact-bad { background-color: #fef2f2; border: 1px solid #fecaca; }
+        .impact-bad h4 { color: #dc2626; }
+        .impact-good { background-color: #f0fdf4; border: 1px solid #bbf7d0; }
+        .impact-good h4 { color: #16a34a; }
+
+        .summary-box {
+            background-color: #fafafa;
+            border-left: 3px solid #000;
+            padding: 1.5rem 1.75rem;
+            margin-top: 3rem;
+            border-radius: 0 4px 4px 0;
+        }
+        .summary-box h3 { margin-top: 0; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+
+        @media (max-width: 640px) {
+            h1 { font-size: 2rem; }
+            .impact-grid { grid-template-columns: 1fr; }
+            .scenario-banner { padding: 1.5rem; }
+            .scenario-banner .big-number { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Real-World Concurrency</h1>
+            <p class="subtitle">How Visa processes 60,000 transactions per second without losing a cent</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- THE SETUP -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>The Setup: Black Friday</h2>
+
+            <div class="scenario-banner">
+                <h3>Visa's Problem</h3>
+                <div class="big-number">60,000</div>
+                <div class="big-label">transactions per second on peak days</div>
+                <p>Every swipe, tap, and online checkout is a transaction: "Charge $47.99 to card ending 4521 at Target." Each one needs to read the balance, check the credit limit, approve or decline, and write the new balance.</p>
+            </div>
+
+            <h3>Why serial execution is impossible</h3>
+
+            <div class="math-box">
+                <p style="margin-bottom: 0.75rem;">Each transaction takes roughly <strong>10ms</strong> (disk reads, credit check, write).</p>
+                <p style="margin-bottom: 0.75rem;">Running them one at a time: 60,000 &times; 10ms = <strong>600 seconds</strong> to process 1 second of transactions.</p>
+                <p style="margin-bottom: 0;"><strong>You fall 599 seconds behind every second.</strong> The system collapses in minutes. Millions of customers stare at "Transaction pending..." on Black Friday.</p>
+            </div>
+
+            <div class="concept-link">
+                <strong>Course concept &rarr; Serial schedules</strong> are always correct, but catastrophically slow for real workloads. This is why databases MUST interleave operations from different transactions.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- THE DANGER: WHAT GOES WRONG -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>The Danger: What Happens Without Concurrency Control</h2>
+
+            <p>Your Visa card has a <strong>$500 credit limit</strong> and <strong>$400 available balance</strong>. Two charges hit at the same time:</p>
+
+            <div class="impact-grid">
+                <div class="impact-item impact-bad">
+                    <h4>T1: Nike.com &mdash; $80 shoes</h4>
+                    <p><code>r1(bal), w1(bal)</code><br>Reads balance, subtracts $80, writes new balance.</p>
+                </div>
+                <div class="impact-item impact-bad">
+                    <h4>T2: Spotify &mdash; $15 auto-renewal</h4>
+                    <p><code>r2(bal), w2(bal)</code><br>Reads balance, subtracts $15, writes new balance.</p>
+                </div>
+            </div>
+
+            <h3>The bad interleaving (no protection)</h3>
+
+            <div class="danger-box">
+                <h3>WR Conflict &rarr; Anomaly: Lost Update</h3>
+                <table class="timeline-table" style="margin-bottom: 0;">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>T1: Nike $80</th>
+                            <th>T2: Spotify $15</th>
+                            <th>Balance on disk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><code>r1(bal)</code> &rarr; reads $400</td>
+                            <td></td>
+                            <td>$400</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td></td>
+                            <td><code>r2(bal)</code> &rarr; reads $400</td>
+                            <td>$400</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>computes $400 &minus; $80 = $320</td>
+                            <td>computes $400 &minus; $15 = $385</td>
+                            <td>$400</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><code>w1(bal)</code> &rarr; writes $320</td>
+                            <td></td>
+                            <td class="result">$320</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td></td>
+                            <td><code>w2(bal)</code> &rarr; writes $385</td>
+                            <td class="result" style="color: #dc2626;">$385</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>Final balance: $385.</strong> The $80 Nike purchase just vanished. You got free shoes. Visa loses $80.</p>
+
+            <div class="math-box">
+                <p style="margin-bottom: 0.75rem;"><strong>Why did this happen?</strong></p>
+                <p style="margin-bottom: 0.75rem;">T2 read the balance <strong>before</strong> T1's write took effect. It used the stale value ($400) instead of the updated one ($320). Then T2's write <strong>overwrote</strong> T1's result.</p>
+                <p style="margin-bottom: 0;">This is a <strong>WR conflict that became a real anomaly</strong> &mdash; T1 wrote, T2 read the old value, and the final state matches no serial ordering.</p>
+            </div>
+
+            <div class="concept-link">
+                <strong>Course concept &rarr; Conflict:</strong> <code>w1(bal)</code> and <code>r2(bal)</code> are from different transactions, on the same data item, and one is a write. That's a WR conflict. In this bad interleaving, the conflict produced an <strong>anomaly</strong> (lost update).
+            </div>
+
+            <h3>The scale of the damage</h3>
+
+            <div class="impact-grid">
+                <div class="impact-item impact-bad">
+                    <h4>Without protection</h4>
+                    <p>At 60,000 TPS, even 0.1% anomaly rate = <strong>60 lost transactions/second</strong>. At an average of $50 each, that's <strong>$3,000/second</strong> in errors &mdash; roughly <strong>$260 million per day</strong>.</p>
+                </div>
+                <div class="impact-item impact-good">
+                    <h4>With concurrency control</h4>
+                    <p>The DBMS detects conflicts, prevents anomalies, and guarantees every interleaved schedule is equivalent to some serial execution. <strong>$0 lost.</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- THE SOLUTION: HOW VISA PREVENTS THIS -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>The Solution: How Visa Prevents Anomalies</h2>
+
+            <p>Visa's database applies the exact concepts from the course. Here is how each piece fits together:</p>
+
+            <!-- Step 1 -->
+            <div class="step-section">
+                <h3><span class="step-number">1</span> Each card swipe is a transaction</h3>
+
+                <p>Every purchase is wrapped in a transaction with atomicity guarantees:</p>
+
+                <div class="code-block">
+                    <span class="keyword">BEGIN TRANSACTION</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">read</span>(balance) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">-- check available credit</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;new_bal = balance - <span class="val">purchase_amt</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">IF</span> new_bal &lt; <span class="val">0</span> &rarr; <span class="keyword">ABORT</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">-- decline the card</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">write</span>(balance = new_bal) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">-- deduct the charge</span><br>
+                    <span class="keyword">COMMIT</span>
+                </div>
+
+                <div class="concept-link">
+                    <strong>Course concept &rarr; Transaction:</strong> A logical unit of work that either fully completes or fully rolls back. If the system crashes between the read and write, WAL (Write-Ahead Logging) ensures the partial change is undone. <strong>Atomicity + Durability</strong> from Week 4.
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-section">
+                <h3><span class="step-number">2</span> The DBMS interleaves but detects conflicts</h3>
+
+                <p>The database runs thousands of transactions simultaneously. But when two transactions touch the <strong>same card</strong> (same data item), the system identifies the conflict:</p>
+
+                <ul>
+                    <li>T1 writes balance, then T2 reads balance &rarr; <strong>WR conflict</strong> on the same card</li>
+                    <li>The conflict graph gets an edge: <strong>T1 &rarr; T2</strong> (T1 must logically precede T2)</li>
+                </ul>
+
+                <p>As long as the conflict graph stays <strong>acyclic</strong>, the interleaving is safe and the DBMS allows it.</p>
+
+                <div class="concept-link">
+                    <strong>Course concept &rarr; Conflict graph:</strong> Nodes = transactions, directed edges = conflict orderings. Acyclic graph = conflict serializable = safe to execute.
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-section">
+                <h3><span class="step-number">3</span> If a cycle forms, abort a victim</h3>
+
+                <p>If both T1 and T2 read the old balance and both try to write (creating edges T1 &rarr; T2 <strong>and</strong> T2 &rarr; T1), the conflict graph has a <strong>cycle</strong>.</p>
+
+                <div class="danger-box" style="margin-bottom: 1.25rem;">
+                    <h3>Cycle detected: T1 &harr; T2</h3>
+                    <p style="margin-bottom: 0.5rem;"><strong>T1 &rarr; T2:</strong> T1's write must happen before T2's read.</p>
+                    <p style="margin-bottom: 0.5rem;"><strong>T2 &rarr; T1:</strong> T2's write must happen before T1's read.</p>
+                    <p style="margin-bottom: 0;">Both can't be first. <strong>Contradiction.</strong></p>
+                </div>
+
+                <p>The DBMS picks a <strong>victim</strong> &mdash; typically the transaction that has done the least work &mdash; aborts it, rolls back its changes using the WAL undo log, and retries it.</p>
+
+                <p>In practice: your Spotify charge gets declined for a split second, then automatically retries 50ms later. You never notice.</p>
+
+                <div class="concept-link">
+                    <strong>Course concept &rarr; Victim selection:</strong> When the conflict graph has a cycle, the DBMS must abort one transaction to break it. Strategies include: youngest transaction, least work done, or lowest priority.
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-section">
+                <h3><span class="step-number">4</span> The correct interleaving</h3>
+
+                <p>After concurrency control, the schedule looks like this:</p>
+
+                <div class="success-box">
+                    <h3>Conflict serializable schedule &mdash; equivalent to serial T1 then T2</h3>
+                    <table class="timeline-table" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>T1: Nike $80</th>
+                                <th>T2: Spotify $15</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td><code>r1(bal)</code> &rarr; $400</td>
+                                <td class="blocked">(blocked &mdash; conflict on same card)</td>
+                                <td>$400</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td><code>w1(bal)</code> &rarr; $320</td>
+                                <td class="blocked">(still waiting)</td>
+                                <td class="result">$320</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>COMMIT &check;</td>
+                                <td><code>r2(bal)</code> &rarr; $320</td>
+                                <td>$320</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td></td>
+                                <td><code>w2(bal)</code> &rarr; $305</td>
+                                <td class="result">$305</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td></td>
+                                <td>COMMIT &check;</td>
+                                <td style="color: #16a34a; font-weight: 600;">$305 &check;</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><strong>Final balance: $305.</strong> Both charges went through. $400 &minus; $80 &minus; $15 = $305. Correct.</p>
+
+                <div class="concept-link">
+                    <strong>Course concept &rarr; Serializable schedule:</strong> This interleaved schedule produces the same result as the serial order T1 then T2. The conflict graph has only one edge (T1 &rarr; T2), no cycle, so it's conflict serializable. Topological sort gives the equivalent serial order: T1, T2.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- THE KEY INSIGHT -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Why This Scales to 60,000 TPS</h2>
+
+            <div class="key-insight">
+                Most of those 60,000 transactions are on <strong>different cards</strong>. Your Nike purchase and someone else's Starbucks coffee don't conflict at all &mdash; different data items, no conflicts, no edges in the graph. They run fully in parallel with zero coordination.
+            </div>
+
+            <p>Conflicts only happen when <strong>two transactions hit the same card at the same time</strong>. With millions of active cards, this is rare. So the system gets:</p>
+
+            <div class="impact-grid">
+                <div class="impact-item impact-good">
+                    <h4>Massive parallelism</h4>
+                    <p>99.9% of transactions touch different cards and run with zero waiting. Full speed.</p>
+                </div>
+                <div class="impact-item impact-good">
+                    <h4>Guaranteed correctness</h4>
+                    <p>The 0.1% that do conflict are serialized (one waits for the other) or aborted and retried. No anomalies ever.</p>
+                </div>
+            </div>
+
+            <div class="math-box">
+                <p style="margin-bottom: 0.75rem;"><strong>The numbers:</strong></p>
+                <p style="margin-bottom: 0.75rem;">60,000 TPS across ~500 million active Visa cards.</p>
+                <p style="margin-bottom: 0.75rem;">Probability of two transactions hitting the same card in the same 10ms window: extremely low.</p>
+                <p style="margin-bottom: 0;">So the conflict graph at any moment has <strong>60,000 nodes but almost no edges</strong>. Trivially acyclic. Almost everything runs in parallel.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- MAPPING TO COURSE CONCEPTS -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>Mapping Every Course Concept</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Course Concept</th>
+                        <th>Visa Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Transaction</strong></td>
+                        <td>One card swipe: read balance, check limit, write new balance</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Serial schedule</strong></td>
+                        <td>Process one swipe at a time. Correct but would take 600 seconds per second of load</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Interleaved schedule</strong></td>
+                        <td>Process thousands of swipes simultaneously. Fast but risks anomalies</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Conflict (WR)</strong></td>
+                        <td>Two charges on the same card &mdash; one writes the balance, the other reads it</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Anomaly (Lost Update)</strong></td>
+                        <td>T2 reads stale balance, overwrites T1's deduction. $80 purchase vanishes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Conflict graph</strong></td>
+                        <td>60,000 nodes (transactions), edges only between transactions on the same card</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Acyclic = safe</strong></td>
+                        <td>Different cards = no edges = trivially acyclic = full parallel execution</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cycle = abort</strong></td>
+                        <td>Two simultaneous charges on the same card create a cycle. One gets retried</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Victim selection</strong></td>
+                        <td>Spotify's $15 charge gets retried (less work) rather than the $80 Nike purchase</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Topological sort</strong></td>
+                        <td>After resolving the cycle, equivalent serial order is: Nike first, Spotify second</td>
+                    </tr>
+                    <tr>
+                        <td><strong>WAL / Undo log</strong></td>
+                        <td>If the system crashes mid-transaction, the partial charge is rolled back cleanly</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SUMMARY -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>The Takeaway</h3>
+                <p style="margin-bottom: 1rem;">Concurrency control is not an abstract academic exercise. It is the reason your credit card works reliably when 60,000 other people are swiping theirs at the exact same moment.</p>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li>&check; <strong>Transactions</strong> wrap each swipe into an atomic unit</li>
+                    <li>&check; <strong>Interleaving</strong> gives the throughput needed for 60,000 TPS</li>
+                    <li>&check; <strong>Conflict detection</strong> identifies the rare cases where two charges hit the same card</li>
+                    <li>&check; <strong>Conflict graphs</strong> check if the interleaving is safe (acyclic) or dangerous (cyclic)</li>
+                    <li>&check; <strong>Victim selection + abort + retry</strong> breaks any cycles, with delays so small you never notice</li>
+                    <li>&check; <strong>The result:</strong> maximum parallelism with guaranteed correctness &mdash; no free shoes, no lost charges, no inconsistent balances</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+            <p>Real-World Concurrency Example &mdash; Supplementary to Lecture 04</p>
+        </footer>
+
+    </div>
+</body>
+</html>

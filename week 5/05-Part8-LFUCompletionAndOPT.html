@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LFU Completion, Hybrid Policies, and OPT — Part 8</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>LFU Completion, Hybrid Policies, and OPT</h1>
+            <p class="subtitle">Finishing the LFU trace, combining recency and frequency, and the theoretical optimal</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: LFU Worked Example (Complete) -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. LFU Worked Example (Complete)</h2>
+
+            <p>Continuing from Part 7, here is the full LFU trace for <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. Note: LFU tracks <strong>historical frequency counts</strong> — even after an item is evicted, its count is remembered so that if it returns, its frequency reflects its full history.</p>
+
+            <table>
+                <tr>
+                    <th>Req</th>
+                    <th>Result</th>
+                    <th>Action</th>
+                    <th>Cache</th>
+                    <th>Counts</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 1</td>
+                    <td>[1]</td>
+                    <td>1:1</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 2</td>
+                    <td>[1, 2]</td>
+                    <td>1:1, 2:1</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 3</td>
+                    <td>[1, 2, 3]</td>
+                    <td>1:1, 2:1, 3:1</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Insert 4 (full)</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:1, 2:1, 3:1, 4:1</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>Increment 1's count</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:<strong>2</strong>, 2:1, 3:1, 4:1</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>Increment 2's count</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:2, 2:<strong>2</strong>, 3:1, 4:1</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 3 or 4 (both count 1, randomly chose 3)</td>
+                    <td>[1, 2, 4, 5]</td>
+                    <td>1:2, 2:2, 4:1, 5:1</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Hit</td>
+                    <td>Increment 1's count</td>
+                    <td>[1, 2, 4, 5]</td>
+                    <td>1:<strong>3</strong>, 2:2, 4:1, 5:1</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Hit</td>
+                    <td>Increment 2's count</td>
+                    <td>[1, 2, 4, 5]</td>
+                    <td>1:3, 2:<strong>3</strong>, 4:1, 5:1</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 4 or 5 (both count 1, randomly chose 5)</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:3, 2:3, 3:<strong>2</strong>, 4:1</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Hit</td>
+                    <td>Increment 4's count</td>
+                    <td>[1, 2, 3, 4]</td>
+                    <td>1:3, 2:3, 3:2, 4:<strong>2</strong></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Miss</strong></td>
+                    <td>Evict 3 or 4 (both count 2, randomly chose 4)</td>
+                    <td>[1, 2, 3, 5]</td>
+                    <td>1:3, 2:3, 3:2, 5:<strong>2</strong></td>
+                </tr>
+            </table>
+
+            <div class="magic-connection">
+                <h4>Result: 7 misses, 5 hits out of 12 requests</h4>
+                <p style="margin-bottom: 0.5rem;">Hit rate: 5/12 = <strong>41.7%</strong> — better than both FIFO (16.7%) and LRU (33.3%)!</p>
+                <p style="margin-bottom: 0;">LFU's advantage on this sequence: items 1 and 2 are the most frequently accessed (3 times each). LFU recognizes their high frequency and protects them from eviction, even when they haven't been accessed in a while. Note that 3's count is remembered as 2 when it re-enters (its historical count of 1 from before eviction + the new access).</p>
+            </div>
+
+            <div class="problem-box">
+                <h4>Important: Tie-breaking is Random</h4>
+                <p style="margin-bottom: 0;">When multiple items have the same lowest frequency (e.g., items 3 and 4 both at count 1), LFU must break the tie somehow. In this example, the tie is broken randomly. Different tie-breaking strategies (e.g., FIFO among ties, or LRU among ties) can change the results.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: LRU/LFU Hybrid Combinations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. LRU/LFU Combinations</h2>
+
+            <p>LRU prioritizes <strong>recent</strong> accesses. LFU prioritizes <strong>frequent</strong> accesses. Both recency and frequency are important signals, and each works better for different workloads. This has led to many <strong>hybrid algorithms</strong> that combine both signals.</p>
+
+            <div class="explanation-box">
+                <h4>Segmented LRU</h4>
+                <p style="margin-bottom: 0.5rem;">One practical hybrid approach:</p>
+                <ul style="margin-bottom: 0;">
+                    <li>The <strong>first time</strong> an object is inserted into the cache, place it in the <strong>middle</strong> of the LRU list (not the head/most-recent position)</li>
+                    <li>On <strong>subsequent accesses</strong>, promote it to the top (most-recent position) as normal LRU would</li>
+                    <li>This mostly behaves like LRU, but <strong>penalizes one-time accesses</strong> — objects that are accessed recently but only once start closer to the eviction end</li>
+                </ul>
+            </div>
+
+            <div class="key-insight">
+                Segmented LRU addresses a common LRU weakness: a single scan through many new items can evict all the popular cached items (called "cache pollution"). By inserting new items in the middle, they must prove they deserve to stay by being accessed again before reaching the protected end of the list.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: OPT / Belady's Algorithm -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. OPT / Belady's Algorithm</h2>
+
+            <p>Every policy we've seen (FIFO, LRU, LFU) performs better or worse depending on the workload. Is there a way to know the absolute best possible performance? Yes — <strong>Belady's algorithm</strong> (also called OPT).</p>
+
+            <div class="definition-box">
+                <strong>OPT (Belady's Algorithm):</strong> Evict the item that will <strong>not be accessed for the longest time in the future</strong>. This is provably the optimal eviction algorithm — no other policy can achieve fewer misses.
+            </div>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Why It's Useful</h4>
+                    <p style="margin-bottom: 0;">OPT serves as a <strong>theoretical benchmark</strong>. Given a trace of requests, we can run OPT (since we know the full trace) and compare it against LRU, LFU, etc. to measure how close real policies come to optimal. This helps evaluate whether a practical policy is "good enough."</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Why It's Impractical</h4>
+                    <p style="margin-bottom: 0;">OPT requires <strong>knowing the future</strong> — the entire sequence of future requests. In a real system, we don't know what will be requested next. So OPT cannot be implemented in practice. It exists purely as an upper bound.</p>
+                </div>
+            </div>
+
+            <p>Recent research has explored using OPT to <strong>train machine learning models</strong> that learn eviction policies. The idea: run OPT on historical traces, then train a model to mimic OPT's decisions using only past information (e.g., "Learning Relaxed Belady" by Song et al.).</p>
+
+            <h3>OPT Worked Example (Beginning)</h3>
+
+            <p>Same sequence: <code>1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</code> with cache size 4. OPT looks ahead to decide who to evict.</p>
+
+            <div class="explanation-box">
+                <h4>First 4 Requests: Cold Misses</h4>
+                <p style="margin-bottom: 0.5rem;">Request 1: miss &rarr; cache = {1, 2, 3, 4} is not full yet</p>
+                <p style="margin-bottom: 0.5rem;">Request 2: miss &rarr; cache grows</p>
+                <p style="margin-bottom: 0.5rem;">Request 3: miss &rarr; cache grows</p>
+                <p style="margin-bottom: 0;">Request 4: miss &rarr; cache = {1, 2, 3, 4} (full)</p>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Request 5 (item 1): Hit</h4>
+                <p style="margin-bottom: 0;">Item 1 is in the cache. No eviction needed. Cache remains {1, 2, 3, 4}. OPT now considers: what are the future access distances for each item?</p>
+            </div>
+
+            <p>The OPT trace continues in Part 9, where it will demonstrate how looking ahead allows OPT to make perfect eviction decisions and achieve the minimum possible number of misses.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Running Scorecard -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Running Scorecard</h2>
+
+            <table>
+                <tr>
+                    <th>Policy</th>
+                    <th>Misses</th>
+                    <th>Hits</th>
+                    <th>Hit Rate</th>
+                </tr>
+                <tr>
+                    <td><strong>FIFO</strong></td>
+                    <td>10</td>
+                    <td>2</td>
+                    <td>16.7%</td>
+                </tr>
+                <tr>
+                    <td><strong>LRU</strong></td>
+                    <td>8</td>
+                    <td>4</td>
+                    <td>33.3%</td>
+                </tr>
+                <tr>
+                    <td><strong>LFU</strong></td>
+                    <td>7</td>
+                    <td>5</td>
+                    <td>41.7%</td>
+                </tr>
+                <tr>
+                    <td><strong>OPT</strong></td>
+                    <td>TBD (Part 9)</td>
+                    <td>TBD</td>
+                    <td>Best possible</td>
+                </tr>
+            </table>
+
+            <div class="key-insight">
+                On this particular sequence, LFU outperforms LRU because the workload has clear "popular" items (1 and 2 appear 3 times each). LFU's frequency tracking detects this. However, this doesn't mean LFU is always better — on a workload where popularity shifts over time, LRU's recency awareness would win. The best policy depends on the workload.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 8</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> LFU achieves <strong>7 misses</strong> (41.7% hit rate) — best practical result so far on the reference sequence</li>
+                    <li><span class="checkmark">&#10003;</span> LFU tracks <strong>historical frequency counts</strong> even for evicted items, so returning items retain their accumulated count</li>
+                    <li><span class="checkmark">&#10003;</span> When items are tied in frequency, the tie must be broken (randomly, by recency, etc.)</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Hybrid policies</strong> combine recency and frequency — e.g., Segmented LRU inserts new items in the middle to penalize one-time accesses</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>OPT (Belady's Algorithm)</strong> evicts the item whose next access is furthest in the future — provably optimal but requires knowing the future</li>
+                    <li><span class="checkmark">&#10003;</span> OPT is used as a <strong>theoretical benchmark</strong> to evaluate how close practical policies come to the best possible</li>
+                    <li><span class="checkmark">&#10003;</span> Recent ML research trains eviction policies using OPT on historical traces</li>
+                    <li><span class="checkmark">&#10003;</span> No single policy wins on all workloads — the best choice depends on access patterns</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

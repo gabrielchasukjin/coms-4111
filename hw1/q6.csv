@@ -1,0 +1,469 @@
+name,repo_name
+xBase,AlDanial/cloc
+wisp,Fresheyeball/elm-node
+wdl,broadinstitute/cromwell
+sed,kubernetes/kubernetes
+reStructuredText,mgeier/homepage
+q,apache/spark
+ooc,fasterthanlime/rock
+nesC,winder/Universal-G-Code-Sender
+mupad,buildfirst/buildfirst
+mIRC Script,GoldenCheetah/GoldenCheetah
+kvlang,kivy/kivy
+jq,angular/angular
+hoon,AlDanial/cloc
+eC,openssl/openssl
+Zimpl,indranilsinharoy/PyZDDE
+Zig,AlDanial/cloc
+Zephir,phalcon/zephir
+ZenScript,ArmageddonGames/ZeldaClassic
+Zeek,cea-sec/ivre
+Yul,ethereum/solidity
+Yacc,rails/rails
+YASnippet,jorgenschaefer/elpy
+YARA,pypa/warehouse
+YAML,ansistrano/deploy
+Xtend,AlDanial/cloc
+Xonsh,h5py/h5py
+Xojo,xojo/FM
+XSLT,facebook/react-native
+XS,y123456yz/reading-code-of-nginx-1.9.2
+XQuery,AlDanial/cloc
+XProc,kraih/mojo
+XPages,teamstudio/xcontrols-domino
+XML,DesarrolloAntonio/FragmentTransactionExtended
+XC,OpenRCT2/OpenRCT2
+X10,MartinThoma/LaTeX-examples
+Witcher Script,t3nsor/SPOJ
+WebIDL,tmpvar/jsdom
+WebAssembly,Microsoft/ChakraCore
+Web Ontology Language,lumifyio/lumify
+Vue,containous/traefik
+Volt,opnsense/core
+Visual Basic 6.0,sysown/proxysql
+Visual Basic .NET,dotnet/roslyn
+Visual Basic,Microsoft/vscode
+VimL,spf13/spf13-vim
+Vim script,docker/docker
+Vim Snippet,tensorflow/tensorflow
+Vim Script,apple/swift
+Verilog,cloudera/hue
+Velocity Template Language,fxbois/web-mode
+Vala,radare/radare2
+VHDL,hamsternz/FPGA_Webserver
+VCL,jamesrwhite/minicron
+VBScript,amix/vimrc
+VBA,AlDanial/cloc
+V,kostya/benchmarks
+UrWeb,steinuil/negoto
+UnrealScript,fail0verflow/ps4-linux
+Uno,jveres/D500px
+TypeScript,facebook/react
+Twig,getgrav/grav
+Turing,pasky/pachi
+Thrift,apache/spark
+Terra,PrismJS/prism
+Tea,remotemethod/hello-world
+TeX,cisco/ChezScheme
+Tcl,antirez/redis
+TXL,umple/umple
+TSQL,antontarasenko/smq
+TLA,erlang/otp
+SystemVerilog,AlDanial/cloc
+Swift,tensorflow/tensorflow
+Svelte,AlDanial/cloc
+SuperCollider,bkaradzic/bgfx
+SugarSS,AlDanial/cloc
+Stylus,t4t5/sweetalert
+StringTemplate,spotify/scio
+Stata,AlDanial/cloc
+Starlark,tensorflow/tensorflow
+Standard ML,facebook/reason
+Stan,stan-dev/stan
+Squirrel,AlDanial/cloc
+SourcePawn,tensorflow/tensorflow
+Solidity,ethereum/go-ethereum
+Smarty,tensorflow/tensorflow
+Smalltalk,h6ah4i/android-advancedrecyclerview
+Smali,skylot/jadx
+SmPL,erlang/otp
+Slim,AlDanial/cloc
+Slice,zeroc-ice/ice
+Slash,emacs-mirror/emacs
+Singularity,MRtrix3/mrtrix3
+Sieve,tomav/docker-mailserver
+Shen,gravicappa/klvm
+ShellSession,MartinThoma/LaTeX-examples
+Shell,tensorflow/tensorflow
+ShaderLab,Microsoft/vscode
+Self,rhuitl/uClinux
+Scilab,saltstack/salt
+Scheme,cisco/ChezScheme
+Scaml,apache/samza
+Scala,apex/apex
+Sass,jgthms/bulma
+SaltStack,chubin/wttr.in
+Sage,bitcoin/bitcoin
+SWIG,libgdx/libgdx
+SVG,gilbarbara/logos
+SRecode Template,videolan/vlc
+SQLPL,andris9/mailtrain
+SQL,amacoder/demo-restWS-spring-jersey-tomcat-mybatis
+SQF,CBATeam/CBA_A3
+SMT,facebook/infer
+SCSS,twbs/bootstrap
+SAS,ketoo/NoahGameFrame
+Rust,Microsoft/vscode
+Ruby,tensorflow/tensorflow
+RouterOS Script,digital-preservation/droid
+Rouge,StanfordLegion/legion
+Roff,tensorflow/tensorflow
+RobotFramework,AlDanial/cloc
+Riot,riot/examples
+Ring,AlDanial/cloc
+Rich Text Format,grafana/grafana
+RenderScript,intellij-rust/intellij-rust
+Ren'Py,robotlolita/cute-demon-crashers
+Redcode,root-mirror/root
+Red,Schematron/schematron
+Rebol,swirldev/swirl_courses
+Reason,facebook/reason
+ReScript,apache/spark
+Rascal,racaljk/hosts
+Raku,DrKLO/Telegram
+Ragel in Ruby Host,google/gumbo-parser
+Ragel,libgdx/libgdx
+Racket,AlDanial/cloc
+RUNOFF,tomaszmrugalski/dibbler
+RPGLE,libssh2/libssh2
+RPC,ohler55/oj
+REXX,scummvm/scummvm
+RAML,AlDanial/cloc
+R,Microsoft/vscode
+Qt Script,xaos-project/XaoS
+QMake,bitcoin/bitcoin
+QML,das-labor/panopticon
+Q#,digital-preservation/droid
+Python,tensorflow/tensorflow
+PureScript,osener/wring
+PureBasic,deeplearning4j/deeplearning4j
+Pure Data,joearms/music_experiments
+Puppet,AlDanial/cloc
+Pug,webpack/webpack
+Protocol Buffer,docker/docker
+Propeller Spin,MyRobotLab/myrobotlab
+Promela,Dolibarr/dolibarr
+Prolog,babel/babel
+Procfile,django/django
+Processing,platformio/platformio
+PowerShell,twbs/bootstrap
+PowerBuilder,secretsquirrel/the-backdoor-factory
+PostScript,danielquinn/paperless
+Portugol,digital-preservation/droid
+Pony,ponylang/ponyc
+PogoScript,featurist/pogoscript
+Pike,blackducksoftware/ohcount
+PigLatin,AlDanial/cloc
+PicoLisp,CyberGrandChallenge/binutils
+Perl6,CleverbotIO/node-cleverbot.io
+Perl 6,Microsoft/vscode
+Perl,tensorflow/tensorflow
+Pep8,hammerlab/pyensembl
+Pawn,tensorflow/tensorflow
+Pascal,AlDanial/cloc
+Parrot,petdance/ack2
+Papyrus,fireundubh/fo4-mods
+Pan,asterisk/pjproject
+POV-Ray SDL,citra-emu/citra
+PLpgSQL,apache/spark
+PLSQL,itsabot/abot
+PHP,Microsoft/vscode
+PEG.js,NaturalNode/natural
+PDDL,LogtalkDotOrg/logtalk3
+PAWN,google/protobuf
+P4,AlDanial/cloc
+Oz,subgraph/oz
+Ox,oxLang/ox
+OpenSCAD,AlDanial/cloc
+OpenQASM,libretro/RetroArch
+OpenEdge ABL,libgdx/libgdx
+Open Policy Agent,concourse/concourse
+Opal,radiasoft/sirepo
+Opa,MLstate/PEPS-source
+Omgrofl,remotemethod/hello-world
+Odin,AlDanial/cloc
+Objective-J,zyq8709/DexHunter
+Objective-C++,tensorflow/tensorflow
+Objective-C,tensorflow/tensorflow
+ObjectScript,SalesforceFoundation/Cumulus
+OCaml,facebook/flow
+Nunjucks,h5bp/Front-end-Developer-Interview-Questions
+Nu,pypa/virtualenv
+Nix,StevenBlack/hosts
+Nit,mollstam/UnrealPy
+Nimrod,jboy/nim-pymod
+Nim,google/flatbuffers
+Nginx,letsencrypt/letsencrypt
+Nextflow,nextflow-io/nextflow
+NewLisp,jlord/git-it-electron
+NetLogo,openmole/openmole
+Nemerle,JetBrains/Nitra
+Nearley,Hardmath123/nearley
+Nasal,ArduPilot/ardupilot
+NWScript,joshumax/hurd
+NSIS,jp9000/obs-studio
+NCL,samwisehawkins/wrftools
+NASL,angular/angular
+Myghty,cloudera/hue
+Mustache,grafana/grafana
+Move,debrief/debrief
+Motoko,puppylinux-woof-CE/woof-CE
+MoonScript,Olivine-Labs/busted
+Moocode,mollstam/UnrealPy
+Monkey C,google/open-location-code
+Monkey,JaviCervera/vortex
+Module Management System,ketoo/NoahGameFrame
+Modula-3,blackducksoftware/ohcount
+Modula-2,emacs-mirror/emacs
+Modelica,jumpserver/jumpserver
+Mirah,mirah/mirah
+Metal,FlexMonkey/Filterpedia
+Meson,nlohmann/json
+Mermaid,PyCQA/pylint
+Mercury,jverkoey/nimbus
+Max,RangeNetworks/openbts
+Matlab,dmlc/mxnet
+Mathematica,AlDanial/cloc
+Mask,cloudera/hue
+Marko,patrick-steele-idem/morphdom
+Markdown,apple/swift-evolution
+Mako,airbnb/caravel
+Makefile,tensorflow/tensorflow
+Macaulay2,fhinkel/InteractiveShell
+MQL5,vdemydiuk/mtapi
+MQL4,vdemydiuk/mtapi
+MLIR,tensorflow/tensorflow
+MAXScript,urho3d/Urho3D
+MATLAB,DrKLO/Telegram
+M4,google/protobuf
+M,Microsoft/WinObjC
+Lua,Microsoft/vscode
+Logtalk,AlDanial/cloc
+Logos,itsabot/abot
+LiveScript,karma-runner/karma
+Liquid,Shopify/liquid
+Limbo,mesonbuild/meson
+LilyPond,jwiegley/org-mode
+Lex,Croteam-official/Serious-Engine
+Less,atom/atom
+Lean,AlDanial/cloc
+Latte,osmcz/osmcz
+Lasso,svenfuchs/adva_cms
+LabVIEW,lionsoul2014/ip2region
+LSL,cloudera/hue
+LOLCODE,justinmeza/lci
+LLVM,tensorflow/tensorflow
+LFE,AlDanial/cloc
+Kotlin,facebook/react-native
+Kit,malarkey/320andup
+KiCad Layout,cuwire/viewee.js
+KiCad,r-lyeh/scriptorium
+KakouneScript,mawww/kakoune
+Kaitai Struct,mitmproxy/mitmproxy
+KRL,spurious/kawa-mirror
+Jupyter Notebook,tensorflow/tensorflow
+Julia,AlDanial/cloc
+Jsonnet,grafana/grafana
+Jolie,bitkeeper-scm/bitkeeper
+Jinja,ansible/ansible
+JetBrains MPS,AlDanial/cloc
+JavaScript,FreeCodeCamp/FreeCodeCamp
+Java,tensorflow/tensorflow
+Jasmin,pxb1988/dex2jar
+JSONiq,cucumber/cucumber
+JSON,KSP-CKAN/CKAN-meta
+JFlex,JetBrains/intellij-haxe
+J,CompSciCabal/SMRTYPRTY
+Isabelle,AlDanial/cloc
+Ioke,cucumber/cuke4duke
+Io,gravitational/teleport
+Inno Setup,Microsoft/vscode
+Inform 7,ElektraInitiative/libelektra
+Imba,krausest/js-framework-benchmark
+ImageJ Macro,bioconda/bioconda-recipes
+Idris,AlDanial/cloc
+IGOR Pro,AlDanial/cloc
+IDL,WhisperSystems/Signal-Android
+HyPhy,celluloid/dcell
+Hy,docker-library/official-images
+HolyC,AlDanial/cloc
+HiveQL,apache/spark
+Haxe,begriffs/postgrest
+Haskell,koalaman/shellcheck
+Harbour,wecodemore/grunt-githooks
+Handlebars,TryGhost/Ghost
+Haml,LukyVj/family.scss
+Hack,jekyll/jekyll
+HTML,FreeCodeCamp/FreeCodeCamp
+HLSL,Microsoft/vscode
+HCL,grafana/grafana
+Groovy,Microsoft/vscode
+Groff,letsencrypt/letsencrypt
+Graphviz (DOT),mosterta/xbmc
+Grammatical Framework,mfem/mfem
+Grace,blackducksoftware/ohcount
+Gosu,ervandew/eclim
+Golo,remotemethod/hello-world
+Go,tensorflow/tensorflow
+Gnuplot,tsenart/vegeta
+Gleam,AlDanial/cloc
+Gherkin,jekyll/jekyll
+Gettext Catalog,danakj/openbox
+Genshi,cloudera/hue
+Genie,mesonbuild/meson
+Game Maker Language,ghcjs/ghcjs
+GSC,libretro/RetroArch
+GLSL,BradLarson/GPUImage2
+GDScript,godotengine/godot
+GDB,mathiasbynens/dotfiles
+GCC Machine Description,facebook/AsyncDisplayKit
+GAP,godotengine/godot
+GAMS,iiasa/gams_stub
+GAML,gama-platform/gama
+G-code,cloudera/hue
+Futhark,AlDanial/cloc
+Frege,Frege/frege-lein-plugin
+FreeMarker,spring-projects/spring-framework
+FreeBasic,universal-ctags/ctags
+Fortran,golang/go
+Forth,AlDanial/cloc
+Fluent,OpenRA/OpenRA
+Filebench WML,sergeykhbr/riscv_vhdl
+Fennel,AlDanial/cloc
+Faust,csound/csound
+Fantom,tcolar/goed
+Fancy,universal-ctags/ctags
+Factor,factor/factor
+FORTRAN,mingchuno/ABCDEFGHPPP
+FLUX,influxdata/influxdb
+F*,FStarLang/FStar
+F#,Microsoft/vscode
+Euphoria,phoenixframework/phoenix
+Erlang,VundleVim/Vundle.vim
+EmberScript,diydrones/ardupilot
+Emacs Lisp,apple/swift
+Elvish,direnv/direnv
+Elm,evancz/elm-architecture-tutorial
+Elixir,phoenixframework/phoenix
+Eiffel,AlDanial/cloc
+Ecl,mollstam/UnrealPy
+Earthly,jekyll/jekyll
+Eagle,r-lyeh/scriptorium
+EQ,openforis/sepal
+EJS,atom/atom
+ECL,pfsense/pfsense
+E,universal-ctags/ctags
+Dylan,LeeBamberTGC/Dark-Basic-Pro
+Dogescript,dogescript/dogescript
+Dockerfile,tensorflow/tensorflow
+Diff,r3gis3r/CSipSimple
+Dhall,AlDanial/cloc
+DenizenScript,AlDanial/cloc
+Delphi,yahoo/KeyKey
+Dart,google/flatbuffers
+DTrace,apple/swift
+DOT,schacon/git-scribe
+DM,tgstation/-tg-station
+DIGITAL Command Language,letsencrypt/letsencrypt
+DCPU-16 ASM,fogleman/DCPU-16
+D,apple/swift
+Cython,tensorflow/tensorflow
+Cypher,neo4j-contrib/neo4j-apoc-procedures
+Cycript,DavidGoldman/InspectiveC
+Cuda,amznlabs/amazon-dsstne
+Cucumber,openblockchain/obc-peer
+Csound Score,MTG/essentia
+Csound Document,csound/csound
+Csound,csound/csound
+Crystal,sdogruyol/kemal
+Coq,CIDARLAB/cello
+Cool,llvm-mirror/clang
+Component Pascal,ge-ne/bibtool
+Common Workflow Language,flycheck/flycheck
+Common Lisp,facebook/infer
+ColdFusion,danielmiessler/SecLists
+CoffeeScript,facebook/react
+CodeQL,drolbr/Overpass-API
+Closure Templates,cloudera/hue
+Clojure,Microsoft/vscode
+Click,cnplab/clickos
+Clean,AlDanial/cloc
+Classic ASP,danielmiessler/SecLists
+Clarion,Croteam-official/Serious-Engine
+Cirru,cloudera/hue
+ChucK,fiebrink1/wekinator_examples
+Charity,eske/multivec
+Chapel,AlDanial/cloc
+Ceylon,ceylon/ceylon
+CartoCSS,spatialdev/PGRestAPI
+Cap'n Proto,autumnai/leaf
+Cairo,AlDanial/cloc
+Cadence,RIOT-OS/RIOT
+CWeb,FFMG/myoddweb.piger
+CUE,grafana/grafana
+CSS,FreeCodeCamp/FreeCodeCamp
+COBOL,AlDanial/cloc
+CMake,tensorflow/tensorflow
+CLIPS,ketoo/NoahGameFrame
+CAP CDS,mahulchak/quickmerge
+C++,tensorflow/tensorflow
+C#,tensorflow/tensorflow
+C,tensorflow/tensorflow
+Bro,apache/incubator-metron
+Brightscript,AlDanial/cloc
+Brainfuck,AlDanial/cloc
+Boogie,boogie-org/corral
+Boo,mausch/SolrNet
+Bluespec,cambridgehackers/connectal
+BlitzMax,blackducksoftware/ohcount
+BlitzBasic,bitkeeper-scm/bitkeeper
+Blade,laravel/framework
+BitBake,fluent/fluent-bit
+Bison,damonkohler/sl4a
+Bicep,Azure/azure-quickstart-templates
+Beef,bkaradzic/bgfx
+Batchfile,tensorflow/tensorflow
+Ballerina,wso2/wso2-qa-artifacts
+BASIC,gnachman/iTerm2
+Awk,golang/go
+AutoIt,bmrf/tron
+AutoHotkey,cloudera/hue
+Augeas,letsencrypt/letsencrypt
+Asymptote,MartinThoma/LaTeX-examples
+Astro,HubSpot/youmightnotneedjquery
+Assembly,facebook/react-native
+AspectJ,spring-projects/spring-framework
+Arduino,kanflo/aaduino
+Arc,ccrisan/motionpie
+AppleScript,altercation/solarized
+Apex,AlDanial/cloc
+ApacheConf,mxstbr/react-boilerplate
+AngelScript,rg3/youtube-dl
+Alloy,digital-preservation/droid
+Agda,AlDanial/cloc
+Adblock Filter List,uBlockOrigin/uAssets
+Ada,ketoo/NoahGameFrame
+ActionScript,hiloteam/Hilo
+ATS,CloudI/CloudI
+ASP.NET,SeleniumHQ/selenium
+ASP,Microsoft/ProjectOxford-ClientSDK
+ASL,jenkinsci/job-dsl-plugin
+APL,AlDanial/cloc
+API Blueprint,moul/advanced-ssh-config
+ANTLR,apache/spark
+AMPL,apache/cassandra
+AL,facebook/infer
+AIDL,godotengine/godot
+AGS Script,statsmodels/statsmodels
+ABAP,cloudera/hue
+1C Enterprise,dotnet/roslyn

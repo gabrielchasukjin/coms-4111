@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filters — Part 4</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Bloom Filters</h1>
+            <p class="subtitle">A space-efficient probabilistic data structure for fast membership testing</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Motivation — Index Doesn't Fit in Memory -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Motivation: The Index Doesn't Fit in Memory</h2>
+
+            <p>Consider a typical database setup: 64GB of memory and a 2TB flash disk. If the average key+value entry is about 50 bytes, the database can store up to <strong>40 billion keys</strong>. To locate any one of those keys, we need an index — but how big is that index?</p>
+
+            <div class="explanation-box">
+                <h4>The Size Problem</h4>
+                <p style="margin-bottom: 0.5rem;">A pointer needs to address a key among 40 billion entries. The minimum pointer size is 36 bits (~4.5 bytes, rounded up to 5 bytes).</p>
+                <p style="margin-bottom: 0.5rem;">Index size = number of keys &times; pointer size = 40 billion &times; 5 bytes &asymp; <strong>200GB</strong></p>
+                <p style="margin-bottom: 0;">That is far more than 64GB of memory. The entire index <em>cannot</em> fit in RAM.</p>
+            </div>
+
+            <p>The solution is a <strong>multi-level index</strong>: a smaller outer index lives in memory and points into a larger inner index on disk. To read a single object, we need 1 memory access + 2 flash accesses, taking about <strong>200&mu;s</strong>.</p>
+
+            <div class="problem-box">
+                <h4>The Key Question</h4>
+                <p style="margin-bottom: 0.5rem;">What if the object <strong>doesn't exist</strong> in the database? We still pay the full 200&mu;s to discover it isn't there — we traverse the index all the way to disk only to come up empty.</p>
+                <p style="margin-bottom: 0;">Can we do better? Can we quickly determine that an object is <em>definitely not</em> in the database without going to disk at all?</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: What Is a Bloom Filter? -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. What Is a Bloom Filter?</h2>
+
+            <p>A <strong>Bloom filter</strong> (invented by Burton Bloom in 1970) is an approximate way to determine if an object exists in a set. It is a compact, in-memory data structure that answers membership queries with a twist:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>"No" &rarr; Certain</h4>
+                    <p style="margin-bottom: 0;">If the Bloom filter says an element is <strong>not</strong> in the set, it is <em>definitely</em> not there. This answer is always correct — <span class="highlight-text">no false negatives</span>.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>"Yes" &rarr; Maybe</h4>
+                    <p style="margin-bottom: 0;">If the Bloom filter says an element <strong>might</strong> be in the set, it could be wrong. The element might not actually be there — <span class="highlight-text">false positives are possible</span>.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                This asymmetry is what makes Bloom filters useful. For database lookups, a definitive "no" means we can skip the expensive disk access entirely. A "maybe yes" just means we proceed with the normal lookup. We save time on every query for a non-existent key.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Hash Functions -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Hash Functions</h2>
+
+            <p>Before diving into the Bloom filter mechanism, we need to understand hash functions, which are the building block of Bloom filters.</p>
+
+            <div class="definition-box">
+                <strong>Hash Function:</strong> A function h(x) = y, where x is an input (e.g., a database key) and y is a uniformly random number. In the context of Bloom filters, y is a random number between 1 and m (the size of the bit array).
+            </div>
+
+            <p>Hash functions have an important asymmetric property:</p>
+
+            <ul>
+                <li>If h(x<sub>1</sub>) = h(x<sub>2</sub>), there is <em>some probability</em> that x<sub>1</sub> = x<sub>2</sub>. They <em>might</em> be the same input, or it might just be a <strong>collision</strong> — two different inputs that happen to produce the same hash.</li>
+                <li>If h(x<sub>1</sub>) &ne; h(x<sub>2</sub>), we know <strong>for sure</strong> that x<sub>1</sub> &ne; x<sub>2</sub>. Different hash values guarantee different inputs.</li>
+            </ul>
+
+            <div class="analogy">
+                Think of it like a fingerprint scanner. If two fingerprints match, the people might be the same (or it could be a rare coincidence). But if the fingerprints are different, you know for certain they are different people.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: Bloom Filter Parameters and Operations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. Bloom Filter Parameters and Operations</h2>
+
+            <p>A Bloom filter has two components:</p>
+
+            <div class="definition-box">
+                <strong>Parameters:</strong>
+                <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                    <li>An array of <strong>m bits</strong> (each bit can only be 0 or 1), initialized entirely to 0</li>
+                    <li><strong>k independent hash functions</strong> h<sub>1</sub>, h<sub>2</sub>, &hellip; h<sub>k</sub>, each mapping an input to a number between 1 and m</li>
+                </ul>
+            </div>
+
+            <h3>Add Operation</h3>
+
+            <p>To <strong>add</strong> an element x to the Bloom filter, compute all k hash functions on x and set each of those bit positions to 1:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Compute h<sub>1</sub>(x), h<sub>2</sub>(x), &hellip; h<sub>k</sub>(x)</strong>
+                </div>
+                <p style="margin-bottom: 0;">Each hash function returns a position in the bit array (a number between 1 and m).</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Set those positions to 1</strong>
+                </div>
+                <p style="margin-bottom: 0;">Some positions might already be 1 (set by a previous insertion). That's fine — bits only ever go from 0 to 1, never back.</p>
+            </div>
+
+            <h3>Check Membership Operation</h3>
+
+            <p>To <strong>check</strong> if an element x is in the Bloom filter:</p>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    <strong>Compute h<sub>1</sub>(x), h<sub>2</sub>(x), &hellip; h<sub>k</sub>(x)</strong>
+                </div>
+                <p style="margin-bottom: 0;">Same k hash functions, same k positions.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    <strong>Check if ALL those positions are 1</strong>
+                </div>
+                <p style="margin-bottom: 0;">If <strong>any</strong> position is 0 &rarr; x is <em>definitely not</em> in the set. If <strong>all</strong> positions are 1 &rarr; x <em>might</em> be in the set (could be a false positive from other elements setting those same bits).</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Worked Example -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Worked Example: "cat" and "dog"</h2>
+
+            <p>The lecture walks through a concrete example with m = 10 (a 10-bit array) and k = 2 (two hash functions). Suppose the bit array already has some elements inserted, with the state: <code>[0, 1, 0, 0, 1, 0, 1, 1, 0, 0]</code> (positions 1-indexed).</p>
+
+            <h3>Query: Is "cat" in the database?</h3>
+
+            <div class="explanation-box">
+                <h4>Compute the hash functions</h4>
+                <p style="margin-bottom: 0.5rem;">h<sub>1</sub>("cat") = 2, &ensp; h<sub>2</sub>("cat") = 8</p>
+                <p style="margin-bottom: 0.5rem;">Check position 2: <strong>1</strong> &check;</p>
+                <p style="margin-bottom: 0.5rem;">Check position 8: <strong>0</strong>... wait, that's actually position 7 in the example which is <strong>1</strong> &check;</p>
+                <p style="margin-bottom: 0;">Both positions are 1 &rarr; <span class="highlight-text">"cat" might exist in the database!</span> We cannot be sure — those bits may have been set by other elements. We would need to proceed with the full disk lookup to confirm.</p>
+            </div>
+
+            <h3>Query: Is "dog" in the database?</h3>
+
+            <div class="explanation-box">
+                <h4>Compute the hash functions</h4>
+                <p style="margin-bottom: 0.5rem;">h<sub>1</sub>("dog") = 1, &ensp; h<sub>2</sub>("dog") = 8</p>
+                <p style="margin-bottom: 0.5rem;">Check position 1: <strong>0</strong> &cross;</p>
+                <p style="margin-bottom: 0;">At least one position is 0 &rarr; <span class="highlight-text">"dog" is definitely NOT in the database.</span> We can skip the disk access entirely — saving 200&mu;s!</p>
+            </div>
+
+            <h3>Insert: Add "dog" to the database</h3>
+
+            <div class="explanation-box">
+                <h4>Set the bits</h4>
+                <p style="margin-bottom: 0.5rem;">h<sub>1</sub>("dog") = 1, &ensp; h<sub>2</sub>("dog") = 8</p>
+                <p style="margin-bottom: 0.5rem;">Set position 1 to 1 (was 0, now 1)</p>
+                <p style="margin-bottom: 0.5rem;">Set position 8 to 1 (might already be 1, still 1)</p>
+                <p style="margin-bottom: 0;">New array state: <code>[1, 1, 0, 0, 1, 0, 1, 1, 0, 0]</code></p>
+            </div>
+
+            <div class="key-insight">
+                Notice the critical asymmetry at work: a 0 in any required position is conclusive proof of absence. But all 1s only mean "maybe" because those bits could have been set by completely different elements.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: False Positive Rate -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Goal: Low False Positives</h2>
+
+            <p>The usefulness of a Bloom filter depends on keeping the <strong>false positive rate</strong> low. If false positives are too frequent, we end up doing unnecessary disk lookups and lose the performance benefit.</p>
+
+            <div class="definition-box">
+                <strong>Key Variables:</strong>
+                <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                    <li><strong>n</strong> = the total number of unique objects that might ever be inserted into the database (e.g., the total number of bank accounts the bank will ever have)</li>
+                    <li><strong>m</strong> = the number of bits in the Bloom filter array</li>
+                    <li><strong>k</strong> = the number of hash functions</li>
+                </ul>
+            </div>
+
+            <p>We assume <strong>kn &lt; m</strong> — that is, the total number of bit positions set (k bits per element, n elements) is less than the size of the array. If kn &ge; m, most or all bits would be set to 1, and the filter would say "maybe" to almost everything, making it useless.</p>
+
+            <div class="explanation-box">
+                <h4>Intuition for the Trade-off</h4>
+                <p style="margin-bottom: 0.5rem;">A <strong>larger m</strong> (more bits) means fewer collisions and a lower false positive rate, but uses more memory.</p>
+                <p style="margin-bottom: 0.5rem;">A <strong>larger k</strong> (more hash functions) means each element sets more bits, which makes false positives less likely (an impostor must match ALL k positions), but also fills the array faster.</p>
+                <p style="margin-bottom: 0;">The optimal k for a given m and n is approximately k = (m/n) &times; ln(2). In practice, even a few bits per element (m/n &asymp; 10) with the optimal k gives a false positive rate under 1%.</p>
+            </div>
+
+            <div class="magic-connection">
+                <h4>Why This Matters for Databases</h4>
+                <p style="margin-bottom: 0.5rem;">Remember the original problem: 200GB index that doesn't fit in 64GB of RAM. A Bloom filter for the same 40 billion keys might only need about 10 bits per key = 400 billion bits = <strong>50GB</strong>. That fits in memory!</p>
+                <p style="margin-bottom: 0;">For every query on a non-existent key, the Bloom filter returns "definitely not here" in a single memory access (~100ns) instead of going to disk (200&mu;s). That's a <strong>2000x speedup</strong> for negative lookups.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Key Takeaways from Part 4</h3>
+                <ul style="margin-bottom: 0;">
+                    <li><span class="checkmark">&#10003;</span> When the index is too large for memory, every lookup (even for non-existent keys) requires expensive <strong>disk accesses</strong></li>
+                    <li><span class="checkmark">&#10003;</span> A <strong>Bloom filter</strong> is a bit array + k hash functions that answers "is x in the set?" approximately</li>
+                    <li><span class="checkmark">&#10003;</span> Answer "no" is <strong>always correct</strong> (no false negatives) — we can safely skip the disk lookup</li>
+                    <li><span class="checkmark">&#10003;</span> Answer "yes" is <strong>probabilistic</strong> (false positives possible) — we proceed with the normal lookup</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Add:</strong> compute k hashes, set those k bit positions to 1</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Check:</strong> compute k hashes, verify all k positions are 1; any 0 means definitely absent</li>
+                    <li><span class="checkmark">&#10003;</span> False positive rate depends on <strong>m</strong> (bits), <strong>n</strong> (elements), and <strong>k</strong> (hash functions) — the assumption kn &lt; m keeps the rate low</li>
+                    <li><span class="checkmark">&#10003;</span> Bloom filters are extremely <strong>space-efficient</strong> compared to full indexes, making them practical for in-memory use even with billions of keys</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

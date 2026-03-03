@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 3 Overview: SQL Queries, JOINs &amp; Nested Queries</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 52rem; margin: 0 auto; }
+        header { margin-bottom: 3rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1rem; color: #000; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.5rem; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1rem; line-height: 1.8; color: #333; }
+        .tldr { background-color: #f0f7ff; border-left: 4px solid #2563eb; padding: 1.25rem; margin: 1.5rem 0; border-radius: 2px; }
+        .tldr strong { color: #1e40af; }
+        .concept { background-color: #fafafa; border-left: 3px solid #000; padding: 1.25rem; margin: 1.25rem 0; }
+        .concept strong { font-weight: 600; color: #000; }
+        .warning { background-color: #fff9e6; border-left: 3px solid #d97706; padding: 1.25rem; margin: 1.25rem 0; border-radius: 2px; }
+        .slide-img { width: 100%; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .slide-caption { text-align: center; font-size: 0.85rem; color: #888; margin-top: -1rem; margin-bottom: 1.5rem; font-style: italic; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.25rem 0; }
+        .col { background-color: #f5f5f5; padding: 1.25rem; border-radius: 2px; border-left: 3px solid #000; }
+        .col h4 { font-family: Georgia, serif; font-size: 1.05rem; font-weight: 400; margin: 0 0 0.5rem 0; color: #000; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; line-height: 1.7; }
+        table { width: 100%; margin: 1.25rem 0; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        .highlight { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .nav { background: #f9f9f9; padding: 1.25rem; margin-bottom: 2rem; border-radius: 4px; }
+        .nav a { color: #2563eb; text-decoration: none; margin-right: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } .two-col { grid-template-columns: 1fr; } table { font-size: 0.8rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SQL Queries, JOINs &amp; Nested Queries</h1>
+            <p class="subtitle">A concise visual overview of Lecture 3 (Parts 1&ndash;4)</p>
+        </header>
+
+        <nav class="nav">
+            <strong>Jump to:</strong><br>
+            <a href="#protobuf">Protocol Buffers</a>
+            <a href="#sfw">SFW Queries</a>
+            <a href="#selection">Selection &amp; Projection</a>
+            <a href="#modifiers">LIKE, DISTINCT, ORDER BY</a>
+            <a href="#foreign-keys">Foreign Keys</a>
+            <a href="#joins">JOINs</a>
+            <a href="#aggregations">Aggregations</a>
+            <a href="#outer-joins">Outer Joins</a>
+            <a href="#nested">Nested Queries</a>
+            <a href="#correlated">Correlated Queries</a>
+        </nav>
+
+        <nav class="nav">
+            <strong>Detailed Parts:</strong><br>
+            <a href="03-Part1-ProtocolBuffersAndAPIs.html">Part 1: Protocol Buffers &amp; API Design</a>
+            <a href="03-Part2-SingleTableSQL.html">Part 2: Single-Table SQL</a><br>
+            <a href="03-Part3-MultiTableAndJoins.html">Part 3: Multi-Table Queries &amp; JOINs</a>
+            <a href="03-Part4-NestedQueries.html">Part 4: Nested Queries</a>
+        </nav>
+
+        <main>
+
+            <!-- ============================================ -->
+            <!-- PART 1: Protocol Buffers & API Design        -->
+            <!-- ============================================ -->
+            <h2 id="protobuf">Protocol Buffers &amp; API Design</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> Modern distributed systems like Uber use Protocol Buffers instead of JSON for inter-service communication. Protobuf is a binary format that is smaller (45 bytes vs 105 bytes for the same record), faster to parse, and schema-enforced &mdash; but not human-readable.
+            </div>
+
+            <img src="slides/01-uber-docstore.png" alt="Uber Docstore architecture" class="slide-img">
+            <p class="slide-caption">Uber's Docstore: Evolving from schemaless to distributed SQL</p>
+
+            <div class="concept">
+                <strong>Uber&rsquo;s Docstore</strong> evolved from a schemaless system to a distributed SQL database with six pillars: shard-local transactions (MySQL + RAFT), geo-replication, associations, flexible document model, materialized views, and change data capture. Key lesson: <span class="highlight">flexible schema &ne; no schema</span>.
+            </div>
+
+            <img src="slides/02-uber-grpc.png" alt="Uber gRPC push platform" class="slide-img">
+            <p class="slide-caption">Uber's push platform: streaming instead of request/response</p>
+
+            <div class="concept">
+                <strong>gRPC</strong> shifts from REST-like request/response to RPC-like streaming. Transport matters as much as the API design itself. The motto: don&rsquo;t reinvent the wheel &mdash; use battle-tested frameworks.
+            </div>
+
+            <img src="slides/04-json-vs-protobuf.png" alt="JSON vs Protobuf comparison" class="slide-img">
+            <p class="slide-caption">Same person record: 105 bytes in JSON vs 45 bytes in Protobuf</p>
+
+            <table>
+                <tr><th>Property</th><th>JSON</th><th>Protobuf</th></tr>
+                <tr><td>Field names</td><td>Repeated as strings ("name", "id")</td><td>Integer tags (1, 2, 3...)</td></tr>
+                <tr><td>Integers</td><td>ASCII digits (12345 = 5 bytes)</td><td>Varint encoding (2 bytes)</td></tr>
+                <tr><td>Schema required</td><td>No (self-describing)</td><td>Yes</td></tr>
+                <tr><td>Human readable</td><td>Yes</td><td>No</td></tr>
+            </table>
+
+            <!-- ============================================ -->
+            <!-- PART 2: Single-Table SQL                     -->
+            <!-- ============================================ -->
+            <h2 id="sfw">The SFW Query</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> SQL&rsquo;s basic building block is the <strong>SFW query</strong>: <code>SELECT</code> (which columns), <code>FROM</code> (which table), <code>WHERE</code> (which rows). Selection filters rows; Projection selects columns.
+            </div>
+
+            <img src="slides/05-sql-query-sfw.png" alt="SFW query structure" class="slide-img">
+            <p class="slide-caption">The SELECT-FROM-WHERE structure</p>
+
+            <h3 id="selection">Selection &amp; Projection</h3>
+
+            <div class="two-col">
+                <div class="col">
+                    <h4>Selection (WHERE)</h4>
+                    <p>Filters <strong>rows</strong> based on a condition.</p>
+                    <p><code>SELECT * FROM Product WHERE Category = 'Gadgets'</code></p>
+                    <p>Returns only rows matching the condition.</p>
+                </div>
+                <div class="col">
+                    <h4>Projection (SELECT)</h4>
+                    <p>Selects specific <strong>columns</strong> from the output.</p>
+                    <p><code>SELECT PName, Price FROM Product WHERE Category = 'Gadgets'</code></p>
+                    <p>Returns only the requested attributes.</p>
+                </div>
+            </div>
+
+            <img src="slides/06-selection.png" alt="Selection example" class="slide-img">
+            <p class="slide-caption">Selection: filtering rows with WHERE</p>
+
+            <img src="slides/07-projection.png" alt="Projection example" class="slide-img">
+            <p class="slide-caption">Projection: choosing columns with SELECT</p>
+
+            <div class="warning">
+                <strong>SQL Syntax Rules:</strong> Commands (<code>SELECT</code>, <code>FROM</code>) are case <strong>insensitive</strong>. Values (<code>'Seattle'</code> vs <code>'seattle'</code>) are case <strong>sensitive</strong>. Always use <strong>single quotes</strong> for string constants.
+            </div>
+
+            <h3 id="modifiers">LIKE, DISTINCT, ORDER BY, LIMIT</h3>
+
+            <img src="slides/09-like-pattern.png" alt="LIKE pattern matching" class="slide-img">
+            <p class="slide-caption">LIKE: % matches any sequence, _ matches one character</p>
+
+            <table>
+                <tr><th>Clause</th><th>Purpose</th><th>Example</th></tr>
+                <tr><td><code>LIKE</code></td><td>Pattern matching on strings</td><td><code>WHERE PName LIKE '%gizmo%'</code></td></tr>
+                <tr><td><code>DISTINCT</code></td><td>Eliminate duplicate rows</td><td><code>SELECT DISTINCT Category FROM Product</code></td></tr>
+                <tr><td><code>ORDER BY</code></td><td>Sort results (ASC default, DESC optional)</td><td><code>ORDER BY Price, PName</code></td></tr>
+                <tr><td><code>LIMIT</code></td><td>Restrict number of output rows</td><td><code>LIMIT 5</code></td></tr>
+            </table>
+
+            <img src="slides/10-distinct.png" alt="DISTINCT example" class="slide-img">
+            <p class="slide-caption">DISTINCT eliminates duplicate values</p>
+
+            <!-- ============================================ -->
+            <!-- PART 3: Foreign Keys & JOINs                 -->
+            <!-- ============================================ -->
+            <h2 id="foreign-keys">Foreign Key Constraints</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> Foreign keys enforce referential integrity &mdash; they guarantee that referenced rows actually exist. On delete, the DBA chooses: disallow, cascade, or set NULL. In practice, many large-scale systems (like GitHub) skip foreign keys for performance and sharding reasons.
+            </div>
+
+            <img src="slides/13-foreign-key-constraints.png" alt="Foreign key constraints" class="slide-img">
+            <p class="slide-caption">Foreign key: student_id in Enrolled references cuid in Students</p>
+
+            <div class="concept">
+                <strong>Declaring a foreign key:</strong><br>
+                <code>CREATE TABLE Enrolled (</code><br>
+                <code>&nbsp;&nbsp;student_id CHAR(20),</code><br>
+                <code>&nbsp;&nbsp;cid CHAR(20),</code><br>
+                <code>&nbsp;&nbsp;FOREIGN KEY (student_id) REFERENCES Students(cuid)</code><br>
+                <code>)</code>
+            </div>
+
+            <div class="two-col">
+                <div class="col">
+                    <h4>On INSERT</h4>
+                    <p>Rejected if the referenced row doesn&rsquo;t exist (constraint violation).</p>
+                </div>
+                <div class="col">
+                    <h4>On DELETE</h4>
+                    <p><strong>1.</strong> Disallow the delete<br>
+                    <strong>2.</strong> Cascade (remove dependent rows)<br>
+                    <strong>3.</strong> Set foreign key to NULL</p>
+                </div>
+            </div>
+
+            <img src="slides/17-github-no-foreign-keys.png" alt="GitHub doesn't use foreign keys" class="slide-img">
+            <p class="slide-caption">Real-world: GitHub avoids foreign keys for sharding and performance</p>
+
+            <h2 id="joins">JOINs: Combining Tables</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> A JOIN combines rows from two tables based on a matching condition. Logically: take the cross product, apply selections, then project. Two equivalent syntaxes: <code>FROM A, B WHERE condition</code> or <code>FROM A JOIN B ON condition</code>.
+            </div>
+
+            <img src="slides/18-joins-example.png" alt="Join example" class="slide-img">
+            <p class="slide-caption">Join: find products under $200 from Japan</p>
+
+            <img src="slides/20-sql-semantics.png" alt="SQL semantics: cross product" class="slide-img">
+            <p class="slide-caption">Logical execution: Cross Product &rarr; Selection &rarr; Projection</p>
+
+            <div class="warning">
+                <strong>Important:</strong> This is how SQL <em>logically</em> works, not how the database actually executes it. Real databases use optimized execution plans, not brute-force cross products.
+            </div>
+
+            <h2 id="aggregations">Aggregations &amp; GROUP BY</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> SQL aggregation functions (SUM, COUNT, MIN, MAX, AVG) collapse multiple rows into a single value. GROUP BY partitions rows into groups first, then applies aggregates per group. HAVING filters groups (vs WHERE which filters individual rows).
+            </div>
+
+            <img src="slides/21-aggregations.png" alt="Aggregation functions" class="slide-img">
+            <p class="slide-caption">Five aggregate functions &mdash; all ignore NULL except COUNT(*)</p>
+
+            <div class="concept">
+                <strong>GROUP BY Semantics (3 steps):</strong><br>
+                <strong>1.</strong> Compute FROM and WHERE &rarr; get the filtered rows<br>
+                <strong>2.</strong> Group rows by the GROUP BY attributes<br>
+                <strong>3.</strong> Compute SELECT: grouped attributes + aggregates per group
+            </div>
+
+            <img src="slides/25-group-by-step2.png" alt="GROUP BY step 2" class="slide-img">
+            <p class="slide-caption">Step 2: Rows partitioned into groups by product</p>
+
+            <img src="slides/27-having-clause.png" alt="HAVING clause" class="slide-img">
+            <p class="slide-caption">HAVING filters groups; WHERE filters individual tuples</p>
+
+            <h2 id="outer-joins">Inner vs. Outer Joins</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> Inner joins only return matching rows. Outer joins preserve unmatched rows by padding with NULL. LEFT keeps all left rows, RIGHT keeps all right rows, FULL keeps both.
+            </div>
+
+            <img src="slides/30-inner-join-example.png" alt="Inner join example" class="slide-img">
+            <p class="slide-caption">Inner join: only matched rows (Ford Pinto is dropped)</p>
+
+            <img src="slides/31-left-outer-join-example.png" alt="Left outer join example" class="slide-img">
+            <p class="slide-caption">Left outer join: Ford Pinto kept with NULL for store</p>
+
+            <table>
+                <tr><th>Join Type</th><th>Min Rows</th><th>Max Rows</th><th>Keeps</th></tr>
+                <tr><td>Inner</td><td>0</td><td>L &times; R</td><td>Only matches</td></tr>
+                <tr><td>Left Outer</td><td>L</td><td>L &times; R</td><td>All left rows</td></tr>
+                <tr><td>Right Outer</td><td>R</td><td>L &times; R</td><td>All right rows</td></tr>
+                <tr><td>Full Outer</td><td>L + R</td><td>L &times; R</td><td>All rows from both</td></tr>
+            </table>
+
+            <!-- ============================================ -->
+            <!-- PART 4: Nested Queries                       -->
+            <!-- ============================================ -->
+            <h2 id="nested">Nested Queries &amp; Subqueries</h2>
+
+            <div class="tldr">
+                <strong>TL;DR:</strong> SQL is compositional &mdash; the output of one query can be the input of another. Subqueries appear in WHERE (with IN, ALL, ANY, EXISTS) or in FROM (as derived tables). Correlated subqueries reference the outer query and are powerful but harder to optimize.
+            </div>
+
+            <img src="slides/36-nested-subqueries-in.png" alt="Nested query with IN" class="slide-img">
+            <p class="slide-caption">Nested query: find cities of companies making products Alice bought</p>
+
+            <h3>Subquery Operators</h3>
+
+            <table>
+                <tr><th>Operator</th><th>Meaning</th><th>Example Use</th></tr>
+                <tr><td><code>IN</code></td><td>Value is in the subquery result set</td><td>Find companies making Alice's products</td></tr>
+                <tr><td><code>&gt; ALL</code></td><td>Greater than every value in subquery</td><td>Products pricier than all Gizmo-Works items</td></tr>
+                <tr><td><code>&lt; ANY</code></td><td>Less than at least one value in subquery</td><td>Products cheaper than some competitor</td></tr>
+                <tr><td><code>EXISTS</code></td><td>Subquery returns at least one row</td><td>Find &ldquo;copycat&rdquo; products with same name</td></tr>
+            </table>
+
+            <img src="slides/37-subqueries-all-any-exists.png" alt="ALL, ANY, EXISTS" class="slide-img">
+            <p class="slide-caption">ALL, ANY, and EXISTS with concrete examples</p>
+
+            <h3 id="correlated">Correlated Subqueries</h3>
+
+            <div class="concept">
+                <strong>Correlated subquery:</strong> The inner query references a variable from the outer query (e.g., <code>x.maker = y.maker</code>). This means the subquery is re-evaluated for every row of the outer query. Powerful for complex comparisons, but harder for the optimizer.
+            </div>
+
+            <img src="slides/38-correlated-query.png" alt="Correlated query example" class="slide-img">
+            <p class="slide-caption">Find products more expensive than all same-manufacturer products before 1972</p>
+
+            <h3>Aggregates in Nested Queries</h3>
+
+            <div class="concept">
+                <strong>Pattern:</strong> Use a subquery in the FROM clause to compute aggregates, then JOIN back to the original table to find the rows that match. This solves the classic &ldquo;find the row with the max/min&rdquo; problem.
+            </div>
+
+            <img src="slides/39-aggregates-nested-example.png" alt="Precipitation example" class="slide-img">
+            <p class="slide-caption">Precipitation example: find stations with highest daily readings</p>
+
+            <img src="slides/41-aggregates-nested-step2.png" alt="Step 2: join back" class="slide-img">
+            <p class="slide-caption">Step 2: Join subquery result back to find matching rows</p>
+
+            <h3>Real-World: Figma PostgreSQL Postmortem</h3>
+
+            <div class="warning">
+                <strong>Why this matters:</strong> Figma experienced a service disruption when a long-running expensive query caused a cascade: stale database statistics led to a bad query plan, which caused expensive table scans, which created an autovacuuming backlog. Upgrading from PostgreSQL 9 to 11 fixed both the query planner and autovacuuming performance. SQL execution planning is not just theory &mdash; it has real operational consequences.
+            </div>
+
+            <img src="slides/42-figma-postmortem.png" alt="Figma postmortem" class="slide-img">
+            <p class="slide-caption">Figma's PostgreSQL service disruption, January 2020</p>
+
+        </main>
+
+        <footer>
+            <p>COMS 4111 &mdash; Computer Systems for Data Science &mdash; Columbia University</p>
+        </footer>
+    </div>
+</body>
+</html>

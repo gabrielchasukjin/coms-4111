@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cores, Threads, and Transactions — Part 5</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        .schedule-table { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; }
+        .schedule-table td { padding: 0.5rem 1rem; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Cores, Threads, and Transactions</h1>
+            <p class="subtitle">Where concurrency meets real hardware, and why databases need transactions</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Concurrency vs. Parallelism -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Concurrency vs. Parallelism</h2>
+
+            <p>In the previous parts, we explored concurrency at the distributed systems level — load balancers, microservices, caches. Now we zoom in to <strong>Layer 8</strong> of our Petflix stack: the individual CPU cores inside a single machine. This is where concurrency meets real hardware, and understanding the distinction between concurrency and parallelism becomes essential.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Concurrency</h4>
+                    <p>1,000 threads managed simultaneously. The system juggles many tasks, switching between them rapidly (<strong>context switching</strong>).</p>
+                    <p style="margin-bottom: 0;">Concurrency is about <em>managing</em> multiple things at once. It is a software concept — you can have concurrency on a single-core machine by rapidly switching between tasks.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Parallelism</h4>
+                    <p>Only 16 things happen at the exact same instant — one per core. Multi-core CPUs make true parallelism real.</p>
+                    <p style="margin-bottom: 0;">Parallelism is about <em>doing</em> multiple things at once. It requires multiple physical cores. A 16-core CPU can truly execute 16 instructions simultaneously.</p>
+                </div>
+            </div>
+
+            <div class="analogy">
+                Imagine a Petflix CDN box with a 16-core CPU. It might have 1,000 active stream threads — one for each user currently watching a video. But only 16 of those threads run at any given instant (one per core). The other 984 are waiting. The operating system rapidly swaps threads on and off cores, giving the illusion that all 1,000 streams are progressing simultaneously. That is concurrency. The 16 threads actually executing at the same moment — that is parallelism.
+            </div>
+
+            <div class="definition-box">
+                <strong>Thread:</strong> A lightweight unit of execution within a process. Each thread has its own instruction pointer and stack, but threads within the same process share memory and resources. The operating system's scheduler decides which threads run on which cores and when to context-switch between them.
+            </div>
+
+            <div class="explanation-box">
+                <h4>Why does this distinction matter?</h4>
+                <p style="margin-bottom: 0;">Because it shapes how we think about performance. Adding more threads does not always make things faster — if you already have more threads than cores, adding more just increases context-switching overhead. True speedup requires either (a) more cores for CPU-bound work, or (b) better overlap of I/O-bound work where threads spend most of their time waiting (on disk, on network) rather than computing.</p>
+            </div>
+
+            <img src="slides/concurrency-parallelism.png" alt="Concurrency vs parallelism — 16-core CPU with 1,000 threads, showing 16 running and 984 waiting">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Race Conditions, Locks, and Deadlocks -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Race Conditions, Locks, and Deadlocks</h2>
+
+            <p>When multiple threads share memory — and they almost always do — things can go very wrong. This is the dark side of concurrency, and it connects directly to the conflict problems we studied in the serializability lecture.</p>
+
+            <h3>Shared Memory: The Danger</h3>
+
+            <p>Consider two threads accessing a shared buffer. Thread A is writing to the buffer while Thread B is reading from it. If these operations overlap without coordination, Thread B might read a half-written value — data that is partly old and partly new. This is a <strong>race condition</strong>: the correctness of the program depends on the unpredictable timing of thread execution.</p>
+
+            <div class="definition-box">
+                <strong>Race Condition:</strong> A situation where the behavior of a program depends on the relative timing or ordering of thread execution. The outcome is non-deterministic — running the same program twice can produce different results. Race conditions are the thread-level equivalent of the WR/RW conflicts we saw in database transactions.
+            </div>
+
+            <h3>The Solution: Locks (Mutual Exclusion)</h3>
+
+            <p>The standard solution to race conditions is a <strong>lock</strong> (also called a mutex, for "mutual exclusion"). Before accessing shared data, a thread must acquire the lock. If another thread already holds it, the requesting thread waits. This ensures only one thread accesses the critical section at a time.</p>
+
+            <div class="problem-box">
+                <h4>But locks introduce their own problem: Deadlock</h4>
+                <p>Imagine Thread A holds Lock 1 and wants Lock 2. Thread B holds Lock 2 and wants Lock 1. Neither can proceed — both are stuck forever. This is <strong>deadlock</strong>: a circular dependency on locks that halts all progress.</p>
+                <p style="margin-bottom: 0;">Deadlock requires four simultaneous conditions: (1) mutual exclusion — locks are exclusive, (2) hold and wait — threads hold locks while requesting others, (3) no preemption — locks cannot be forcibly taken, and (4) circular wait — a cycle exists in the wait-for graph. Breaking any one condition prevents deadlock.</p>
+            </div>
+
+            <div class="analogy">
+                Deadlock is like two people in a narrow hallway, each refusing to step aside. Thread A says "I will not release Lock 1 until I get Lock 2," and Thread B says "I will not release Lock 2 until I get Lock 1." Neither moves. The solution is a protocol: always acquire locks in the same global order (e.g., always Lock 1 before Lock 2). Then the circular wait condition can never arise.
+            </div>
+
+            <h3>Real-Time Decoding: Where Deadlines Meet Concurrency</h3>
+
+            <p>All of these concurrency challenges become especially critical in <strong>real-time video decoding</strong>. When Fatima watches a video on her phone, the decoder must produce a new frame every <strong>33 milliseconds</strong> (for 30 fps video). Miss a single deadline and the user sees a visible stutter.</p>
+
+            <div class="explanation-box">
+                <h4>The Frame Deadline</h4>
+                <p>At 30 frames per second, each frame gets exactly 33ms. The decoder must: read compressed data from the network buffer, decompress it, apply motion compensation, and write the result to the display buffer — all within that 33ms window. If a lock is held too long, or a thread gets stuck waiting, the deadline is missed.</p>
+                <p style="margin-bottom: 0;">This is why modern devices use <strong>hardware decoders</strong> — dedicated silicon that handles video decoding in a fixed, predictable time, without the variability of software threads competing for CPU cores. The hardware decoder handles the heavy lifting, freeing the CPU cores for other work.</p>
+            </div>
+
+            <div class="key-insight">
+                Race conditions, locks, and deadlocks are not just theoretical problems — they are the everyday challenges of building systems that must serve thousands of concurrent users while meeting real-time deadlines. Every layer of the Petflix stack has its own version of these problems.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: The Full Stack — Concurrency at Every Layer -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. The Full Stack — Concurrency at Every Layer</h2>
+
+            <p>One of the key insights of this lecture is that <strong>concurrency is not one problem — it is a different problem at every layer</strong>. Let us map the entire Petflix stack and see what concurrency challenge each layer faces:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Concurrency Problem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>DNS Routing</strong></td>
+                        <td>Global load balancing — directing millions of users to the nearest, least-loaded data center</td>
+                    </tr>
+                    <tr>
+                        <td><strong>API Gateway</strong></td>
+                        <td>10K concurrent connections per gateway instance, routing requests to the correct service</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Microservices</strong></td>
+                        <td>Billions of internal calls/min across hundreds of services, with fan-out and cascading failures</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cache &amp; DB</strong></td>
+                        <td>400M cache ops/sec with consistency guarantees, thundering herd problems</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CDN Box</strong></td>
+                        <td>Thousands of streams per box, each needing adaptive bitrate and buffer management</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pods</strong></td>
+                        <td>Write serialization — ensuring concurrent writes to the same data produce correct results</td>
+                    </tr>
+                    <tr>
+                        <td><strong>VMs</strong></td>
+                        <td>Bin-packing containers onto virtual machines, balancing resource utilization</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cores</strong></td>
+                        <td>Race conditions, deadlocks, and real-time deadlines at the hardware level</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="key-insight">
+                The users do not — and should not have to — know any of this. From Fatima's perspective, she presses play and the video starts. The entire purpose of this elaborate stack is to make concurrency invisible to the end user while achieving the performance that serial execution could never deliver.
+            </div>
+
+            <img src="slides/full-stack-summary.png" alt="The full Petflix stack in one picture — mapping each layer to its concurrency problem">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: OLTP vs. OLAP — Two Worlds of Databases -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. OLTP vs. OLAP — Two Worlds of Databases</h2>
+
+            <p>With the concurrency foundations in place, we now shift to the database layer. The lecture introduces a fundamental distinction: there are broadly <strong>two types of databases</strong> in the world, and they serve very different purposes.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>OLTP (Online Transaction Processing)</h4>
+                    <p>Supports reading and writing data <strong>in real time</strong>. Provides the <strong>transactions</strong> abstraction (usually). Uses smaller, targeted queries. Think: a single bank transfer, updating a user's settings, recording a game save.</p>
+                    <p><strong>Examples:</strong> MySQL, Postgres, Redis, Cassandra, DynamoDB, Aurora/RDS</p>
+                    <p style="margin-bottom: 0;"><strong>Use cases:</strong> Financial transactions, game progress, social media settings, Google Docs collaborative editing</p>
+                </div>
+                <div class="visual-item">
+                    <h4>OLAP (Online Analytical Processing)</h4>
+                    <p><strong>Read-only</strong>, no real-time updates. Data is re-written in batches offline (e.g., once a day via ETL). Uses larger queries — scans, aggregates, joins across millions of rows. Think: a monthly business report, training a statistical model.</p>
+                    <p><strong>Examples:</strong> BigQuery, Snowflake, Databricks, Redshift</p>
+                    <p style="margin-bottom: 0;"><strong>Use cases:</strong> Interactive data analysis, monthly business reports, designing statistical models</p>
+                </div>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Why does this split exist?</h4>
+                <p style="margin-bottom: 0;">Because the access patterns are fundamentally different. OLTP needs to read and write <em>individual rows</em> extremely fast, with strong correctness guarantees (transactions). OLAP needs to scan <em>millions of rows</em> efficiently for aggregation, and does not need real-time writes. Optimizing for one pattern makes you worse at the other, so the industry evolved two separate categories of systems. The course focuses on <strong>OLTP</strong> for the next several weeks, since that is where transactions and concurrency control matter most.</p>
+            </div>
+
+            <img src="slides/oltp-vs-olap.png" alt="OLTP vs OLAP — comparing the two types of databases, their characteristics, and use cases">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Why Transactions? The ATM Motivating Example -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Why Transactions? The ATM Motivating Example</h2>
+
+            <p>To motivate why we need transactions, the lecture presents a deceptively simple question: <strong>how should an ATM withdrawal work?</strong></p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Approach 1: Optimistic</h4>
+                    <p style="margin-bottom: 0.5rem;">1. Read Balance</p>
+                    <p style="margin-bottom: 0.5rem;">2. Give money to user</p>
+                    <p style="margin-bottom: 0;">3. Update Balance in database</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Approach 2: Pessimistic</h4>
+                    <p style="margin-bottom: 0.5rem;">1. Read Balance</p>
+                    <p style="margin-bottom: 0.5rem;">2. Update Balance in database</p>
+                    <p style="margin-bottom: 0;">3. Give money to user</p>
+                </div>
+            </div>
+
+            <p>Both approaches have a problem. In Approach 1, if the system crashes after giving money but before updating the balance, the user gets free money. In Approach 2, if the system crashes after updating the balance but before dispensing cash, the user loses money. Neither ordering is safe on its own.</p>
+
+            <div class="key-insight">
+                The real question is not "what order do we do these steps?" but rather "how do we guarantee that either ALL steps happen or NONE of them do?" This is exactly the problem that transactions solve — and it is the Atomicity property of ACID.
+            </div>
+
+            <h3>The Scale Problem: Multiple Users, One Table</h3>
+
+            <p>Now multiply this by thousands of concurrent users. Visa processes over <strong>60,000 transactions per second</strong> across users and merchants worldwide. Should your $6 Starbucks purchase wait for a $10,000 bet to finish processing in Las Vegas? Absolutely not. Transactions can be fast or slow, and they are almost always unrelated to each other. The database must handle them concurrently while keeping each one correct.</p>
+
+            <h3>Transactions Are Not Just for Finance</h3>
+
+            <p>While bank transfers are the classic example, transactions are at the core of virtually every interactive system:</p>
+            <ul>
+                <li><strong>Payment systems</strong> — stock markets, banks, ticketing</li>
+                <li><strong>Collaborative applications</strong> — Gmail, Google Docs (multiple people editing simultaneously)</li>
+                <li><strong>Gaming</strong> — saving game state, in-game purchases</li>
+                <li><strong>Healthcare systems</strong> — updating patient records with concurrent access</li>
+            </ul>
+
+            <p>Any system where multiple users read and write shared data needs the guarantees that transactions provide.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Transactions — Definition and SQL -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Transactions — Definition and SQL</h2>
+
+            <div class="definition-box">
+                <strong>Transaction ("TXN"):</strong> A sequence of one or more operations (reads or writes) that reflects a single real-world transition. A transaction either happens <strong>completely or not at all</strong> — there is no in-between state visible to anyone.
+            </div>
+
+            <h3>The Monthly Interest Example</h3>
+
+            <p>Consider a bank that needs to apply 10% monthly interest to all 10 million accounts. The transaction <code>T-Monthly-423</code> starts at 4:28 AM and takes 24 hours to process every account:</p>
+
+            <div class="explanation-box">
+                <h4>Normal Execution (No Crash)</h4>
+                <p>The transaction reads each account balance and writes the updated value (balance * 1.1). After 24 hours, every account has been updated. The "before" table shows original balances; the "after" table shows each balance multiplied by 1.1.</p>
+                <p style="margin-bottom: 0;">For example: Account 3001 goes from $500 to $550, Account 4001 from $100 to $110, and so on through all 10 million accounts.</p>
+            </div>
+
+            <div class="problem-box">
+                <h4>What happens if the system crashes midway?</h4>
+                <p>Suppose there is a network outage at 10:29 AM, and the system comes back at 10:45 AM. The transaction has only processed a fraction of the accounts. Some accounts (early ones like 3001, 4001) received their interest. Others (later ones like 5002, 50002) did not. The database is now in an <strong>inconsistent state</strong> — some customers got interest and others did not.</p>
+                <p style="margin-bottom: 0;">Without transaction guarantees, you would have to figure out exactly where the process stopped and manually fix things. With transactions, the system automatically <strong>rolls back</strong> all the changes — returning every account to its original balance — and the transaction can be retried from scratch. That is atomicity in action.</p>
+            </div>
+
+            <img src="slides/bank-interest-crash.png" alt="Monthly bank interest transaction with crash — showing partial state where some accounts got interest and others did not">
+
+            <h3>Transactions in SQL</h3>
+
+            <p>SQL provides explicit syntax for transaction boundaries:</p>
+
+            <div class="explanation-box">
+                <h4>Implicit Transactions (Ad-Hoc SQL)</h4>
+                <p style="margin-bottom: 0;">In "ad-hoc" SQL (typing queries directly into a database console), each individual statement is automatically wrapped in its own transaction. A single <code>UPDATE</code> is one transaction. A single <code>SELECT</code> is one transaction. The database handles the BEGIN and COMMIT for you.</p>
+            </div>
+
+            <div class="explanation-box">
+                <h4>Explicit Transactions (Programmatic SQL)</h4>
+                <p>In a program, you can group multiple statements into a single transaction using <code>START TRANSACTION</code> and <code>COMMIT</code>:</p>
+                <p style="margin-bottom: 0.5rem;"><code>START TRANSACTION</code></p>
+                <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;&nbsp;&nbsp;<code>UPDATE Bank SET amount = amount - 100 WHERE name = 'Bob'</code></p>
+                <p style="margin-bottom: 0.5rem;">&nbsp;&nbsp;&nbsp;&nbsp;<code>UPDATE Bank SET amount = amount + 100 WHERE name = 'Joe'</code></p>
+                <p style="margin-bottom: 0;"><code>COMMIT</code></p>
+            </div>
+
+            <p>The two UPDATE statements are bundled as one atomic unit. Either Bob loses $100 <em>and</em> Joe gains $100, or neither change happens. There is no scenario where Bob's money disappears without Joe receiving it.</p>
+
+            <img src="slides/transaction-sql.png" alt="Transactions in SQL — showing START TRANSACTION, operations, and COMMIT syntax">
+
+            <div class="key-insight">
+                The transaction abstraction is one of the most powerful ideas in computer science. It takes the incredibly complex problem of "what if things go wrong in the middle?" and gives programmers a simple guarantee: wrap your operations in a transaction, and the database will ensure all-or-nothing execution. This is what makes it possible to build reliable systems on top of unreliable hardware.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>Concurrency vs. parallelism</strong> — concurrency is managing many tasks (1,000 threads); parallelism is executing them simultaneously (16 cores). More threads than cores means context switching, not more parallelism.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Race conditions</strong> arise when threads access shared memory without coordination. Locks (mutual exclusion) prevent races but can cause <strong>deadlocks</strong> — circular lock dependencies where no thread can proceed.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Real-time decoding</strong> imposes hard deadlines (33ms per frame at 30 fps). Hardware decoders provide predictable timing that software threads cannot guarantee.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Concurrency is a different problem at every layer</strong> of the stack — from DNS load balancing down to core-level race conditions. Users should never have to know about any of it.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>OLTP vs. OLAP</strong> — two fundamentally different database paradigms. OLTP handles real-time reads/writes with transactions; OLAP handles batch analytical queries. The course focuses on OLTP.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Transactions</strong> guarantee all-or-nothing execution. A transaction is a sequence of operations reflecting a single real-world transition — it either completes fully or is rolled back entirely.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>SQL transactions</strong> use <code>START TRANSACTION</code> and <code>COMMIT</code> to group multiple statements into an atomic unit. In ad-hoc SQL, each statement is implicitly its own transaction.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Cores, Threads &amp; Transactions — Supplementary to Lecture 04, Part 5</p>
+        </footer>
+
+    </div>
+</body>
+</html>

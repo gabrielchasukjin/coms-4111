@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduling, Conflicts, and Conflict Serializability — Part 9</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.7; color: #1a1a1a; background-color: #ffffff; padding: 2rem 1rem; }
+        .container { max-width: 48rem; margin: 0 auto; }
+        header { margin-bottom: 4rem; text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; }
+        h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.5rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.5rem; color: #000; }
+        .subtitle { font-size: 1.1rem; color: #666; font-weight: 300; font-style: italic; }
+        h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.8rem; font-weight: 400; letter-spacing: -0.01em; margin-top: 3rem; margin-bottom: 1.5rem; color: #000; }
+        h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.3rem; font-weight: 400; margin-top: 2rem; margin-bottom: 1rem; color: #000; }
+        h4 { font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #000; }
+        p { margin-bottom: 1.25rem; line-height: 1.8; color: #333; }
+        .section { margin: 3rem 0; }
+        .definition-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition-box strong { font-weight: 600; color: #000; }
+        .explanation-box { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .explanation-box h4 { margin-top: 0; }
+        .key-insight { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; font-style: italic; color: #333; }
+        .analogy { background-color: #f5f5f5; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; font-style: italic; border-left: 3px solid #000; }
+        .highlight-text { background-color: #fff9e6; padding: 0.1em 0.3em; border-radius: 1px; }
+        .step { background-color: #fafafa; padding: 1.5rem; margin: 1.5rem 0; border-left: 3px solid #000; border-radius: 2px; }
+        .step strong { color: #000; }
+        .step-number { background-color: #000; color: #fff; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 0.75rem; }
+        .step-title { display: flex; align-items: center; margin-bottom: 0.75rem; }
+        .visual-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.75rem 0; }
+        .visual-item { background-color: #f5f5f5; padding: 1.5rem; border-radius: 2px; border-left: 3px solid #000; }
+        .visual-item h4 { margin-top: 0; }
+        .problem-box { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; border-radius: 2px; }
+        .magic-connection { background-color: #fff9e6; border-left: 3px solid #000; padding: 1.5rem; margin: 2rem 0; border-radius: 2px; }
+        .summary-box { background-color: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; border-radius: 2px; }
+        .summary-box h3 { margin-top: 0; }
+        .checkmark { color: #000; font-weight: 600; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.75rem; line-height: 1.8; }
+        table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background-color: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #fafafa; }
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+        code { font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace; font-size: 0.9em; background-color: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+        img { max-width: 100%; height: auto; margin: 1.5rem 0; border: 1px solid #e5e5e5; border-radius: 2px; }
+        @media (max-width: 640px) { h1 { font-size: 2rem; } h2 { font-size: 1.5rem; } .visual-comparison { grid-template-columns: 1fr; } table { font-size: 0.85rem; } th, td { padding: 0.75rem; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Scheduling, Conflicts, and Conflict Serializability</h1>
+            <p class="subtitle">From schedule catalogs to conflict graphs — a systematic approach to safe interleaving</p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: Schedule B Is Bad — Completing the Proof -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>1. Schedule B is Not Serializable</h2>
+
+            <p>Continuing from Part 8, the lecture completes the analysis of Schedule B (the "bad" interleaving). We already showed that Schedule B produces A = $159, B = $112 — different from the serial order T1&rarr;T2 which gives A = $159, B = $106. But what about the other serial order?</p>
+
+            <div class="explanation-box">
+                <h4>Serial Order T2&rarr;T1</h4>
+                <p style="margin-bottom: 0.5rem;">Starting: A = $50, B = $200</p>
+                <p style="margin-bottom: 0.5rem;">T2 runs: A = $50 * 1.06 = $53, B = $200 * 1.06 = $212</p>
+                <p style="margin-bottom: 0;">T1 runs: A = $53 + $100 = <strong>$153</strong>, B = $212 - $100 = <strong>$112</strong></p>
+            </div>
+
+            <p>Schedule B produces A = $159, B = $112. The serial order T2&rarr;T1 gives A = $153, B = $112. <strong>Different!</strong> Schedule B does not match T1&rarr;T2 <em>or</em> T2&rarr;T1. Since it matches no serial order, it is <span class="highlight-text">not serializable</span>.</p>
+
+            <div class="key-insight">
+                This is the formal confirmation: Schedule B produces a result that is different from any serial order. This is exactly the kind of schedule the database must prevent. But how do we detect bad schedules without computing actual values? That is what the rest of this part addresses.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: Scheduling Definitions -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>2. Scheduling Definitions</h2>
+
+            <p>The lecture now formalizes the terminology we have been using informally:</p>
+
+            <div class="definition-box">
+                <strong>Serial Schedule:</strong> A schedule that does not interleave the actions of different transactions. All operations of one transaction complete before any operations of the next begin.
+            </div>
+
+            <div class="definition-box">
+                <strong>Equivalent Schedules:</strong> Two schedules A and B are equivalent if, <strong>for any database state</strong>, the effect on the database of executing A is identical to the effect of executing B. This is a very strong condition — it must hold for every possible starting state, not just one particular set of values.
+            </div>
+
+            <div class="definition-box">
+                <strong>Serializable Schedule:</strong> A schedule that is equivalent to <strong>some</strong> serial execution of the transactions. It does not need to match a specific serial order — any serial order will do.
+            </div>
+
+            <div class="problem-box">
+                <h4>The word "some" makes this definition powerful and tricky!</h4>
+                <p style="margin-bottom: 0;">A schedule is serializable if it matches <em>any</em> serial order. With N transactions, there are N! possible serial orderings. The schedule only needs to match one of them to be correct. This makes serializability a surprisingly permissive condition — many interleaved schedules turn out to be serializable, even though they look nothing like serial execution.</p>
+            </div>
+
+            <h3>The Complete Schedule Catalog: S1 through S6</h3>
+
+            <p>The lecture presents all possible schedules of T1 and T2 (with two operations each) to build intuition:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Schedule</th>
+                        <th>Type</th>
+                        <th>Classification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>S1:</strong> T1(A+=100), T1(B-=100), T2(A*=1.06), T2(B*=1.06)</td>
+                        <td>Serial (T1&rarr;T2)</td>
+                        <td>Always correct</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S2:</strong> T2(A*=1.06), T2(B*=1.06), T1(A+=100), T1(B-=100)</td>
+                        <td>Serial (T2&rarr;T1)</td>
+                        <td>Always correct</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S3:</strong> T1(A+=100), T2(A*=1.06), T1(B-=100), T2(B*=1.06)</td>
+                        <td>Interleaved</td>
+                        <td><span class="highlight-text">Serializable</span> (equivalent to S1)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S4:</strong> T2(A*=1.06), T1(A+=100), T2(B*=1.06), T1(B-=100)</td>
+                        <td>Interleaved</td>
+                        <td><span class="highlight-text">Serializable</span> (equivalent to S2)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S5:</strong> T2(A*=1.06), T1(A+=100), T1(B-=100), T2(B*=1.06)</td>
+                        <td>Interleaved</td>
+                        <td>NOT serializable</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S6:</strong> T1(A+=100), T2(A*=1.06), T2(B*=1.06), T1(B-=100)</td>
+                        <td>Interleaved</td>
+                        <td>NOT serializable</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="explanation-box">
+                <h4>Equivalence Pairs</h4>
+                <p style="margin-bottom: 0;">S1 and S3 are equivalent (same result for all initial states). S2 and S4 are equivalent. S5 and S6 are the bad schedules — they match neither S1 nor S2. Note that the serializable interleaved schedules (S3, S4) are just as correct as the serial schedules (S1, S2), despite being interleaved.</p>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: Real-World Consequences -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>3. Real-World Consequences: The Ticketmaster Meltdown</h2>
+
+            <p>The lecture references the 2022 Ticketmaster/Taylor Swift Eras Tour ticket sale disaster as a real-world example of what happens when concurrent transactions go wrong at scale. Millions of fans tried to purchase tickets simultaneously, overwhelming the system's ability to manage concurrent access to a limited inventory.</p>
+
+            <div class="analogy">
+                Imagine thousands of transactions all trying to read the same "seats available" counter, decrement it, and write it back — all at the same time. Without proper concurrency control, you get overselling (more tickets sold than seats exist), lost updates (two people both think they got the last ticket), and system crashes. This is the scheduling problem playing out in real life, at massive scale, with real consequences.
+            </div>
+
+            <div class="key-insight">
+                Conflicts happen often in many real-world transactions. Two people trying to book the same airline ticket, two managers trying to discount the same product, two ATM withdrawals on the same account — these are all scenarios where the scheduling decisions of the database determine whether the outcome is correct or corrupted.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4: The General Model — R/W Operations -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>4. The General Model: Concurrency as Interleaving R/W Operations</h2>
+
+            <p>To reason about schedules systematically, we need a more abstract model. Each action in a transaction <strong>reads a value</strong> and then <strong>writes one back</strong>. We model transactions as sequences of R(X) and W(X) operations, where X is a data item.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Serial Schedule</h4>
+                    <p style="margin-bottom: 0.5rem;">T1: R(A), W(A), R(B), W(B)</p>
+                    <p style="margin-bottom: 0;">T2: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R(A), W(A), R(B), W(B)</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Interleaved Schedule</h4>
+                    <p style="margin-bottom: 0.5rem;">T1: R(A), W(A), &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R(B), W(B)</p>
+                    <p style="margin-bottom: 0;">T2: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R(A), W(A), &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;R(B), W(B)</p>
+                </div>
+            </div>
+
+            <p>Having transactions occur concurrently means <strong>interleaving their component R/W actions</strong>. Each particular order of interleaving is called a <strong>schedule</strong>. The key constraint: the order of operations <em>within</em> each transaction must be preserved.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5: Conflict Types -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>5. Conflict Types</h2>
+
+            <div class="definition-box">
+                <strong>Conflict:</strong> Two actions <strong>conflict</strong> if they are part of different transactions, involve the <strong>same variable</strong>, and at least one of them is a <strong>write</strong>.
+            </div>
+
+            <p>This gives three types of conflicts:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Operations</th>
+                        <th>Why It Matters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Read-Write (RW)</strong></td>
+                        <td>T<sub>i</sub> reads X, T<sub>j</sub> writes X</td>
+                        <td>Swapping the order changes what T<sub>i</sub> reads</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write-Read (WR)</strong></td>
+                        <td>T<sub>i</sub> writes X, T<sub>j</sub> reads X</td>
+                        <td>Swapping the order changes what T<sub>j</sub> reads</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write-Write (WW)</strong></td>
+                        <td>T<sub>i</sub> writes X, T<sub>j</sub> writes X</td>
+                        <td>Swapping the order changes which write "wins"</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="problem-box">
+                <h4>Why no "RR Conflict"?</h4>
+                <p style="margin-bottom: 0;">Two reads on the same variable from different transactions do <strong>not</strong> conflict. Reads do not change data, so the order in which they occur has no effect on the outcome. You can freely swap two reads without changing anything.</p>
+            </div>
+
+            <img src="slides/conflict-types.png" alt="Conflict types — RW, WR, and WW conflicts shown on an interleaved schedule timeline">
+
+            <h3>Conflicts vs. Anomalies</h3>
+
+            <p>This is a crucial distinction that the lecture emphasizes:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Conflicts</h4>
+                    <p style="margin-bottom: 0;">Are present in <strong>both</strong> "good" and "bad" schedules. Conflicts are a property of the <em>transactions</em> themselves — they exist regardless of how the transactions are scheduled. Any pair of transactions that access the same data with at least one write will have conflicts.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Anomalies</h4>
+                    <p style="margin-bottom: 0;">Only occur in "bad" schedules where the specific interleaving causes the conflicts to produce incorrect results. The goal is to <strong>avoid anomalies while interleaving transactions with conflicts</strong> — do not create schedules where isolation and/or consistency is broken.</p>
+                </div>
+            </div>
+
+            <img src="slides/conflicts-vs-anomalies.png" alt="Conflicts vs anomalies — conflicts exist in all schedules, anomalies only in bad ones">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6: Conflict Serializability -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>6. Conflict Serializability</h2>
+
+            <p>Now we arrive at the formal tool for distinguishing good schedules from bad ones without computing actual values:</p>
+
+            <div class="definition-box">
+                <strong>Conflict Equivalent:</strong> Two schedules are <strong>conflict equivalent</strong> if:
+                <ol style="margin-top: 0.75rem; margin-bottom: 0;">
+                    <li>Each transaction's order of operations is the same in both schedules</li>
+                    <li>Every <strong>pair of conflicting actions</strong> of two transactions is <strong>ordered the same way</strong> in both schedules</li>
+                </ol>
+            </div>
+
+            <div class="definition-box">
+                <strong>Conflict Serializable:</strong> A schedule S is <strong>conflict serializable</strong> if S is conflict equivalent to some serial schedule. This is a sufficient (but not necessary) condition for serializability.
+            </div>
+
+            <div class="magic-connection">
+                <h4>The Key Implication</h4>
+                <p style="margin-bottom: 0;"><strong>Conflict serializable &rArr; serializable.</strong> So if we have conflict serializability, we have consistency and isolation. This gives us an operative, checkable definition of "good" vs. "bad" schedules. In the "bad" schedule, the order of conflicting actions is different from any serial schedule — that is what makes it bad.</p>
+            </div>
+
+            <h3>Example: Good vs. Bad Schedules via Conflict Order</h3>
+
+            <p>Consider the serial schedule T1&rarr;T2. All conflicts point from T1 to T2 (T1's operations always come before T2's conflicting operations). Now look at two interleaved schedules:</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Good Interleaving</h4>
+                    <p>All conflicting pairs are ordered the same way as in the serial schedule T1&rarr;T2: T1's conflicting operations always precede T2's. The schedule is conflict equivalent to T1&rarr;T2.</p>
+                    <p style="margin-bottom: 0;"><strong>Result:</strong> Conflict serializable. Safe to execute.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Bad Interleaving</h4>
+                    <p>Some conflicting pairs have T1 before T2, but others have T2 before T1. The conflict ordering does not match <em>any</em> serial schedule.</p>
+                    <p style="margin-bottom: 0;"><strong>Result:</strong> NOT conflict serializable. Creates data anomalies.</p>
+                </div>
+            </div>
+
+            <img src="slides/conflict-serializability.png" alt="Conflict serializability — comparing conflict orderings between good and bad schedules">
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7: The Conflict Graph -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <h2>7. The Conflict Graph</h2>
+
+            <p>Rather than comparing conflict orderings by hand, we can use a graph to determine serializability mechanically:</p>
+
+            <div class="definition-box">
+                <strong>Conflict Graph (Serialization Graph):</strong> A directed graph where <strong>nodes are transactions</strong>, and there is an edge from T<sub>i</sub> &rarr; T<sub>j</sub> if any action in T<sub>i</sub> <strong>precedes and conflicts with</strong> any action in T<sub>j</sub> in the schedule.
+            </div>
+
+            <p>For the good interleaved schedule, all conflict edges point from T1 to T2: the conflict graph is T1 &rarr; T2. This is <strong>acyclic</strong> — it is a DAG. The schedule is conflict serializable, equivalent to serial order T1, T2.</p>
+
+            <p>For the bad interleaved schedule, some conflicts point T1 &rarr; T2 and others point T2 &rarr; T1. The conflict graph has a <strong>cycle</strong>: T1 &rarr; T2 &rarr; T1. This means "T1 must come before T2 AND T2 must come before T1" — a contradiction. The schedule is NOT conflict serializable.</p>
+
+            <div class="visual-comparison">
+                <div class="visual-item">
+                    <h4>Good Schedule: Acyclic Graph</h4>
+                    <p style="margin-bottom: 0;">T1 &rarr; T2 (no cycle). Equivalent serial order exists: T1 then T2. Schedule is <strong>conflict serializable</strong>.</p>
+                </div>
+                <div class="visual-item">
+                    <h4>Bad Schedule: Cyclic Graph</h4>
+                    <p style="margin-bottom: 0;">T1 &rarr; T2 &rarr; T1 (cycle!). No serial order can satisfy both constraints. Schedule is <strong>NOT conflict serializable</strong>.</p>
+                </div>
+            </div>
+
+            <img src="slides/conflict-graphs.png" alt="Conflict graphs — acyclic graph for good schedule vs cyclic graph for bad schedule">
+
+            <div class="key-insight">
+                The conflict graph transforms the serializability question from "do these interleavings produce the same result as some serial order?" (which requires computing values for all possible inputs) to "does this directed graph have a cycle?" (which can be checked in linear time). This is the foundation of practical concurrency control in real database systems.
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 8: Summary -->
+        <!-- ============================================================ -->
+        <div class="section">
+            <div class="summary-box">
+                <h3>Summary</h3>
+                <ul style="list-style: none; margin-left: 0;">
+                    <li><span class="checkmark">&#10003;</span> <strong>Schedule B is not serializable</strong> — it produces results different from both serial orderings (T1&rarr;T2 and T2&rarr;T1), confirming it is an unsafe interleaving.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Key definitions:</strong> serial schedule (no interleaving), equivalent schedules (same effect for all states), serializable schedule (equivalent to <em>some</em> serial order).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The S1-S6 catalog</strong> shows all possible schedules of two 2-operation transactions: S1, S2 are serial; S3, S4 are serializable interleavings; S5, S6 are non-serializable (bad).</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflicts are ubiquitous</strong> — any real-world system with concurrent access (Ticketmaster, banks, airlines) must deal with conflicting operations.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The R/W model</strong> abstracts transactions into read and write operations, enabling formal analysis of schedules.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Three conflict types:</strong> RW, WR, WW. No RR conflict because reads do not change data.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflicts vs. anomalies:</strong> conflicts exist in all schedules (good and bad); anomalies only occur in bad schedules where the interleaving causes conflicts to produce incorrect results.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>Conflict serializability:</strong> a schedule is conflict serializable if every pair of conflicting actions is ordered the same way as in some serial schedule. Conflict serializable &rArr; serializable.</li>
+                    <li><span class="checkmark">&#10003;</span> <strong>The conflict graph</strong> reduces serializability to cycle detection: acyclic = safe (conflict serializable), cyclic = unsafe (not conflict serializable). This sets up the full conflict graph algorithm covered in Part 4.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+            <p>Scheduling, Conflicts &amp; Serializability — Supplementary to Lecture 04, Part 9</p>
+        </footer>
+
+    </div>
+</body>
+</html>
