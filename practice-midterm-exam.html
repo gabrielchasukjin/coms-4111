@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSEE 4121 — Practice Midterm Exam</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1a1a1a; background: #f7f7f7; padding: 2rem 1rem; }
+        .container { max-width: 52rem; margin: 0 auto; background: #fff; padding: 3rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+        h1 { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+        .subtitle { font-size: 0.95rem; color: #666; margin-top: 0.5rem; }
+        .exam-info { background: #f9f9f9; padding: 1rem 1.5rem; border-radius: 4px; margin-bottom: 2rem; font-size: 0.92rem; }
+        .exam-info li { margin-bottom: 0.3rem; }
+
+        .question-block { border: 1px solid #e5e5e5; border-radius: 6px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; transition: border-color 0.2s; }
+        .question-block.correct { border-color: #27ae60; background: #f0fff4; }
+        .question-block.incorrect { border-color: #e74c3c; background: #fff5f5; }
+        .question-header { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .q-num { background: #000; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+        .q-topic { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.06em; background: #f0f0f0; padding: 0.15em 0.5em; border-radius: 3px; }
+        .q-points { font-size: 0.75rem; color: #666; margin-left: auto; }
+        .q-text { font-size: 1.05rem; margin-bottom: 1rem; font-weight: 500; }
+        .q-text code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88em; background: #f0f0f0; padding: 0.15em 0.4em; border-radius: 2px; }
+
+        /* MCQ */
+        .options { list-style: none; margin-left: 0; }
+        .options li { margin-bottom: 0.5rem; }
+        .options label { display: flex; align-items: baseline; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 4px; border: 1px solid transparent; transition: background 0.15s; }
+        .options label:hover { background: #f5f5f5; }
+        .options input[type="radio"],
+        .options input[type="checkbox"] { margin-top: 0.25rem; flex-shrink: 0; }
+
+        /* Short answer / code */
+        .short-answer { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; font-family: inherit; }
+        .code-answer { width: 100%; min-height: 100px; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88rem; resize: vertical; background: #fafafa; }
+        .code-context { background: #1a1a1a; color: #e0e0e0; padding: 1rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; white-space: pre; }
+
+        /* Feedback */
+        .feedback { display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 4px; font-size: 0.92rem; }
+        .feedback.show { display: block; }
+        .feedback.correct-fb { background: #e8f8ee; border-left: 3px solid #27ae60; }
+        .feedback.incorrect-fb { background: #fdeaea; border-left: 3px solid #e74c3c; }
+
+        /* Buttons */
+        .btn-bar { text-align: center; margin-top: 2rem; }
+        .btn { padding: 0.85rem 2.5rem; font-size: 1.05rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        .btn-grade { background: #000; color: #fff; }
+        .btn-grade:hover { background: #333; }
+        .btn-reset { background: #e5e5e5; color: #333; margin-left: 1rem; }
+        .btn-reset:hover { background: #d0d0d0; }
+
+        /* Score */
+        .score-box { display: none; text-align: center; padding: 2rem; margin-top: 2rem; border-radius: 8px; }
+        .score-box.show { display: block; }
+        .score-box .score-num { font-size: 3rem; font-weight: 700; font-family: Georgia, serif; }
+        .score-box .score-label { font-size: 1rem; color: #666; margin-top: 0.25rem; }
+        .score-box.grade-a { background: #e8f8ee; }
+        .score-box.grade-b { background: #fff8ee; }
+        .score-box.grade-c { background: #fdeaea; }
+
+        .select-answer { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; background: #fff; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 1.5rem; margin-top: 3rem; color: #999; font-size: 0.85rem; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>CSEE 4121 — Practice Midterm</h1>
+        <p class="subtitle">Computer Systems for Data Science | Spring 2026</p>
+    </header>
+
+    <div class="exam-info">
+        <ul>
+            <li><strong>Time:</strong> 90 minutes</li>
+            <li><strong>Questions:</strong> 20 (mix of multiple choice, short answer, and SQL)</li>
+            <li><strong>Total Points:</strong> 100</li>
+            <li><strong>No cheat sheet allowed</strong></li>
+        </ul>
+    </div>
+
+    <form id="exam-form" onsubmit="return false;">
+
+        <!-- ====== Q1 ====== -->
+        <div class="question-block" id="q1-block">
+            <div class="question-header">
+                <span class="q-num">1</span>
+                <span class="q-topic">Performance</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A program spends 40% of its time in a component that can be parallelized. If you speed up that component by 4x, what is the overall speedup according to Amdahl's Law?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q1" value="a"> a) 1.18x</label></li>
+                <li><label><input type="radio" name="q1" value="b"> b) 1.43x</label></li>
+                <li><label><input type="radio" name="q1" value="c"> c) 2.50x</label></li>
+                <li><label><input type="radio" name="q1" value="d"> d) 4.00x</label></li>
+            </ul>
+            <div class="feedback" id="q1-fb"></div>
+        </div>
+
+        <!-- ====== Q2 ====== -->
+        <div class="question-block" id="q2-block">
+            <div class="question-header">
+                <span class="q-num">2</span>
+                <span class="q-topic">Performance</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Rank the following from <strong>fastest to slowest</strong> access latency:</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q2" value="a"> a) L1 cache &lt; L2 cache &lt; Main memory &lt; SSD &lt; HDD</label></li>
+                <li><label><input type="radio" name="q2" value="b"> b) L2 cache &lt; L1 cache &lt; SSD &lt; Main memory &lt; HDD</label></li>
+                <li><label><input type="radio" name="q2" value="c"> c) L1 cache &lt; Main memory &lt; L2 cache &lt; HDD &lt; SSD</label></li>
+                <li><label><input type="radio" name="q2" value="d"> d) L1 cache &lt; L2 cache &lt; SSD &lt; Main memory &lt; HDD</label></li>
+            </ul>
+            <div class="feedback" id="q2-fb"></div>
+        </div>
+
+        <!-- ====== Q3 ====== -->
+        <div class="question-block" id="q3-block">
+            <div class="question-header">
+                <span class="q-num">3</span>
+                <span class="q-topic">Relational Model</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">What is the difference between a <strong>set</strong> and a <strong>multiset (bag)</strong> in the context of relational databases?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q3" value="a"> a) A set allows duplicates; a multiset does not</label></li>
+                <li><label><input type="radio" name="q3" value="b"> b) A set does not allow duplicates; a multiset allows duplicates</label></li>
+                <li><label><input type="radio" name="q3" value="c"> c) A set is ordered; a multiset is unordered</label></li>
+                <li><label><input type="radio" name="q3" value="d"> d) There is no difference; they are synonyms</label></li>
+            </ul>
+            <div class="feedback" id="q3-fb"></div>
+        </div>
+
+        <!-- ====== Q4 ====== -->
+        <div class="question-block" id="q4-block">
+            <div class="question-header">
+                <span class="q-num">4</span>
+                <span class="q-topic">SQL</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Given a table <code>orders(id, customer_id, amount, order_date)</code>, write a SQL query to find each customer's total spending, but <strong>only</strong> for customers who have spent more than $1000.</p>
+            <textarea class="code-answer" id="q4-answer" placeholder="Write your SQL here..."></textarea>
+            <div class="feedback" id="q4-fb"></div>
+        </div>
+
+        <!-- ====== Q5 ====== -->
+        <div class="question-block" id="q5-block">
+            <div class="question-header">
+                <span class="q-num">5</span>
+                <span class="q-topic">SQL / Joins</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Table <code>students(id, name)</code> has 5 rows. Table <code>enrollments(student_id, course)</code> has 8 rows. How many rows does <code>SELECT * FROM students CROSS JOIN enrollments</code> return?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q5" value="a"> a) 8</label></li>
+                <li><label><input type="radio" name="q5" value="b"> b) 13</label></li>
+                <li><label><input type="radio" name="q5" value="c"> c) 40</label></li>
+                <li><label><input type="radio" name="q5" value="d"> d) 5</label></li>
+            </ul>
+            <div class="feedback" id="q5-fb"></div>
+        </div>
+
+        <!-- ====== Q6 ====== -->
+        <div class="question-block" id="q6-block">
+            <div class="question-header">
+                <span class="q-num">6</span>
+                <span class="q-topic">SQL / Joins</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">You have <code>employees(id, name, dept_id)</code> and <code>departments(id, dept_name)</code>. Some employees have a NULL <code>dept_id</code>. Which JOIN guarantees all employees appear in the result, even those without a department?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q6" value="a"> a) INNER JOIN</label></li>
+                <li><label><input type="radio" name="q6" value="b"> b) LEFT JOIN employees ON departments</label></li>
+                <li><label><input type="radio" name="q6" value="c"> c) RIGHT JOIN employees ON departments</label></li>
+                <li><label><input type="radio" name="q6" value="d"> d) CROSS JOIN</label></li>
+            </ul>
+            <div class="feedback" id="q6-fb"></div>
+        </div>
+
+        <!-- ====== Q7 ====== -->
+        <div class="question-block" id="q7-block">
+            <div class="question-header">
+                <span class="q-num">7</span>
+                <span class="q-topic">Protocol Buffers</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Why are Protocol Buffers (protobuf) smaller than JSON for the same data?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q7" value="a"> a) Protobuf compresses data using gzip</label></li>
+                <li><label><input type="radio" name="q7" value="b"> b) Protobuf uses numeric field tags instead of string keys and a binary encoding</label></li>
+                <li><label><input type="radio" name="q7" value="c"> c) Protobuf removes all metadata</label></li>
+                <li><label><input type="radio" name="q7" value="d"> d) Protobuf stores only primary keys</label></li>
+            </ul>
+            <div class="feedback" id="q7-fb"></div>
+        </div>
+
+        <!-- ====== Q8 ====== -->
+        <div class="question-block" id="q8-block">
+            <div class="question-header">
+                <span class="q-num">8</span>
+                <span class="q-topic">Transactions / ACID</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Which ACID property does Write-Ahead Logging (WAL) primarily provide?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q8" value="a"> a) Consistency and Isolation</label></li>
+                <li><label><input type="radio" name="q8" value="b"> b) Atomicity and Durability</label></li>
+                <li><label><input type="radio" name="q8" value="c"> c) Only Isolation</label></li>
+                <li><label><input type="radio" name="q8" value="d"> d) Only Consistency</label></li>
+            </ul>
+            <div class="feedback" id="q8-fb"></div>
+        </div>
+
+        <!-- ====== Q9 ====== -->
+        <div class="question-block" id="q9-block">
+            <div class="question-header">
+                <span class="q-num">9</span>
+                <span class="q-topic">Isolation Levels</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Transaction T1 reads a row, then transaction T2 modifies and commits that row, then T1 reads the same row again and sees the new value. What anomaly is this?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q9" value="a"> a) Dirty read</label></li>
+                <li><label><input type="radio" name="q9" value="b"> b) Unrepeatable read</label></li>
+                <li><label><input type="radio" name="q9" value="c"> c) Phantom read</label></li>
+                <li><label><input type="radio" name="q9" value="d"> d) Lost update</label></li>
+            </ul>
+            <div class="feedback" id="q9-fb"></div>
+        </div>
+
+        <!-- ====== Q10 ====== -->
+        <div class="question-block" id="q10-block">
+            <div class="question-header">
+                <span class="q-num">10</span>
+                <span class="q-topic">Concurrency / Locking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">In Two-Phase Locking (2PL), what is the rule that guarantees conflict serializability?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q10" value="a"> a) A transaction must acquire all locks before executing any operation</label></li>
+                <li><label><input type="radio" name="q10" value="b"> b) Once a transaction releases any lock, it cannot acquire any new locks</label></li>
+                <li><label><input type="radio" name="q10" value="c"> c) All shared locks must be acquired before exclusive locks</label></li>
+                <li><label><input type="radio" name="q10" value="d"> d) Locks are released in the reverse order of acquisition</label></li>
+            </ul>
+            <div class="feedback" id="q10-fb"></div>
+        </div>
+
+        <!-- ====== Q11 ====== -->
+        <div class="question-block" id="q11-block">
+            <div class="question-header">
+                <span class="q-num">11</span>
+                <span class="q-topic">Serializability</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Given this schedule with transactions T1 and T2:</p>
+            <div class="code-context">T1: R(A)       W(A)            R(B)  W(B)
+T2:       R(A)       W(A)  R(B)            W(B)</div>
+            <p class="q-text">List all conflicts in this schedule (e.g., "T1:R(A)-T2:W(A)"). Is this schedule conflict-serializable?</p>
+            <textarea class="code-answer" id="q11-answer" placeholder="List the conflicts and state whether it is conflict-serializable..." style="min-height: 80px;"></textarea>
+            <div class="feedback" id="q11-fb"></div>
+        </div>
+
+        <!-- ====== Q12 ====== -->
+        <div class="question-block" id="q12-block">
+            <div class="question-header">
+                <span class="q-num">12</span>
+                <span class="q-topic">Locking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Two transactions: T1 holds an exclusive lock on row X and requests a shared lock on row Y. T2 holds an exclusive lock on row Y and requests a shared lock on row X. What happens?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q12" value="a"> a) Both proceed normally</label></li>
+                <li><label><input type="radio" name="q12" value="b"> b) Deadlock — each is waiting for the other</label></li>
+                <li><label><input type="radio" name="q12" value="c"> c) T1 is aborted, T2 proceeds</label></li>
+                <li><label><input type="radio" name="q12" value="d"> d) Both are upgraded to exclusive locks automatically</label></li>
+            </ul>
+            <div class="feedback" id="q12-fb"></div>
+        </div>
+
+        <!-- ====== Q13 ====== -->
+        <div class="question-block" id="q13-block">
+            <div class="question-header">
+                <span class="q-num">13</span>
+                <span class="q-topic">Indexing</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">You have a query: <code>SELECT * FROM users WHERE LOWER(email) = 'foo@bar.com'</code>. There is an index on the <code>email</code> column. Will the database use the index? Why or why not?</p>
+            <textarea class="code-answer" id="q13-answer" placeholder="Your answer..." style="min-height: 60px;"></textarea>
+            <div class="feedback" id="q13-fb"></div>
+        </div>
+
+        <!-- ====== Q14 ====== -->
+        <div class="question-block" id="q14-block">
+            <div class="question-header">
+                <span class="q-num">14</span>
+                <span class="q-topic">B+ Trees</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Why are B+ Trees preferred over binary search trees for database indexing?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q14" value="a"> a) B+ Trees use less memory in all cases</label></li>
+                <li><label><input type="radio" name="q14" value="b"> b) B+ Trees have high fan-out, which reduces the number of disk I/Os needed for a lookup</label></li>
+                <li><label><input type="radio" name="q14" value="c"> c) Binary search trees do not support range queries</label></li>
+                <li><label><input type="radio" name="q14" value="d"> d) B+ Trees are always faster than hash indexes</label></li>
+            </ul>
+            <div class="feedback" id="q14-fb"></div>
+        </div>
+
+        <!-- ====== Q15 ====== -->
+        <div class="question-block" id="q15-block">
+            <div class="question-header">
+                <span class="q-num">15</span>
+                <span class="q-topic">Bloom Filters</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A Bloom filter returns "possibly in set" for a key lookup. Which of the following is true?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q15" value="a"> a) The key is definitely in the set</label></li>
+                <li><label><input type="radio" name="q15" value="b"> b) The key might or might not be in the set (false positive possible)</label></li>
+                <li><label><input type="radio" name="q15" value="c"> c) The Bloom filter is broken and should be rebuilt</label></li>
+                <li><label><input type="radio" name="q15" value="d"> d) The key was in the set but has since been deleted</label></li>
+            </ul>
+            <div class="feedback" id="q15-fb"></div>
+        </div>
+
+        <!-- ====== Q16 ====== -->
+        <div class="question-block" id="q16-block">
+            <div class="question-header">
+                <span class="q-num">16</span>
+                <span class="q-topic">Caching</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A cache with 3 slots processes the sequence: <code>A, B, C, A, D, B</code> using <strong>LRU</strong>. What is evicted when D arrives?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q16" value="a"> a) A</label></li>
+                <li><label><input type="radio" name="q16" value="b"> b) B</label></li>
+                <li><label><input type="radio" name="q16" value="c"> c) C</label></li>
+                <li><label><input type="radio" name="q16" value="d"> d) Nothing — cache is not full</label></li>
+            </ul>
+            <div class="feedback" id="q16-fb"></div>
+        </div>
+
+        <!-- ====== Q17 ====== -->
+        <div class="question-block" id="q17-block">
+            <div class="question-header">
+                <span class="q-num">17</span>
+                <span class="q-topic">Networking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Match each item to its correct network layer:</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
+                <div><strong>MAC address:</strong></div>
+                <div>
+                    <select class="select-answer" id="q17a">
+                        <option value="">-- Select --</option>
+                        <option value="physical">Physical</option>
+                        <option value="datalink">Data Link</option>
+                        <option value="network">Network</option>
+                        <option value="transport">Transport</option>
+                        <option value="application">Application</option>
+                    </select>
+                </div>
+                <div><strong>Port number:</strong></div>
+                <div>
+                    <select class="select-answer" id="q17b">
+                        <option value="">-- Select --</option>
+                        <option value="physical">Physical</option>
+                        <option value="datalink">Data Link</option>
+                        <option value="network">Network</option>
+                        <option value="transport">Transport</option>
+                        <option value="application">Application</option>
+                    </select>
+                </div>
+                <div><strong>IP address:</strong></div>
+                <div>
+                    <select class="select-answer" id="q17c">
+                        <option value="">-- Select --</option>
+                        <option value="physical">Physical</option>
+                        <option value="datalink">Data Link</option>
+                        <option value="network">Network</option>
+                        <option value="transport">Transport</option>
+                        <option value="application">Application</option>
+                    </select>
+                </div>
+                <div><strong>HTTP:</strong></div>
+                <div>
+                    <select class="select-answer" id="q17d">
+                        <option value="">-- Select --</option>
+                        <option value="physical">Physical</option>
+                        <option value="datalink">Data Link</option>
+                        <option value="network">Network</option>
+                        <option value="transport">Transport</option>
+                        <option value="application">Application</option>
+                    </select>
+                </div>
+            </div>
+            <div class="feedback" id="q17-fb"></div>
+        </div>
+
+        <!-- ====== Q18 ====== -->
+        <div class="question-block" id="q18-block">
+            <div class="question-header">
+                <span class="q-num">18</span>
+                <span class="q-topic">Networking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">When a packet travels through 10 routers from your laptop to a server, which addresses <strong>change at every hop</strong> and which <strong>stay the same</strong>?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q18" value="a"> a) IP addresses change; MAC addresses stay the same</label></li>
+                <li><label><input type="radio" name="q18" value="b"> b) Both change at every hop</label></li>
+                <li><label><input type="radio" name="q18" value="c"> c) MAC addresses change at every hop; IP addresses stay the same</label></li>
+                <li><label><input type="radio" name="q18" value="d"> d) Neither changes</label></li>
+            </ul>
+            <div class="feedback" id="q18-fb"></div>
+        </div>
+
+        <!-- ====== Q19 ====== -->
+        <div class="question-block" id="q19-block">
+            <div class="question-header">
+                <span class="q-num">19</span>
+                <span class="q-topic">Distributed Systems</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">In Two-Phase Commit (2PC), if <strong>one</strong> participant votes NO in the Prepare phase, what does the coordinator do?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q19" value="a"> a) Commits anyway with the remaining participants</label></li>
+                <li><label><input type="radio" name="q19" value="b"> b) Sends ABORT to all participants</label></li>
+                <li><label><input type="radio" name="q19" value="c"> c) Retries the Prepare phase up to 3 times</label></li>
+                <li><label><input type="radio" name="q19" value="d"> d) Asks the NO voter to change its vote</label></li>
+            </ul>
+            <div class="feedback" id="q19-fb"></div>
+        </div>
+
+        <!-- ====== Q20 ====== -->
+        <div class="question-block" id="q20-block">
+            <div class="question-header">
+                <span class="q-num">20</span>
+                <span class="q-topic">Partitioning</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">What problem does <strong>consistent hashing</strong> solve compared to regular hash partitioning (key mod N)?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q20" value="a"> a) It eliminates hash collisions entirely</label></li>
+                <li><label><input type="radio" name="q20" value="b"> b) When a node is added/removed, only a small fraction of keys need to be moved instead of rehashing everything</label></li>
+                <li><label><input type="radio" name="q20" value="c"> c) It ensures all partitions have exactly equal data</label></li>
+                <li><label><input type="radio" name="q20" value="d"> d) It makes range queries faster</label></li>
+            </ul>
+            <div class="feedback" id="q20-fb"></div>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="btn-bar">
+            <button class="btn btn-grade" type="button" onclick="gradeExam()">Grade Exam</button>
+            <button class="btn btn-reset" type="button" onclick="resetExam()">Reset</button>
+        </div>
+
+        <!-- SCORE -->
+        <div class="score-box" id="score-box">
+            <div class="score-num" id="score-num"></div>
+            <div class="score-label" id="score-label"></div>
+        </div>
+
+    </form>
+
+    <footer>
+        <p>CSEE 4121 Practice Midterm &mdash; Columbia University &mdash; Spring 2026</p>
+    </footer>
+</div>
+
+<script>
+const answers = {
+    q1:  { correct: 'b', explanation: 'Amdahl\'s Law: Speedup = 1 / ((1 - 0.4) + 0.4/4) = 1 / (0.6 + 0.1) = 1 / 0.7 = 1.43x.' },
+    q2:  { correct: 'a', explanation: 'The memory hierarchy from fastest to slowest: L1 cache (~1ns) < L2 cache (~4ns) < Main memory (~100ns) < SSD (~100\u00B5s) < HDD (~10ms).' },
+    q3:  { correct: 'b', explanation: 'A set has no duplicates (like a mathematical set). A multiset (bag) allows duplicates. SQL tables are multisets by default — you need SELECT DISTINCT to get set behavior.' },
+    q5:  { correct: 'c', explanation: 'CROSS JOIN produces the Cartesian product: 5 \u00D7 8 = 40 rows. Every row from students is paired with every row from enrollments.' },
+    q6:  { correct: 'b', explanation: 'LEFT JOIN keeps all rows from the left table (employees), filling in NULLs where there\'s no matching department. INNER JOIN would drop employees without departments.' },
+    q7:  { correct: 'b', explanation: 'Protobuf replaces human-readable string field names with small numeric tags (1, 2, 3...) and uses binary variable-length encoding instead of text. This makes it much more compact than JSON.' },
+    q8:  { correct: 'b', explanation: 'WAL provides Atomicity (can undo incomplete transactions by replaying the log) and Durability (changes are logged to disk before being applied, surviving crashes).' },
+    q9:  { correct: 'b', explanation: 'Unrepeatable read: T1 reads a row, T2 commits a change to that row, T1 re-reads and sees a different value. A dirty read would be if T2 hadn\'t committed yet.' },
+    q10: { correct: 'b', explanation: 'The 2PL rule: there\'s a growing phase (acquire locks) and a shrinking phase (release locks). Once any lock is released, no new locks can be acquired. This guarantees conflict serializability.' },
+    q12: { correct: 'b', explanation: 'Classic deadlock: T1 waits for Y (held by T2), T2 waits for X (held by T1). Neither can proceed. The DBMS must detect this (via a waits-for graph) and abort one transaction.' },
+    q14: { correct: 'b', explanation: 'B+ Trees have a high fan-out (hundreds of children per node) so the tree is very shallow (3-4 levels for millions of keys). Each level is a disk I/O, so fewer levels = fewer disk reads. BSTs have fan-out 2, making them much deeper.' },
+    q15: { correct: 'b', explanation: 'Bloom filters have no false negatives (if it says "not in set," it\'s definitely not). But they can have false positives — "possibly in set" means the key might or might not actually be there.' },
+    q16: { correct: 'b', explanation: 'Trace: A miss [A], B miss [A,B], C miss [A,B,C], A hit (moved to MRU) [B,C,A], D arrives \u2014 cache full, evict LRU which is B. Cache becomes [C,A,D].' },
+    q18: { correct: 'c', explanation: 'IP addresses (Layer 3) identify the source and destination globally and stay the same end-to-end. MAC addresses (Layer 2) are local to each hop \u2014 they change at every router because they identify the next device on the link.' },
+    q19: { correct: 'b', explanation: '2PC requires unanimous YES votes to commit. If any participant votes NO, the coordinator sends ABORT to all participants. The transaction is rolled back everywhere.' },
+    q20: { correct: 'b', explanation: 'With key mod N, adding or removing a node changes N, causing almost every key to rehash to a different node. Consistent hashing uses a ring, so only the keys on the affected segment of the ring need to move \u2014 roughly 1/N of the data.' },
+};
+
+// Free-response answer keys
+const freeResponseKeys = {
+    q4: {
+        keywords: ['group by', 'customer_id', 'sum', 'having', '1000'],
+        modelAnswer: `SELECT customer_id, SUM(amount) AS total_spent
+FROM orders
+GROUP BY customer_id
+HAVING SUM(amount) > 1000;`,
+        explanation: 'You need GROUP BY customer_id to aggregate per customer, SUM(amount) for total spending, and HAVING (not WHERE) to filter on the aggregate.'
+    },
+    q11: {
+        keywords: ['conflict', 'serializable'],
+        modelAnswer: `Conflicts (operations on same item, at least one write, different transactions):
+1. T1:R(A) - T2:W(A)  (RW conflict on A)
+2. T2:R(A) - T1:W(A)  (RW conflict on A)
+3. T1:W(A) - T2:W(A)  (WW conflict on A)
+4. T2:R(B) - T1:W(B)  (RW conflict on B)
+5. T1:R(B) - T2:W(B)  (RW conflict on B)
+6. T1:W(B) - T2:W(B)  (WW conflict on B)
+
+Conflict graph: T1 \u2192 T2 (from conflict 1) and T2 \u2192 T1 (from conflict 2).
+There is a cycle, so this schedule is NOT conflict-serializable.`,
+        explanation: 'Build a conflict graph from the conflicting operations. If the graph has a cycle, the schedule is not conflict-serializable. Here T1\u2192T2 and T2\u2192T1 creates a cycle.'
+    },
+    q13: {
+        keywords: ['function', 'index', 'no', 'not', 'lower', 'inhibit'],
+        modelAnswer: `No, the database will NOT use the index. Applying a function (LOWER()) to the column prevents the optimizer from using the index on email. The index stores raw email values, but the query compares against LOWER(email), which doesn't match the index structure. Fix: create a functional index on LOWER(email), or store emails in lowercase.`,
+        explanation: 'Functions applied to indexed columns are index inhibitors. The index stores original values, so LOWER(email) can\'t use it. This forces a full table scan.'
+    }
+};
+
+function gradeExam() {
+    let totalPoints = 0;
+    let earnedPoints = 0;
+    const totalQuestions = 20;
+
+    // Grade MCQs
+    for (const [qId, ans] of Object.entries(answers)) {
+        const num = qId.replace('q', '');
+        const block = document.getElementById(`${qId}-block`);
+        const fb = document.getElementById(`${qId}-fb`);
+        const selected = document.querySelector(`input[name="${qId}"]:checked`);
+        totalPoints += 5;
+
+        if (selected && selected.value === ans.correct) {
+            earnedPoints += 5;
+            block.classList.add('correct');
+            block.classList.remove('incorrect');
+            fb.className = 'feedback show correct-fb';
+            fb.innerHTML = `<strong>Correct!</strong> ${ans.explanation}`;
+        } else {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            const yourAnswer = selected ? selected.value.toUpperCase() : 'none';
+            fb.innerHTML = `<strong>Incorrect (you picked: ${yourAnswer}, correct: ${ans.correct.toUpperCase()}).</strong> ${ans.explanation}`;
+        }
+    }
+
+    // Grade free response
+    for (const [qId, key] of Object.entries(freeResponseKeys)) {
+        const num = qId.replace('q', '');
+        const block = document.getElementById(`${qId}-block`);
+        const fb = document.getElementById(`${qId}-fb`);
+        const textarea = document.getElementById(`${qId}-answer`);
+        const userAnswer = (textarea ? textarea.value : '').toLowerCase().trim();
+        totalPoints += 5;
+
+        const matchCount = key.keywords.filter(kw => userAnswer.includes(kw.toLowerCase())).length;
+        const threshold = Math.ceil(key.keywords.length * 0.6);
+
+        if (userAnswer.length === 0) {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            fb.innerHTML = `<strong>No answer provided.</strong><br><br><strong>Model answer:</strong><pre style="background:#f5f5f5;padding:0.75rem;border-radius:4px;margin-top:0.5rem;white-space:pre-wrap;font-size:0.88rem;">${key.modelAnswer}</pre><p style="margin-top:0.5rem;margin-bottom:0;">${key.explanation}</p>`;
+        } else if (matchCount >= threshold) {
+            earnedPoints += 5;
+            block.classList.add('correct');
+            block.classList.remove('incorrect');
+            fb.className = 'feedback show correct-fb';
+            fb.innerHTML = `<strong>Looks correct!</strong> Key concepts detected.<br><br><strong>Model answer:</strong><pre style="background:#f5f5f5;padding:0.75rem;border-radius:4px;margin-top:0.5rem;white-space:pre-wrap;font-size:0.88rem;">${key.modelAnswer}</pre>`;
+        } else {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            fb.innerHTML = `<strong>Partially correct or missing key concepts.</strong> Compare with model answer below.<br><br><strong>Model answer:</strong><pre style="background:#f5f5f5;padding:0.75rem;border-radius:4px;margin-top:0.5rem;white-space:pre-wrap;font-size:0.88rem;">${key.modelAnswer}</pre><p style="margin-top:0.5rem;margin-bottom:0;">${key.explanation}</p>`;
+        }
+    }
+
+    // Grade Q17 (matching)
+    {
+        const block = document.getElementById('q17-block');
+        const fb = document.getElementById('q17-fb');
+        const a = document.getElementById('q17a').value;
+        const b = document.getElementById('q17b').value;
+        const c = document.getElementById('q17c').value;
+        const d = document.getElementById('q17d').value;
+        totalPoints += 5;
+
+        const correct = (a === 'datalink' && b === 'transport' && c === 'network' && d === 'application');
+        let partialCount = 0;
+        if (a === 'datalink') partialCount++;
+        if (b === 'transport') partialCount++;
+        if (c === 'network') partialCount++;
+        if (d === 'application') partialCount++;
+
+        if (correct) {
+            earnedPoints += 5;
+            block.classList.add('correct');
+            block.classList.remove('incorrect');
+            fb.className = 'feedback show correct-fb';
+            fb.innerHTML = '<strong>All correct!</strong> MAC \u2192 Data Link, Port \u2192 Transport, IP \u2192 Network, HTTP \u2192 Application.';
+        } else {
+            if (partialCount >= 3) earnedPoints += 3;
+            else if (partialCount >= 1) earnedPoints += 1;
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            fb.innerHTML = `<strong>${partialCount}/4 correct.</strong> Correct answers: MAC \u2192 Data Link, Port \u2192 Transport, IP \u2192 Network, HTTP \u2192 Application.`;
+        }
+    }
+
+    // Show score
+    const pct = Math.round((earnedPoints / totalPoints) * 100);
+    const scoreBox = document.getElementById('score-box');
+    const scoreNum = document.getElementById('score-num');
+    const scoreLabel = document.getElementById('score-label');
+
+    scoreNum.textContent = `${earnedPoints} / ${totalPoints}`;
+    scoreLabel.textContent = `${pct}% — ${pct >= 90 ? 'Excellent!' : pct >= 75 ? 'Good job! Review the marked questions.' : pct >= 60 ? 'Decent — focus on the red questions.' : 'Keep studying — review all explanations below.'}`;
+
+    scoreBox.classList.remove('grade-a', 'grade-b', 'grade-c');
+    if (pct >= 80) scoreBox.classList.add('grade-a');
+    else if (pct >= 60) scoreBox.classList.add('grade-b');
+    else scoreBox.classList.add('grade-c');
+    scoreBox.classList.add('show');
+
+    scoreBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetExam() {
+    document.getElementById('exam-form').reset();
+    document.querySelectorAll('.question-block').forEach(b => { b.classList.remove('correct', 'incorrect'); });
+    document.querySelectorAll('.feedback').forEach(f => { f.className = 'feedback'; f.innerHTML = ''; });
+    document.getElementById('score-box').classList.remove('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

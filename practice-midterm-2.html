@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSEE 4121 — Practice Midterm 2 (Harder)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1a1a1a; background: #f7f7f7; padding: 2rem 1rem; }
+        .container { max-width: 52rem; margin: 0 auto; background: #fff; padding: 3rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+        h1 { font-family: Georgia, serif; font-size: 2rem; font-weight: 700; }
+        .subtitle { font-size: 0.95rem; color: #666; margin-top: 0.5rem; }
+        .exam-info { background: #fff5f5; padding: 1rem 1.5rem; border-radius: 4px; margin-bottom: 2rem; font-size: 0.92rem; border-left: 4px solid #e74c3c; }
+        .exam-info li { margin-bottom: 0.3rem; }
+
+        .question-block { border: 1px solid #e5e5e5; border-radius: 6px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; transition: border-color 0.2s; }
+        .question-block.correct { border-color: #27ae60; background: #f0fff4; }
+        .question-block.incorrect { border-color: #e74c3c; background: #fff5f5; }
+        .question-header { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+        .q-num { background: #000; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+        .q-topic { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.06em; background: #f0f0f0; padding: 0.15em 0.5em; border-radius: 3px; }
+        .q-points { font-size: 0.75rem; color: #666; margin-left: auto; }
+        .q-text { font-size: 1.02rem; margin-bottom: 1rem; font-weight: 500; }
+        .q-text code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88em; background: #f0f0f0; padding: 0.15em 0.4em; border-radius: 2px; }
+
+        .options { list-style: none; margin-left: 0; }
+        .options li { margin-bottom: 0.5rem; }
+        .options label { display: flex; align-items: baseline; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 4px; border: 1px solid transparent; transition: background 0.15s; }
+        .options label:hover { background: #f5f5f5; }
+        .options input[type="radio"] { margin-top: 0.25rem; flex-shrink: 0; }
+
+        .short-answer { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; font-family: inherit; }
+        .code-answer { width: 100%; min-height: 100px; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88rem; resize: vertical; background: #fafafa; }
+        .code-context { background: #1a1a1a; color: #e0e0e0; padding: 1rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; white-space: pre; }
+        .schema-box { background: #f5f5f5; padding: 1rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; }
+
+        .feedback { display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 4px; font-size: 0.92rem; }
+        .feedback.show { display: block; }
+        .feedback.correct-fb { background: #e8f8ee; border-left: 3px solid #27ae60; }
+        .feedback.incorrect-fb { background: #fdeaea; border-left: 3px solid #e74c3c; }
+        .feedback pre { background: #f5f5f5; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem; white-space: pre-wrap; font-size: 0.88rem; }
+
+        .btn-bar { text-align: center; margin-top: 2rem; }
+        .btn { padding: 0.85rem 2.5rem; font-size: 1.05rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        .btn-grade { background: #c0392b; color: #fff; }
+        .btn-grade:hover { background: #a93226; }
+        .btn-reset { background: #e5e5e5; color: #333; margin-left: 1rem; }
+        .btn-reset:hover { background: #d0d0d0; }
+
+        .score-box { display: none; text-align: center; padding: 2rem; margin-top: 2rem; border-radius: 8px; }
+        .score-box.show { display: block; }
+        .score-box .score-num { font-size: 3rem; font-weight: 700; font-family: Georgia, serif; }
+        .score-box .score-label { font-size: 1rem; color: #666; margin-top: 0.25rem; }
+        .score-box.grade-a { background: #e8f8ee; }
+        .score-box.grade-b { background: #fff8ee; }
+        .score-box.grade-c { background: #fdeaea; }
+
+        .select-answer { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; background: #fff; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 1.5rem; margin-top: 3rem; color: #999; font-size: 0.85rem; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>CSEE 4121 — Practice Midterm 2</h1>
+        <p class="subtitle">Computer Systems for Data Science | Spring 2026 | Harder Difficulty</p>
+    </header>
+
+    <div class="exam-info">
+        <ul>
+            <li><strong>Time:</strong> 90 minutes</li>
+            <li><strong>Questions:</strong> 20 &mdash; mix of MCQ, short answer, SQL, and trace problems</li>
+            <li><strong>Total Points:</strong> 100</li>
+            <li><strong>Difficulty:</strong> Slightly above midterm level</li>
+        </ul>
+    </div>
+
+    <form id="exam-form" onsubmit="return false;">
+
+        <!-- ====== Q1: Amdahl's Law Tricky ====== -->
+        <div class="question-block" id="q1-block">
+            <div class="question-header">
+                <span class="q-num">1</span>
+                <span class="q-topic">Performance</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A program spends 80% of its time in a parallelizable section. You have unlimited cores. What is the <strong>maximum possible speedup</strong> according to Amdahl's Law?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q1" value="a"> a) 5x</label></li>
+                <li><label><input type="radio" name="q1" value="b"> b) 10x</label></li>
+                <li><label><input type="radio" name="q1" value="c"> c) 80x</label></li>
+                <li><label><input type="radio" name="q1" value="d"> d) Infinity</label></li>
+            </ul>
+            <div class="feedback" id="q1-fb"></div>
+        </div>
+
+        <!-- ====== Q2: WAL Protocol ====== -->
+        <div class="question-block" id="q2-block">
+            <div class="question-header">
+                <span class="q-num">2</span>
+                <span class="q-topic">WAL</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A system writes data pages to disk <strong>before</strong> writing the corresponding log records. After a crash, which ACID property is violated and why?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q2" value="a"> a) Durability — committed transactions can't be replayed</label></li>
+                <li><label><input type="radio" name="q2" value="b"> b) Atomicity — modified data is on disk but there's no log to undo incomplete transactions</label></li>
+                <li><label><input type="radio" name="q2" value="c"> c) Isolation — other transactions can see partial writes</label></li>
+                <li><label><input type="radio" name="q2" value="d"> d) Consistency — constraints are not checked before writing</label></li>
+            </ul>
+            <div class="feedback" id="q2-fb"></div>
+        </div>
+
+        <!-- ====== Q3: Isolation Levels ====== -->
+        <div class="question-block" id="q3-block">
+            <div class="question-header">
+                <span class="q-num">3</span>
+                <span class="q-topic">Isolation</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">PostgreSQL's default isolation level is <strong>Read Committed</strong>. Which of the following anomalies can still occur at this level? Select the most complete answer.</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q3" value="a"> a) Dirty reads only</label></li>
+                <li><label><input type="radio" name="q3" value="b"> b) Lost updates, unrepeatable reads, and phantom reads</label></li>
+                <li><label><input type="radio" name="q3" value="c"> c) Phantom reads only</label></li>
+                <li><label><input type="radio" name="q3" value="d"> d) None — Read Committed prevents all anomalies</label></li>
+            </ul>
+            <div class="feedback" id="q3-fb"></div>
+        </div>
+
+        <!-- ====== Q4: SQL Correlated Subquery ====== -->
+        <div class="question-block" id="q4-block">
+            <div class="question-header">
+                <span class="q-num">4</span>
+                <span class="q-topic">SQL / Subqueries</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <div class="schema-box">Product(PName, Price, Category, Manufacturer)
+Company(CName, Country, NoOfEmployees)</div>
+            <p class="q-text">Write a SQL query to find all products that are <strong>more expensive than every other product in the same category</strong> (i.e., the most expensive product per category). Do NOT use GROUP BY.</p>
+            <textarea class="code-answer" id="q4-answer" placeholder="Write your SQL here..."></textarea>
+            <div class="feedback" id="q4-fb"></div>
+        </div>
+
+        <!-- ====== Q5: COUNT(*) vs COUNT(col) ====== -->
+        <div class="question-block" id="q5-block">
+            <div class="question-header">
+                <span class="q-num">5</span>
+                <span class="q-topic">SQL / Aggregation</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A table <code>employees(id, name, dept)</code> has 100 rows. The <code>dept</code> column is NULL for 15 employees. What does <code>SELECT COUNT(*), COUNT(dept) FROM employees</code> return?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q5" value="a"> a) 100, 100</label></li>
+                <li><label><input type="radio" name="q5" value="b"> b) 100, 85</label></li>
+                <li><label><input type="radio" name="q5" value="c"> c) 85, 85</label></li>
+                <li><label><input type="radio" name="q5" value="d"> d) 85, 100</label></li>
+            </ul>
+            <div class="feedback" id="q5-fb"></div>
+        </div>
+
+        <!-- ====== Q6: Outer Join Result Size ====== -->
+        <div class="question-block" id="q6-block">
+            <div class="question-header">
+                <span class="q-num">6</span>
+                <span class="q-topic">SQL / Joins</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Table <code>A</code> has 10 rows. Table <code>B</code> has 8 rows. No rows in A match any row in B on the join condition. How many rows does <code>A FULL OUTER JOIN B</code> return?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q6" value="a"> a) 0</label></li>
+                <li><label><input type="radio" name="q6" value="b"> b) 10</label></li>
+                <li><label><input type="radio" name="q6" value="c"> c) 18</label></li>
+                <li><label><input type="radio" name="q6" value="d"> d) 80</label></li>
+            </ul>
+            <div class="feedback" id="q6-fb"></div>
+        </div>
+
+        <!-- ====== Q7: Foreign Key Strategies ====== -->
+        <div class="question-block" id="q7-block">
+            <div class="question-header">
+                <span class="q-num">7</span>
+                <span class="q-topic">Relational Model</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A <code>Students</code> table has a primary key <code>id</code>. An <code>Enrollments</code> table has a foreign key <code>student_id</code> referencing it with <code>ON DELETE CASCADE</code>. If you delete a student, what happens to their enrollments?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q7" value="a"> a) The delete is rejected because enrollments reference the student</label></li>
+                <li><label><input type="radio" name="q7" value="b"> b) The enrollments' student_id is set to NULL</label></li>
+                <li><label><input type="radio" name="q7" value="c"> c) All enrollments for that student are automatically deleted</label></li>
+                <li><label><input type="radio" name="q7" value="d"> d) The enrollments remain unchanged with a dangling reference</label></li>
+            </ul>
+            <div class="feedback" id="q7-fb"></div>
+        </div>
+
+        <!-- ====== Q8: Protobuf Backward Compat ====== -->
+        <div class="question-block" id="q8-block">
+            <div class="question-header">
+                <span class="q-num">8</span>
+                <span class="q-topic">Protocol Buffers</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Why should you avoid using <code>required</code> fields in Protocol Buffers and prefer <code>optional</code>?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q8" value="a"> a) Required fields use more bytes on the wire</label></li>
+                <li><label><input type="radio" name="q8" value="b"> b) Required fields break backward compatibility — old clients crash if a new required field is added</label></li>
+                <li><label><input type="radio" name="q8" value="c"> c) Required fields are slower to serialize</label></li>
+                <li><label><input type="radio" name="q8" value="d"> d) Required fields cannot be numeric types</label></li>
+            </ul>
+            <div class="feedback" id="q8-fb"></div>
+        </div>
+
+        <!-- ====== Q9: Strict 2PL + Deadlock ====== -->
+        <div class="question-block" id="q9-block">
+            <div class="question-header">
+                <span class="q-num">9</span>
+                <span class="q-topic">Locking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Under Strict 2PL, when are locks released?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q9" value="a"> a) Immediately after the operation that needed the lock completes</label></li>
+                <li><label><input type="radio" name="q9" value="b"> b) At the end of the shrinking phase, before commit</label></li>
+                <li><label><input type="radio" name="q9" value="c"> c) All at once when the transaction commits or aborts</label></li>
+                <li><label><input type="radio" name="q9" value="d"> d) In reverse order of acquisition</label></li>
+            </ul>
+            <div class="feedback" id="q9-fb"></div>
+        </div>
+
+        <!-- ====== Q10: Deadlock Detection 3 Txns ====== -->
+        <div class="question-block" id="q10-block">
+            <div class="question-header">
+                <span class="q-num">10</span>
+                <span class="q-topic">Deadlocks</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Three transactions under Strict 2PL:</p>
+            <div class="code-context">T1: holds X(A), requests S(B)
+T2: holds X(B), requests S(C)
+T3: holds X(C), requests S(A)</div>
+            <p class="q-text">Draw the waits-for graph. Is this a deadlock? If so, what is the cycle?</p>
+            <textarea class="code-answer" id="q10-answer" placeholder="Describe the waits-for graph and whether there is a deadlock..." style="min-height: 70px;"></textarea>
+            <div class="feedback" id="q10-fb"></div>
+        </div>
+
+        <!-- ====== Q11: Conflict Graph — 3 Transactions ====== -->
+        <div class="question-block" id="q11-block">
+            <div class="question-header">
+                <span class="q-num">11</span>
+                <span class="q-topic">Serializability</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Given this schedule with three transactions:</p>
+            <div class="code-context">w1(A), r2(A), w2(B), r3(B), w3(A)</div>
+            <p class="q-text">List all conflicts, draw the conflict graph edges, and determine if this is conflict serializable. If yes, give an equivalent serial order.</p>
+            <textarea class="code-answer" id="q11-answer" placeholder="List conflicts, edges, and whether it's serializable..." style="min-height: 90px;"></textarea>
+            <div class="feedback" id="q11-fb"></div>
+        </div>
+
+        <!-- ====== Q12: Bloom Filter Calculation ====== -->
+        <div class="question-block" id="q12-block">
+            <div class="question-header">
+                <span class="q-num">12</span>
+                <span class="q-topic">Bloom Filters</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">You have a Bloom filter with <strong>m = 10 bits</strong> and <strong>k = 2 hash functions</strong>. After inserting elements X and Y, the bit array is: <code>[0, 1, 0, 1, 0, 0, 1, 0, 1, 0]</code>. You query element Z and get h₁(Z) = 1, h₂(Z) = 6. What does the Bloom filter report?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q12" value="a"> a) Z is definitely in the set</label></li>
+                <li><label><input type="radio" name="q12" value="b"> b) Z is possibly in the set (false positive possible)</label></li>
+                <li><label><input type="radio" name="q12" value="c"> c) Z is definitely NOT in the set</label></li>
+                <li><label><input type="radio" name="q12" value="d"> d) Cannot determine without knowing X and Y</label></li>
+            </ul>
+            <div class="feedback" id="q12-fb"></div>
+        </div>
+
+        <!-- ====== Q13: Bloom Filter — Why no deletes? ====== -->
+        <div class="question-block" id="q13-block">
+            <div class="question-header">
+                <span class="q-num">13</span>
+                <span class="q-topic">Bloom Filters</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Why can't you delete elements from a standard Bloom filter by setting bits back to 0?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q13" value="a"> a) The hash functions are not reversible</label></li>
+                <li><label><input type="radio" name="q13" value="b"> b) Multiple elements may share the same bit positions; clearing a bit could create false negatives for other elements</label></li>
+                <li><label><input type="radio" name="q13" value="c"> c) Bloom filters are read-only after construction</label></li>
+                <li><label><input type="radio" name="q13" value="d"> d) The bit array would become all zeros</label></li>
+            </ul>
+            <div class="feedback" id="q13-fb"></div>
+        </div>
+
+        <!-- ====== Q14: Dense vs Sparse Index ====== -->
+        <div class="question-block" id="q14-block">
+            <div class="question-header">
+                <span class="q-num">14</span>
+                <span class="q-topic">Indexing</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A table is physically sorted by <code>id</code> (primary key). You create a secondary index on <code>salary</code>. Must this secondary index be dense or sparse, and why?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q14" value="a"> a) Sparse — secondary indexes are always sparse to save space</label></li>
+                <li><label><input type="radio" name="q14" value="b"> b) Dense — the data is not sorted by salary, so you can't rely on sequential scan from a nearby entry</label></li>
+                <li><label><input type="radio" name="q14" value="c"> c) Either works — the database optimizer chooses</label></li>
+                <li><label><input type="radio" name="q14" value="d"> d) Dense — secondary indexes always have more entries than primary indexes</label></li>
+            </ul>
+            <div class="feedback" id="q14-fb"></div>
+        </div>
+
+        <!-- ====== Q15: LRU vs FIFO Trace ====== -->
+        <div class="question-block" id="q15-block">
+            <div class="question-header">
+                <span class="q-num">15</span>
+                <span class="q-topic">Caching</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Cache size = 3. Sequence: <code>A, B, C, A, B, D, A, B, C, D</code>. Complete the FIFO trace. How many misses occur?</p>
+            <textarea class="code-answer" id="q15-answer" placeholder="Show the cache state after each request and count misses..." style="min-height: 100px;"></textarea>
+            <div class="feedback" id="q15-fb"></div>
+        </div>
+
+        <!-- ====== Q16: OPT vs LRU ====== -->
+        <div class="question-block" id="q16-block">
+            <div class="question-header">
+                <span class="q-num">16</span>
+                <span class="q-topic">Caching</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">Cache size = 3. Cache currently holds <code>{A, B, C}</code>. Next request is D. Remaining future sequence after D is: <code>A, C, B, A</code>. Under <strong>OPT (Belady's)</strong>, which item is evicted?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q16" value="a"> a) A — it was accessed least recently</label></li>
+                <li><label><input type="radio" name="q16" value="b"> b) B — its next access is furthest in the future</label></li>
+                <li><label><input type="radio" name="q16" value="c"> c) C — it has the lowest frequency count</label></li>
+                <li><label><input type="radio" name="q16" value="d"> d) A — it won't be accessed again</label></li>
+            </ul>
+            <div class="feedback" id="q16-fb"></div>
+        </div>
+
+        <!-- ====== Q17: TCP vs UDP ====== -->
+        <div class="question-block" id="q17-block">
+            <div class="question-header">
+                <span class="q-num">17</span>
+                <span class="q-topic">Networking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">A video call application uses UDP instead of TCP. Which of the following best explains why?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q17" value="a"> a) UDP encrypts data while TCP does not</label></li>
+                <li><label><input type="radio" name="q17" value="b"> b) UDP is connectionless and doesn't retransmit lost packets, avoiding latency spikes from retransmission delays</label></li>
+                <li><label><input type="radio" name="q17" value="c"> c) UDP uses smaller port numbers so there's less overhead</label></li>
+                <li><label><input type="radio" name="q17" value="d"> d) UDP guarantees packet ordering which is critical for video</label></li>
+            </ul>
+            <div class="feedback" id="q17-fb"></div>
+        </div>
+
+        <!-- ====== Q18: DHCP ====== -->
+        <div class="question-block" id="q18-block">
+            <div class="question-header">
+                <span class="q-num">18</span>
+                <span class="q-topic">Networking</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">When your laptop connects to a new Wi-Fi network, it doesn't have an IP address yet. Which protocol assigns it one, and at which layer does this operate?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q18" value="a"> a) DNS at the Application layer</label></li>
+                <li><label><input type="radio" name="q18" value="b"> b) ARP at the Data Link layer</label></li>
+                <li><label><input type="radio" name="q18" value="c"> c) DHCP at the Data Link layer</label></li>
+                <li><label><input type="radio" name="q18" value="d"> d) BGP at the Network layer</label></li>
+            </ul>
+            <div class="feedback" id="q18-fb"></div>
+        </div>
+
+        <!-- ====== Q19: 2PC ====== -->
+        <div class="question-block" id="q19-block">
+            <div class="question-header">
+                <span class="q-num">19</span>
+                <span class="q-topic">Distributed Systems</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">In Two-Phase Commit, the coordinator sends PREPARE and all participants vote YES. The coordinator writes COMMIT to its log and starts sending COMMIT messages. It crashes after sending COMMIT to participant 1 but before sending it to participant 2. What happens when the coordinator recovers?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q19" value="a"> a) The transaction is aborted since not all participants received COMMIT</label></li>
+                <li><label><input type="radio" name="q19" value="b"> b) The coordinator re-reads its log, sees COMMIT, and re-sends COMMIT to all participants</label></li>
+                <li><label><input type="radio" name="q19" value="c"> c) Participant 2 independently decides to abort after a timeout</label></li>
+                <li><label><input type="radio" name="q19" value="d"> d) The coordinator starts a new PREPARE phase from scratch</label></li>
+            </ul>
+            <div class="feedback" id="q19-fb"></div>
+        </div>
+
+        <!-- ====== Q20: Consistent Hashing ====== -->
+        <div class="question-block" id="q20-block">
+            <div class="question-header">
+                <span class="q-num">20</span>
+                <span class="q-topic">Partitioning</span>
+                <span class="q-points">5 pts</span>
+            </div>
+            <p class="q-text">You have 4 nodes using hash partitioning with <code>node = hash(key) mod 4</code>. You add a 5th node, changing the formula to <code>mod 5</code>. Approximately what fraction of keys must be moved?</p>
+            <ul class="options">
+                <li><label><input type="radio" name="q20" value="a"> a) About 1/5 (20%)</label></li>
+                <li><label><input type="radio" name="q20" value="b"> b) About 4/5 (80%)</label></li>
+                <li><label><input type="radio" name="q20" value="c"> c) All keys (100%)</label></li>
+                <li><label><input type="radio" name="q20" value="d"> d) None — mod 4 keys still map correctly under mod 5</label></li>
+            </ul>
+            <div class="feedback" id="q20-fb"></div>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="btn-bar">
+            <button class="btn btn-grade" type="button" onclick="gradeExam()">Grade Exam</button>
+            <button class="btn btn-reset" type="button" onclick="resetExam()">Reset</button>
+        </div>
+
+        <div class="score-box" id="score-box">
+            <div class="score-num" id="score-num"></div>
+            <div class="score-label" id="score-label"></div>
+        </div>
+
+    </form>
+
+    <footer>
+        <p>CSEE 4121 Practice Midterm 2 &mdash; Columbia University &mdash; Spring 2026</p>
+    </footer>
+</div>
+
+<script>
+const answers = {
+    q1: { correct: 'a', explanation: 'Amdahl\'s Law with infinite speedup on the parallel portion: Speedup = 1 / (1 - 0.8) = 1 / 0.2 = 5x. The 20% sequential portion is the bottleneck — no matter how many cores you throw at the parallel part, you can never exceed 5x. This is the key insight of Amdahl\'s Law: the sequential fraction sets a hard ceiling.' },
+    q2: { correct: 'b', explanation: 'WAL Rule: log must be written BEFORE data pages. If data is written first and the system crashes before the log is written, modified data is on disk but there\'s no log record to undo it. The database is stuck with partial modifications from an incomplete transaction — Atomicity is violated.' },
+    q3: { correct: 'b', explanation: 'Read Committed only prevents dirty reads (reading uncommitted data). It does NOT prevent lost updates (two concurrent writes overwriting each other), unrepeatable reads (re-reading a row gets a different value), or phantom reads (re-running a query gets different rows). These are all still possible at this isolation level, which is PostgreSQL\'s default.' },
+    q5: { correct: 'b', explanation: 'COUNT(*) counts all rows regardless of NULL values — returns 100. COUNT(dept) counts only non-NULL values in the dept column — returns 100 - 15 = 85. This is a critical distinction: COUNT(*) counts rows, COUNT(column) counts non-NULL values in that column.' },
+    q6: { correct: 'c', explanation: 'FULL OUTER JOIN guarantees all rows from both tables appear. With zero matches, every row from A appears with NULLs for B\'s columns (10 rows) and every row from B appears with NULLs for A\'s columns (8 rows). Total = 10 + 8 = 18. An INNER JOIN would return 0 rows. A LEFT JOIN would return 10. A RIGHT JOIN would return 8.' },
+    q7: { correct: 'c', explanation: 'ON DELETE CASCADE means when a parent row is deleted, all child rows referencing it are automatically deleted too. This is dangerous — deleting one student silently wipes their entire enrollment history. ON DELETE RESTRICT would reject the delete. ON DELETE SET NULL would set student_id to NULL in the enrollments.' },
+    q8: { correct: 'b', explanation: 'If you add a new required field, old clients that don\'t know about this field will fail to serialize valid messages (they can\'t provide the required field). This breaks backward compatibility. Optional fields are safe — old clients simply don\'t include them, and new clients handle their absence gracefully.' },
+    q9: { correct: 'c', explanation: 'Strict 2PL is stricter than basic 2PL. In basic 2PL, locks can be released before commit (shrinking phase). In STRICT 2PL, ALL locks are held until the transaction commits or aborts, then released all at once. This prevents cascading aborts (where aborting one transaction forces aborting others that read its uncommitted data).' },
+    q12: { correct: 'c', explanation: 'Check positions h₁(Z)=1 and h₂(Z)=6. The bit array is [0,1,0,1,0,0,1,0,1,0] (0-indexed). Position 1 = 1 (set), but position 6 = 1 (set). Wait — let\'s recheck with 0-indexing: index 0=0, 1=1, 2=0, 3=1, 4=0, 5=0, 6=1, 7=0, 8=1, 9=0. Both positions 1 and 6 are 1. Actually this would report "possibly in set." BUT — if using 0-indexed: position 6 is 1. Let me re-examine: the bit at index 1 is 1 and index 6 is 1. Both are set, so the answer is "possibly in set." Correction: the answer is (b).' },
+    q13: { correct: 'b', explanation: 'Multiple elements can hash to the same bit position. If element X sets bit 3 and element Y also sets bit 3, clearing bit 3 when deleting X would make the Bloom filter report "definitely not present" for Y — a false negative. Bloom filters guarantee zero false negatives, so deletion would break this fundamental property.' },
+    q14: { correct: 'b', explanation: 'A sparse index works by finding the nearest smaller entry and scanning sequentially from there. This only works if the data is physically sorted by the search key. Since the table is sorted by id (not salary), consecutive salary values are scattered across different disk blocks. You need a dense index (one entry per value) so every lookup has a direct pointer. Secondary indexes MUST be dense.' },
+    q16: { correct: 'b', explanation: 'OPT looks at when each item is next accessed in the future sequence (A, C, B, A). A is next accessed at position 1 (soon). C is next at position 2. B is next at position 3 (furthest away). OPT evicts the item whose next use is furthest in the future — that\'s B. Note: OPT doesn\'t care about recency (LRU) or frequency (LFU), only the future.' },
+    q17: { correct: 'b', explanation: 'For real-time video, a slightly dropped frame is better than waiting for a retransmission. TCP guarantees delivery by retransmitting lost packets, which introduces variable delays (jitter). UDP just sends and moves on — if a packet is lost, the video skips a frame rather than freezing while waiting for retransmission. For real-time applications, low and predictable latency matters more than perfect delivery.' },
+    q18: { correct: 'c', explanation: 'DHCP (Dynamic Host Configuration Protocol) assigns your laptop an IP address through a 4-step handshake: DISCOVER → OFFER → REQUEST → ACK. It operates at Layer 2 (Data Link) because your laptop doesn\'t have an IP address yet — it must use broadcast MAC frames to communicate. ARP maps IP→MAC (doesn\'t assign IPs). DNS maps hostnames→IPs. BGP is for inter-network routing.' },
+    q19: { correct: 'b', explanation: 'The coordinator wrote COMMIT to its WAL before crashing. On recovery, it reads the log, sees the COMMIT decision, and re-sends COMMIT to all participants. This is exactly why WAL is used — the decision survives the crash. Participant 2 may have been blocked waiting, but once the coordinator recovers, it completes the protocol. The transaction is NOT aborted because the decision was already made and logged.' },
+    q20: { correct: 'b', explanation: 'With mod 4 → mod 5, a key stays on the same node only if hash(key) mod 4 = hash(key) mod 5, which happens for about 1/5 of keys (those where mod 4 and mod 5 agree). The other ~4/5 (80%) get rehashed to a different node. This is the problem consistent hashing solves — with a hash ring, adding a 5th node only moves ~1/5 of keys (the ones on the ring segment the new node takes over).' },
+};
+
+const freeResponseKeys = {
+    q4: {
+        keywords: ['not exists', 'all', 'subquery', 'where', 'category', 'price', 'select'],
+        modelAnswer: `-- Using NOT EXISTS:
+SELECT p1.PName, p1.Price, p1.Category
+FROM Product p1
+WHERE NOT EXISTS (
+    SELECT * FROM Product p2
+    WHERE p2.Category = p1.Category
+    AND p2.Price > p1.Price
+);
+
+-- OR using ALL:
+SELECT PName, Price, Category
+FROM Product p1
+WHERE Price >= ALL (
+    SELECT Price FROM Product p2
+    WHERE p2.Category = p1.Category
+);`,
+        explanation: 'This requires a correlated subquery. For each product, the inner query checks if any other product in the same category has a higher price. NOT EXISTS or >= ALL both work. You cannot use GROUP BY per the instructions — this tests correlated subquery mastery.'
+    },
+    q10: {
+        keywords: ['cycle', 'deadlock', 't1', 't2', 't3'],
+        modelAnswer: `Waits-for graph:
+- T1 wants S(B), but T2 holds X(B) → T1 waits for T2 → Edge: T1 → T2
+- T2 wants S(C), but T3 holds X(C) → T2 waits for T3 → Edge: T2 → T3
+- T3 wants S(A), but T1 holds X(A) → T3 waits for T1 → Edge: T3 → T1
+
+Cycle: T1 → T2 → T3 → T1
+
+YES, this is a deadlock. No transaction can proceed.
+The DBMS must abort one transaction (victim) to break the cycle.`,
+        explanation: 'This is a 3-way deadlock forming a cycle T1→T2→T3→T1. Each transaction holds a lock the next one needs, and needs a lock the previous one holds. The system detects the cycle in the waits-for graph and aborts one transaction.'
+    },
+    q11: {
+        keywords: ['conflict', 't1', 't2', 't3', 'serializable', 'serial'],
+        modelAnswer: `Operations in order: w1(A), r2(A), w2(B), r3(B), w3(A)
+
+Conflicts (different txns, same item, at least one write):
+On A:
+1. w1(A) → r2(A): T1→T2 (WR)
+2. w1(A) → w3(A): T1→T3 (WW)
+3. r2(A) → w3(A): T2→T3 (RW)
+
+On B:
+4. w2(B) → r3(B): T2→T3 (WR)
+
+Conflict graph edges: T1→T2, T1→T3, T2→T3
+All arrows go forward: T1→T2→T3. No cycles.
+
+YES, conflict serializable. Equivalent serial order: T1, T2, T3.`,
+        explanation: 'All edges point in one direction (T1→T2→T3), forming a DAG. The topological sort gives the serial order T1, T2, T3. No cycle means the interleaved schedule is safe.'
+    },
+    q15: {
+        keywords: ['miss', '6', '7', 'fifo'],
+        modelAnswer: `FIFO trace (cache size 3):
+A: Miss  [A]
+B: Miss  [A, B]
+C: Miss  [A, B, C]       ← cache full
+A: Hit   [A, B, C]       ← A in cache, no change (FIFO doesn't move on hit)
+B: Hit   [A, B, C]       ← B in cache, no change
+D: Miss  [B, C, D]       ← evict A (first in), insert D
+A: Miss  [C, D, A]       ← evict B (first in), insert A
+B: Miss  [D, A, B]       ← evict C (first in), insert B
+C: Miss  [A, B, C]       ← evict D (first in), insert C
+D: Miss  [B, C, D]       ← evict A (first in), insert D
+
+Result: 7 misses, 3 hits out of 10 requests (30% hit rate)`,
+        explanation: 'FIFO evicts the oldest inserted item regardless of access pattern. Even though A and B were recently accessed (hits at steps 4-5), FIFO still evicts them when they\'re oldest in the queue. This is why LRU outperforms FIFO — LRU would refresh their position on a hit.'
+    },
+};
+
+function gradeExam() {
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    // Grade MCQs
+    for (const [qId, ans] of Object.entries(answers)) {
+        const num = qId.replace('q', '');
+        const block = document.getElementById(`${qId}-block`);
+        const fb = document.getElementById(`${qId}-fb`);
+        const selected = document.querySelector(`input[name="${qId}"]:checked`);
+        totalPoints += 5;
+
+        // Fix Q12 answer (was incorrectly set during development)
+        let correctAns = ans.correct;
+        let explanation = ans.explanation;
+        if (qId === 'q12') {
+            correctAns = 'b';
+            explanation = 'Check positions h₁(Z)=1 and h₂(Z)=6 (0-indexed). Bit array: [0,1,0,1,0,0,1,0,1,0]. Position 1 = 1 and position 6 = 1 — both are set. The Bloom filter reports "possibly in set." However, Z was never inserted — this is a false positive. Bits 1 and 6 were set by X and Y, not Z. This is exactly how false positives work in Bloom filters.';
+        }
+
+        if (selected && selected.value === correctAns) {
+            earnedPoints += 5;
+            block.classList.add('correct');
+            block.classList.remove('incorrect');
+            fb.className = 'feedback show correct-fb';
+            fb.innerHTML = `<strong>Correct!</strong> ${explanation}`;
+        } else {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            const yourAnswer = selected ? selected.value.toUpperCase() : 'none';
+            fb.innerHTML = `<strong>Incorrect (you picked: ${yourAnswer}, correct: ${correctAns.toUpperCase()}).</strong> ${explanation}`;
+        }
+    }
+
+    // Grade free response
+    for (const [qId, key] of Object.entries(freeResponseKeys)) {
+        const block = document.getElementById(`${qId}-block`);
+        const fb = document.getElementById(`${qId}-fb`);
+        const textarea = document.getElementById(`${qId}-answer`);
+        const userAnswer = (textarea ? textarea.value : '').toLowerCase().trim();
+        totalPoints += 5;
+
+        const matchCount = key.keywords.filter(kw => userAnswer.includes(kw.toLowerCase())).length;
+        const threshold = Math.ceil(key.keywords.length * 0.5);
+
+        if (userAnswer.length === 0) {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            fb.innerHTML = `<strong>No answer provided.</strong><br><br><strong>Model answer:</strong><pre>${key.modelAnswer}</pre><p style="margin-top:0.5rem;margin-bottom:0;">${key.explanation}</p>`;
+        } else if (matchCount >= threshold) {
+            earnedPoints += 5;
+            block.classList.add('correct');
+            block.classList.remove('incorrect');
+            fb.className = 'feedback show correct-fb';
+            fb.innerHTML = `<strong>Looks correct!</strong> Key concepts detected.<br><br><strong>Model answer:</strong><pre>${key.modelAnswer}</pre>`;
+        } else {
+            block.classList.add('incorrect');
+            block.classList.remove('correct');
+            fb.className = 'feedback show incorrect-fb';
+            fb.innerHTML = `<strong>Partially correct or missing key concepts.</strong><br><br><strong>Model answer:</strong><pre>${key.modelAnswer}</pre><p style="margin-top:0.5rem;margin-bottom:0;">${key.explanation}</p>`;
+        }
+    }
+
+    // Show score
+    const pct = Math.round((earnedPoints / totalPoints) * 100);
+    const scoreBox = document.getElementById('score-box');
+    document.getElementById('score-num').textContent = `${earnedPoints} / ${totalPoints}`;
+    document.getElementById('score-label').textContent = `${pct}% — ${pct >= 90 ? 'Excellent! You\'re well prepared.' : pct >= 75 ? 'Good — review the red questions carefully.' : pct >= 60 ? 'Decent — focus on the concepts you missed.' : 'Keep studying — go through all explanations below.'}`;
+
+    scoreBox.classList.remove('grade-a', 'grade-b', 'grade-c');
+    if (pct >= 80) scoreBox.classList.add('grade-a');
+    else if (pct >= 60) scoreBox.classList.add('grade-b');
+    else scoreBox.classList.add('grade-c');
+    scoreBox.classList.add('show');
+    scoreBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetExam() {
+    document.getElementById('exam-form').reset();
+    document.querySelectorAll('.question-block').forEach(b => { b.classList.remove('correct', 'incorrect'); });
+    document.querySelectorAll('.feedback').forEach(f => { f.className = 'feedback'; f.innerHTML = ''; });
+    document.getElementById('score-box').classList.remove('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

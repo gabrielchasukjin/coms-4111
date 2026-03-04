@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Serializability — Step by Step</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1a1a1a; background: #fff; padding: 2rem 1rem; }
+        .container { max-width: 50rem; margin: 0 auto; }
+        header { text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; margin-bottom: 3rem; }
+        h1 { font-family: Georgia, serif; font-size: 2.2rem; font-weight: 400; }
+        .subtitle { font-size: 1.05rem; color: #666; font-style: italic; margin-top: 0.5rem; }
+        h2 { font-family: Georgia, serif; font-size: 1.6rem; font-weight: 400; margin-top: 3rem; margin-bottom: 1rem; }
+        h3 { font-family: Georgia, serif; font-size: 1.2rem; font-weight: 400; margin-top: 2rem; margin-bottom: 0.75rem; }
+        p { margin-bottom: 1.25rem; color: #333; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88em; background: #f0f0f0; padding: 0.15em 0.4em; border-radius: 2px; }
+        ul, ol { margin-left: 1.5rem; margin-bottom: 1.25rem; }
+        li { margin-bottom: 0.5rem; }
+
+        .big-idea { background: #fffbe6; border-left: 4px solid #f0c000; padding: 1.5rem; margin: 2rem 0; border-radius: 0 4px 4px 0; }
+        .key-insight { background: #fafafa; border-left: 3px solid #000; padding: 1.25rem 1.5rem; margin: 1.75rem 0; font-style: italic; color: #333; }
+        .definition { background: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin: 1.75rem 0; }
+        .definition strong { color: #000; }
+
+        .step-box { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1.5rem 1.75rem; margin: 1.5rem 0; }
+        .step-box h3 { margin-top: 0; }
+
+        .schedule-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; }
+        .schedule-table th, .schedule-table td { padding: 0.6rem 0.75rem; border: 1px solid #ddd; text-align: center; }
+        .schedule-table th { background: #f0f0f0; font-weight: 700; }
+        .schedule-table .highlight { background: #fff3cd; }
+        .schedule-table .conflict-highlight { background: #ffd9d9; }
+
+        .conflict-pair { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; }
+        .conflict-pair.rw { background: #e8f4fd; border-left: 4px solid #3498db; }
+        .conflict-pair.ww { background: #fdf2e8; border-left: 4px solid #e67e22; }
+        .conflict-pair .arrow { font-size: 1.2rem; }
+        .conflict-pair .tag { font-family: -apple-system, sans-serif; font-size: 0.8rem; padding: 0.15em 0.5em; border-radius: 3px; color: #fff; }
+        .conflict-pair .tag.rw-tag { background: #3498db; }
+        .conflict-pair .tag.ww-tag { background: #e67e22; }
+
+        .graph-box { text-align: center; padding: 2rem; margin: 1.5rem 0; }
+        .graph-box svg { max-width: 400px; }
+
+        .example-box { background: #f0fff4; border: 1px solid #b7ebc8; border-radius: 6px; padding: 1.5rem 1.75rem; margin: 1.5rem 0; }
+        .example-box h3 { margin-top: 0; color: #1a7a3a; }
+
+        .bad-box { background: #fff5f5; border: 1px solid #f5c6c6; border-radius: 6px; padding: 1.5rem 1.75rem; margin: 1.5rem 0; }
+        .bad-box h3 { margin-top: 0; color: #c0392b; }
+
+        .summary-box { background: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; }
+        .summary-box h3 { margin-top: 0; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 1.5rem; margin-top: 3rem; color: #999; font-size: 0.85rem; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>Conflict Serializability, Step by Step</h1>
+        <p class="subtitle">What it tests, how to find conflicts, and how to detect cycles</p>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- WHAT IS IT TESTING? -->
+    <!-- ============================================================ -->
+
+    <h2>1. What Is This Question Actually Testing?</h2>
+
+    <div class="big-idea">
+        <strong>The core question:</strong> If two transactions ran at the same time (interleaved), is the result guaranteed to be the same as if they had run one after the other (serially)? If yes, the schedule is <strong>safe</strong>. If no, the database could produce <strong>corrupted or inconsistent data</strong>.
+    </div>
+
+    <p>Imagine two people editing the same Google Doc at the same time. If the final document looks like Person A edited first, then Person B edited — or Person B first, then Person A — it's fine. But if the final document is some weird mix that matches neither ordering, something went wrong. That's what serializability checks for.</p>
+
+    <div class="definition">
+        <strong>Conflict Serializable:</strong> A schedule (interleaved execution) is conflict serializable if you can rearrange it into a serial order (T1 then T2, or T2 then T1) by swapping <em>only non-conflicting</em> operations. If yes, it's safe. If not, it could produce incorrect results.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- WHAT IS A CONFLICT? -->
+    <!-- ============================================================ -->
+
+    <h2>2. What Counts as a Conflict?</h2>
+
+    <p>Two operations <strong>conflict</strong> if ALL three conditions are true:</p>
+
+    <ol>
+        <li><strong>Different transactions</strong> (T1 and T2)</li>
+        <li><strong>Same data item</strong> (both touch A, or both touch B)</li>
+        <li><strong>At least one is a Write</strong></li>
+    </ol>
+
+    <div class="key-insight">
+        Two Reads are NEVER a conflict. Reading doesn't change anything, so the order doesn't matter. The moment a Write is involved, order matters because someone is changing the data.
+    </div>
+
+    <p>There are only 3 types of conflicts:</p>
+
+    <table style="width:100%; border-collapse:collapse; margin:1.5rem 0;">
+        <tr style="border-bottom:2px solid #000;">
+            <th style="padding:0.75rem; text-align:left;">Type</th>
+            <th style="padding:0.75rem; text-align:left;">Pattern</th>
+            <th style="padding:0.75rem; text-align:left;">Why it matters</th>
+        </tr>
+        <tr style="border-bottom:1px solid #e5e5e5;">
+            <td style="padding:0.75rem;"><strong>Read-Write (RW)</strong></td>
+            <td style="padding:0.75rem;"><code>T1:R(A) ... T2:W(A)</code></td>
+            <td style="padding:0.75rem;">T1 read a value that T2 is about to change</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e5e5e5;">
+            <td style="padding:0.75rem;"><strong>Write-Read (WR)</strong></td>
+            <td style="padding:0.75rem;"><code>T1:W(A) ... T2:R(A)</code></td>
+            <td style="padding:0.75rem;">T2 reads a value that T1 just changed</td>
+        </tr>
+        <tr>
+            <td style="padding:0.75rem;"><strong>Write-Write (WW)</strong></td>
+            <td style="padding:0.75rem;"><code>T1:W(A) ... T2:W(A)</code></td>
+            <td style="padding:0.75rem;">Both overwrite the same item — final value depends on order</td>
+        </tr>
+    </table>
+
+    <p><strong>Not a conflict:</strong> <code>T1:R(A) ... T2:R(A)</code> — both are just reading. Order doesn't matter.</p>
+    <p><strong>Not a conflict:</strong> <code>T1:W(A) ... T2:W(B)</code> — different data items. They don't interfere.</p>
+
+    <!-- ============================================================ -->
+    <!-- STEP-BY-STEP WITH THE EXAMPLE -->
+    <!-- ============================================================ -->
+
+    <h2>3. Walkthrough: The Exam Question</h2>
+
+    <h3>The Schedule</h3>
+    <p>Here's the interleaved execution. Read it left to right — that's the time order:</p>
+
+    <table class="schedule-table">
+        <tr>
+            <th>Time &rarr;</th>
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
+        </tr>
+        <tr>
+            <th>T1</th>
+            <td class="highlight">R(A)</td><td></td><td>W(A)</td><td></td><td></td><td>R(B)</td><td>W(B)</td><td></td>
+        </tr>
+        <tr>
+            <th>T2</th>
+            <td></td><td class="highlight">R(A)</td><td></td><td>W(A)</td><td>R(B)</td><td></td><td></td><td>W(B)</td>
+        </tr>
+    </table>
+
+    <!-- STEP 1: Find conflicts -->
+    <div class="step-box">
+        <h3>Step 1: Find All Conflicts</h3>
+        <p>Go through every pair of operations from different transactions on the same item where at least one is a Write. <strong>The one that happens first in time goes on the left.</strong></p>
+
+        <p><strong>On item A:</strong></p>
+
+        <div class="conflict-pair rw">
+            <span>T1:R(A) &rarr; T2:W(A)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag rw-tag">RW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T1 reads A at time 1, T2 writes A at time 4</span>
+        </div>
+        <div class="conflict-pair rw">
+            <span>T2:R(A) &rarr; T1:W(A)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag rw-tag">RW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T2 reads A at time 2, T1 writes A at time 3</span>
+        </div>
+        <div class="conflict-pair ww">
+            <span>T1:W(A) &rarr; T2:W(A)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag ww-tag">WW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T1 writes A at time 3, T2 writes A at time 4</span>
+        </div>
+
+        <p style="margin-top:1rem;"><strong>On item B:</strong></p>
+
+        <div class="conflict-pair rw">
+            <span>T2:R(B) &rarr; T1:W(B)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag rw-tag">RW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T2 reads B at time 5, T1 writes B at time 7</span>
+        </div>
+        <div class="conflict-pair rw">
+            <span>T1:R(B) &rarr; T2:W(B)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag rw-tag">RW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T1 reads B at time 6, T2 writes B at time 8</span>
+        </div>
+        <div class="conflict-pair ww">
+            <span>T1:W(B) &rarr; T2:W(B)</span>
+            <span class="arrow">&nbsp;</span>
+            <span class="tag ww-tag">WW</span>
+            <span style="font-family:sans-serif; font-size:0.85rem; color:#555;">T1 writes B at time 7, T2 writes B at time 8</span>
+        </div>
+
+        <p style="margin-top:1rem; margin-bottom:0;"><strong>Total: 6 conflicts found.</strong></p>
+    </div>
+
+    <!-- STEP 2: Build the graph -->
+    <div class="step-box">
+        <h3>Step 2: Build the Conflict Graph (Precedence Graph)</h3>
+
+        <p>For each conflict, draw an arrow from the transaction that went <strong>first</strong> to the one that went <strong>second</strong>. The arrow means "this transaction MUST come before that one in any serial ordering."</p>
+
+        <table style="width:100%; border-collapse:collapse; margin:1rem 0;">
+            <tr style="border-bottom:2px solid #000;">
+                <th style="padding:0.6rem; text-align:left;">Conflict</th>
+                <th style="padding:0.6rem; text-align:left;">Who goes first?</th>
+                <th style="padding:0.6rem; text-align:left;">Edge</th>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+                <td style="padding:0.6rem;"><code>T1:R(A) &rarr; T2:W(A)</code></td>
+                <td style="padding:0.6rem;">T1 acted first</td>
+                <td style="padding:0.6rem;"><strong>T1 &rarr; T2</strong></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5; background:#fff5f5;">
+                <td style="padding:0.6rem;"><code>T2:R(A) &rarr; T1:W(A)</code></td>
+                <td style="padding:0.6rem;">T2 acted first</td>
+                <td style="padding:0.6rem;"><strong>T2 &rarr; T1</strong></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+                <td style="padding:0.6rem;"><code>T1:W(A) &rarr; T2:W(A)</code></td>
+                <td style="padding:0.6rem;">T1 acted first</td>
+                <td style="padding:0.6rem;"><strong>T1 &rarr; T2</strong> (duplicate)</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5; background:#fff5f5;">
+                <td style="padding:0.6rem;"><code>T2:R(B) &rarr; T1:W(B)</code></td>
+                <td style="padding:0.6rem;">T2 acted first</td>
+                <td style="padding:0.6rem;"><strong>T2 &rarr; T1</strong> (duplicate)</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+                <td style="padding:0.6rem;"><code>T1:R(B) &rarr; T2:W(B)</code></td>
+                <td style="padding:0.6rem;">T1 acted first</td>
+                <td style="padding:0.6rem;"><strong>T1 &rarr; T2</strong> (duplicate)</td>
+            </tr>
+            <tr>
+                <td style="padding:0.6rem;"><code>T1:W(B) &rarr; T2:W(B)</code></td>
+                <td style="padding:0.6rem;">T1 acted first</td>
+                <td style="padding:0.6rem;"><strong>T1 &rarr; T2</strong> (duplicate)</td>
+            </tr>
+        </table>
+
+        <p><strong>Unique edges:</strong> <code>T1 &rarr; T2</code> and <code>T2 &rarr; T1</code></p>
+
+        <div class="graph-box">
+            <svg viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- T1 circle -->
+                <circle cx="80" cy="60" r="35" fill="#e8f4fd" stroke="#3498db" stroke-width="2.5"/>
+                <text x="80" y="66" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="600" fill="#1a1a1a">T1</text>
+                <!-- T2 circle -->
+                <circle cx="280" cy="60" r="35" fill="#fdf2e8" stroke="#e67e22" stroke-width="2.5"/>
+                <text x="280" y="66" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="600" fill="#1a1a1a">T2</text>
+                <!-- Arrow T1 -> T2 (top) -->
+                <line x1="115" y1="42" x2="245" y2="42" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+                <text x="180" y="34" text-anchor="middle" font-size="12" fill="#e74c3c" font-weight="600">must come before</text>
+                <!-- Arrow T2 -> T1 (bottom) -->
+                <line x1="245" y1="78" x2="115" y2="78" stroke="#e74c3c" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+                <text x="180" y="96" text-anchor="middle" font-size="12" fill="#e74c3c" font-weight="600">must come before</text>
+                <!-- Arrowhead marker -->
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+                    </marker>
+                </defs>
+            </svg>
+        </div>
+    </div>
+
+    <!-- STEP 3: Check for cycles -->
+    <div class="step-box">
+        <h3>Step 3: Check for a Cycle</h3>
+
+        <p>Read the graph:</p>
+        <ul>
+            <li><code>T1 &rarr; T2</code> means "T1 must come before T2"</li>
+            <li><code>T2 &rarr; T1</code> means "T2 must come before T1"</li>
+        </ul>
+
+        <div class="bad-box">
+            <h3>Contradiction!</h3>
+            <p style="margin-bottom:0;">T1 must be before T2, AND T2 must be before T1. That's impossible — you can't have both. This is a <strong>cycle</strong>: T1 &rarr; T2 &rarr; T1 &rarr; T2 &rarr; ... forever.</p>
+        </div>
+
+        <p><strong>Cycle found &rarr; NOT conflict serializable.</strong></p>
+        <p>There is no serial ordering (neither "T1 then T2" nor "T2 then T1") that would produce the same result as this interleaved schedule. The schedule is <strong>unsafe</strong>.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- COUNTEREXAMPLE: A GOOD SCHEDULE -->
+    <!-- ============================================================ -->
+
+    <h2>4. For Comparison: A Schedule That IS Serializable</h2>
+
+    <table class="schedule-table">
+        <tr>
+            <th>Time &rarr;</th>
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+        </tr>
+        <tr>
+            <th>T1</th>
+            <td>R(A)</td><td>W(A)</td><td></td><td></td><td>R(B)</td><td>W(B)</td>
+        </tr>
+        <tr>
+            <th>T2</th>
+            <td></td><td></td><td>R(A)</td><td>W(A)</td><td></td><td></td>
+        </tr>
+    </table>
+
+    <div class="example-box">
+        <h3>No Cycle Here</h3>
+        <p>Conflicts on A: <code>T1:W(A) &rarr; T2:R(A)</code> and <code>T1:W(A) &rarr; T2:W(A)</code>. Both give edge <strong>T1 &rarr; T2</strong>.</p>
+        <p>All arrows point one direction: T1 &rarr; T2. No arrow goes back from T2 to T1.</p>
+        <p style="margin-bottom:0;"><strong>No cycle &rarr; conflict serializable.</strong> This schedule is equivalent to running T1 first, then T2. Safe!</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- THE RECIPE -->
+    <!-- ============================================================ -->
+
+    <h2>5. The Recipe (Use This on the Exam)</h2>
+
+    <div class="step-box" style="background:#fffbe6; border-color:#f0c000;">
+        <ol style="margin-left:1.25rem;">
+            <li style="margin-bottom:1rem;">
+                <strong>List all operations in time order</strong><br>
+                Write out the full interleaved schedule so you can see what happens when.
+            </li>
+            <li style="margin-bottom:1rem;">
+                <strong>Find all conflicts</strong><br>
+                Check every pair of operations from different transactions on the same item. If at least one is a Write, it's a conflict. <em>(RR is never a conflict!)</em>
+            </li>
+            <li style="margin-bottom:1rem;">
+                <strong>Draw edges</strong><br>
+                For each conflict, draw an arrow from the transaction that acted first to the one that acted second. Skip duplicates.
+            </li>
+            <li style="margin-bottom:0;">
+                <strong>Check for cycles</strong><br>
+                If you can follow arrows and get back to where you started, there's a cycle &rarr; <strong>NOT serializable</strong>. If all arrows go one direction &rarr; <strong>serializable</strong> (equivalent to the topological order).
+            </li>
+        </ol>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- WHY DOES A CYCLE MEAN NOT SERIALIZABLE? -->
+    <!-- ============================================================ -->
+
+    <h2>6. Why Does a Cycle Mean "Not Serializable"?</h2>
+
+    <p>A serial schedule means one transaction runs completely before the other. There are only two options:</p>
+
+    <ul>
+        <li><strong>Option 1:</strong> T1 runs first, then T2</li>
+        <li><strong>Option 2:</strong> T2 runs first, then T1</li>
+    </ul>
+
+    <p>The edge <code>T1 &rarr; T2</code> says "in any equivalent serial schedule, T1 must come first." The edge <code>T2 &rarr; T1</code> says "T2 must come first." You can't satisfy both constraints at the same time.</p>
+
+    <div class="key-insight">
+        Think of it like seating two people at a dinner table where Person A insists on sitting to the left of Person B, and Person B insists on sitting to the left of Person A. With only two chairs in a line, it's impossible to satisfy both. That's a cycle.
+    </div>
+
+    <p>With 3+ transactions, cycles can be longer: T1 &rarr; T2 &rarr; T3 &rarr; T1. Same logic — you can't order them in a line where everyone's constraint is satisfied.</p>
+
+    <!-- ============================================================ -->
+    <!-- SUMMARY -->
+    <!-- ============================================================ -->
+
+    <div class="summary-box">
+        <h3>Key Takeaways</h3>
+        <ul>
+            <li>A <strong>conflict</strong> = two operations from different transactions, same item, at least one Write</li>
+            <li>The <strong>conflict graph</strong> has one node per transaction, and edges showing "must come before"</li>
+            <li><strong>No cycle</strong> = serializable = safe (equivalent to some serial order)</li>
+            <li><strong>Cycle</strong> = not serializable = the interleaved execution could produce results that no serial execution would</li>
+            <li>RR is never a conflict. Only RW, WR, and WW count.</li>
+        </ul>
+    </div>
+
+    <footer>
+        <p>CSEE 4121 — Computer Systems for Data Science — Columbia University</p>
+    </footer>
+
+</div>
+</body>
+</html>

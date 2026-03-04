@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Layers — The Postal System Analogy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1a1a1a; background: #fff; padding: 2rem 1rem; }
+        .container { max-width: 50rem; margin: 0 auto; }
+        header { text-align: center; border-bottom: 1px solid #e5e5e5; padding-bottom: 2rem; margin-bottom: 3rem; }
+        h1 { font-family: Georgia, serif; font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; }
+        .subtitle { font-size: 1.1rem; color: #666; font-style: italic; margin-top: 0.5rem; }
+        h2 { font-family: Georgia, serif; font-size: 1.7rem; font-weight: 400; margin-top: 3rem; margin-bottom: 1rem; }
+        h3 { font-family: Georgia, serif; font-size: 1.25rem; font-weight: 400; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        p { margin-bottom: 1.25rem; color: #333; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.88em; background: #f5f5f5; padding: 0.15em 0.4em; border-radius: 2px; }
+
+        .big-idea { background: #fffbe6; border-left: 4px solid #f0c000; padding: 1.5rem; margin: 2rem 0; border-radius: 0 4px 4px 0; }
+        .big-idea strong { color: #000; }
+
+        /* Layer cards */
+        .layer-stack { display: flex; flex-direction: column; gap: 0; margin: 2rem 0; }
+        .layer-card { padding: 1.5rem 1.75rem; border-left: 5px solid; position: relative; }
+        .layer-card .layer-num { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; }
+        .layer-card .layer-name { font-family: Georgia, serif; font-size: 1.4rem; margin-bottom: 0.15rem; }
+        .layer-card .layer-one-liner { font-style: italic; color: #555; margin-bottom: 0.75rem; font-size: 0.95rem; }
+        .layer-card .analogy-tag { display: inline-block; background: rgba(0,0,0,0.07); padding: 0.2em 0.6em; border-radius: 3px; font-size: 0.85rem; margin-bottom: 0.75rem; }
+        .layer-card p:last-child { margin-bottom: 0; }
+        .layer-card ul { margin-left: 1.25rem; margin-bottom: 0; }
+        .layer-card li { margin-bottom: 0.4rem; }
+
+        /* Color coding per layer */
+        .l-physical    { background: #f9f0ff; border-color: #9b59b6; }
+        .l-datalink    { background: #eef7ff; border-color: #3498db; }
+        .l-network     { background: #eafff0; border-color: #27ae60; }
+        .l-transport   { background: #fff8ee; border-color: #e67e22; }
+        .l-application { background: #fff0f0; border-color: #e74c3c; }
+
+        .arrow-down { text-align: center; font-size: 1.5rem; color: #999; padding: 0.25rem 0; }
+
+        .key-insight { background: #fafafa; border-left: 3px solid #000; padding: 1.25rem 1.5rem; margin: 1.75rem 0; font-style: italic; color: #333; }
+
+        .comparison-table { width: 100%; margin: 1.75rem 0; border-collapse: collapse; font-size: 0.92rem; }
+        .comparison-table th, .comparison-table td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        .comparison-table th { background: #f9f9f9; font-weight: 600; border-bottom: 2px solid #000; }
+        .comparison-table tr:last-child td { border-bottom: none; }
+
+        .encap-visual { background: #fafafa; padding: 1.75rem; margin: 2rem 0; border-radius: 4px; border: 1px solid #e5e5e5; text-align: center; }
+        .encap-visual .packet-layer { display: inline-block; padding: 0.5rem 0.75rem; margin: 0.15rem; border-radius: 3px; font-size: 0.85rem; font-weight: 600; }
+
+        .summary-box { background: #fafafa; border-left: 3px solid #000; padding: 1.5rem; margin-top: 3rem; }
+        .summary-box h3 { margin-top: 0; }
+        .summary-box li { margin-bottom: 0.5rem; }
+
+        footer { border-top: 1px solid #e5e5e5; padding-top: 2rem; margin-top: 4rem; color: #666; font-size: 0.9rem; text-align: center; }
+
+        @media (max-width: 640px) { h1 { font-size: 1.9rem; } .layer-card .layer-name { font-size: 1.15rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>Network Layers, Intuitively</h1>
+        <p class="subtitle">Think of the internet as a postal system. Every layer has one job.</p>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- THE CORE IDEA -->
+    <!-- ============================================================ -->
+
+    <div class="big-idea">
+        <strong>The one idea that makes it all click:</strong> Sending data across a network is like sending a letter. You don't personally drive it to the recipient — you hand it to a system of people, each doing one job. The writer writes the letter, someone puts it in an envelope with an address, the post office routes it, the trucks carry it, and the physical roads connect the cities. Each layer only talks to the layer directly above or below it. That's the network stack.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- THE 5-LAYER MODEL -->
+    <!-- ============================================================ -->
+
+    <h2>The 5 Layers (TCP/IP Model)</h2>
+    <p>We use the practical 5-layer model (what the internet actually runs on), not the theoretical 7-layer OSI model.</p>
+
+    <div class="layer-stack">
+
+        <!-- APPLICATION -->
+        <div class="layer-card l-application">
+            <div class="layer-num">Layer 5 — Application</div>
+            <div class="layer-name">What are we saying?</div>
+            <div class="analogy-tag">You writing the letter</div>
+            <p>This is where your actual data lives — the webpage, the email body, the API response. Protocols here define the <em>meaning</em> of the conversation.</p>
+            <ul>
+                <li><strong>HTTP/HTTPS</strong> — "Give me this webpage"</li>
+                <li><strong>SMTP</strong> — "Here's an email to deliver"</li>
+                <li><strong>DNS</strong> — "What's the IP address for google.com?"</li>
+                <li><strong>SSH</strong> — "Open a secure terminal session"</li>
+            </ul>
+        </div>
+
+        <div class="arrow-down">&#8595;</div>
+
+        <!-- TRANSPORT -->
+        <div class="layer-card l-transport">
+            <div class="layer-num">Layer 4 — Transport</div>
+            <div class="layer-name">Which conversation is this for?</div>
+            <div class="analogy-tag">The envelope — labeled with sender & recipient department</div>
+            <p>Your machine runs many apps at once (browser, Spotify, email). The transport layer uses <strong>port numbers</strong> to route data to the right app. It also decides: do we care if packets arrive reliably?</p>
+            <ul>
+                <li><strong>TCP</strong> — Reliable, ordered delivery. "I'll resend anything you miss." (web, email, file transfer)</li>
+                <li><strong>UDP</strong> — Fire and forget. "Speed over perfection." (video calls, gaming, DNS lookups)</li>
+            </ul>
+            <p style="margin-top: 0.75rem; margin-bottom: 0;"><strong>Unit of data:</strong> Segment (TCP) / Datagram (UDP)</p>
+        </div>
+
+        <div class="arrow-down">&#8595;</div>
+
+        <!-- NETWORK -->
+        <div class="layer-card l-network">
+            <div class="layer-num">Layer 3 — Network</div>
+            <div class="layer-name">How do we get it across the world?</div>
+            <div class="analogy-tag">The postal routing system — ZIP codes & sorting facilities</div>
+            <p>This layer handles <strong>addressing</strong> (IP addresses) and <strong>routing</strong> — finding a path from source to destination across many intermediate networks. Your data might hop through 15 routers to get from New York to Tokyo.</p>
+            <ul>
+                <li><strong>IP (Internet Protocol)</strong> — Every device gets an address (e.g., <code>142.250.80.46</code>)</li>
+                <li><strong>Routers</strong> live here — they read the destination IP and forward the packet one hop closer</li>
+            </ul>
+            <p style="margin-top: 0.75rem; margin-bottom: 0;"><strong>Unit of data:</strong> Packet</p>
+        </div>
+
+        <div class="arrow-down">&#8595;</div>
+
+        <!-- DATA LINK -->
+        <div class="layer-card l-datalink">
+            <div class="layer-num">Layer 2 — Data Link</div>
+            <div class="layer-name">How do we get it to the next stop?</div>
+            <div class="analogy-tag">The local mail truck — delivers between neighboring post offices</div>
+            <p>The network layer plans the full route; the data link layer handles <strong>one hop at a time</strong>. It moves data between two directly connected devices (your laptop &rarr; your Wi-Fi router, or one router &rarr; the next router).</p>
+            <ul>
+                <li><strong>MAC addresses</strong> — hardware addresses burned into your network card (e.g., <code>A4:83:E7:2F:01:BC</code>)</li>
+                <li><strong>Ethernet</strong> (wired) and <strong>Wi-Fi (802.11)</strong> live here</li>
+                <li><strong>Switches</strong> live here — they forward frames within a local network</li>
+            </ul>
+            <p style="margin-top: 0.75rem; margin-bottom: 0;"><strong>Unit of data:</strong> Frame</p>
+        </div>
+
+        <div class="arrow-down">&#8595;</div>
+
+        <!-- PHYSICAL -->
+        <div class="layer-card l-physical">
+            <div class="layer-num">Layer 1 — Physical</div>
+            <div class="layer-name">How do we move raw bits?</div>
+            <div class="analogy-tag">The actual roads and trucks</div>
+            <p>Electrical signals on copper wire, light pulses in fiber optic cable, radio waves for Wi-Fi. This layer doesn't know what the bits mean — it just moves 1s and 0s from point A to point B.</p>
+            <ul>
+                <li>Ethernet cables, fiber optics, radio frequencies</li>
+                <li>Defines voltages, frequencies, connector shapes</li>
+            </ul>
+            <p style="margin-top: 0.75rem; margin-bottom: 0;"><strong>Unit of data:</strong> Bits</p>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ENCAPSULATION -->
+    <!-- ============================================================ -->
+
+    <h2>Encapsulation: Russian Nesting Dolls</h2>
+
+    <p>When you send data, each layer <strong>wraps</strong> the data from the layer above with its own header (like putting a letter in an envelope, then putting that envelope in a shipping box, then loading the box on a truck).</p>
+
+    <div class="encap-visual">
+        <p style="margin-bottom: 1rem; font-weight: 600;">What actually travels on the wire:</p>
+        <span class="packet-layer" style="background: #e8d5f5;">L1 Preamble</span>
+        <span class="packet-layer" style="background: #d4e9ff;">L2 Frame Header</span>
+        <span class="packet-layer" style="background: #d0f0db;">L3 IP Header</span>
+        <span class="packet-layer" style="background: #ffe8cc;">L4 TCP Header</span>
+        <span class="packet-layer" style="background: #ffd9d9;">Your Data</span>
+        <span class="packet-layer" style="background: #d4e9ff;">L2 Trailer</span>
+        <p style="margin-top: 1rem; margin-bottom: 0; color: #666; font-size: 0.9rem;">Each layer only reads its own header, does its job, and passes the rest up or down.</p>
+    </div>
+
+    <div class="key-insight">
+        At the destination, the process reverses: each layer strips its header and passes the contents up. The physical layer hands bits to data link, which hands a packet to network, which hands a segment to transport, which hands the data to your application. Nobody peeks at layers that aren't theirs.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- THE KEY DISTINCTION -->
+    <!-- ============================================================ -->
+
+    <h2>The Two Questions That Separate Every Layer</h2>
+
+    <table class="comparison-table">
+        <tr>
+            <th>Layer</th>
+            <th>Addresses</th>
+            <th>Scope</th>
+            <th>Device</th>
+        </tr>
+        <tr>
+            <td><strong>Application</strong></td>
+            <td>URLs, hostnames</td>
+            <td>End-to-end meaning</td>
+            <td>Your app</td>
+        </tr>
+        <tr>
+            <td><strong>Transport</strong></td>
+            <td>Port numbers (e.g., :443)</td>
+            <td>End-to-end reliability</td>
+            <td>OS kernel</td>
+        </tr>
+        <tr>
+            <td><strong>Network</strong></td>
+            <td>IP addresses</td>
+            <td>Global routing (any-to-any)</td>
+            <td>Router</td>
+        </tr>
+        <tr>
+            <td><strong>Data Link</strong></td>
+            <td>MAC addresses</td>
+            <td>Local hop (neighbor-to-neighbor)</td>
+            <td>Switch</td>
+        </tr>
+        <tr>
+            <td><strong>Physical</strong></td>
+            <td>None</td>
+            <td>Raw signal on a wire/air</td>
+            <td>Cable / antenna</td>
+        </tr>
+    </table>
+
+    <div class="big-idea">
+        <strong>The single hardest thing to internalize:</strong> IP addresses get your data across the <em>entire internet</em> (globally routed). MAC addresses only get your data to the <em>next device on the same link</em> (locally scoped). When a packet hops through 10 routers, the IP addresses stay the same the whole trip, but the MAC addresses change at every single hop.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- REAL EXAMPLE -->
+    <!-- ============================================================ -->
+
+    <h2>What Happens When You Open google.com</h2>
+
+    <div class="layer-card l-application" style="margin: 1rem 0;">
+        <strong>Application:</strong> Your browser creates an HTTP GET request: "Give me the homepage"
+    </div>
+    <div class="layer-card l-transport" style="margin: 1rem 0;">
+        <strong>Transport:</strong> TCP wraps it with your port (e.g., :52481) and Google's port (:443). Establishes a reliable connection.
+    </div>
+    <div class="layer-card l-network" style="margin: 1rem 0;">
+        <strong>Network:</strong> IP wraps it with your IP (192.168.1.5) and Google's IP (142.250.80.46). Routers will use this to forward it hop by hop.
+    </div>
+    <div class="layer-card l-datalink" style="margin: 1rem 0;">
+        <strong>Data Link:</strong> Ethernet/Wi-Fi wraps it with your MAC and your router's MAC. Just needs to reach the first hop.
+    </div>
+    <div class="layer-card l-physical" style="margin: 1rem 0;">
+        <strong>Physical:</strong> Bits go out as radio waves (Wi-Fi) or electrical signals (Ethernet cable) to your router.
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SUMMARY -->
+    <!-- ============================================================ -->
+
+    <div class="summary-box">
+        <h3>Remember It Like This</h3>
+        <ul>
+            <li><strong>Physical</strong> = the road</li>
+            <li><strong>Data Link</strong> = the local mail truck (one stop at a time)</li>
+            <li><strong>Network</strong> = the ZIP code routing system (across the country)</li>
+            <li><strong>Transport</strong> = the envelope label (which department/app gets it, and do we track delivery?)</li>
+            <li><strong>Application</strong> = the actual letter you wrote</li>
+        </ul>
+        <p style="margin-top: 1rem; margin-bottom: 0;">Data goes <strong>down</strong> the stack when sending (each layer adds a header), and <strong>up</strong> the stack when receiving (each layer strips its header). Every layer only cares about its own job.</p>
+    </div>
+
+    <footer>
+        <p>COMS 4111 — Computer Systems for Data Science — Columbia University</p>
+    </footer>
+
+</div>
+</body>
+</html>
